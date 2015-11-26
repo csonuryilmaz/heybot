@@ -119,7 +119,7 @@ public class Svn2Ftp
 	    }
 	    else if (operation.equals("revert"))
 	    {
-		// @todo: implement operation
+		// @todo: implement operation 
 		System.err.println("Ooops! Not implemented yet. :( Please, be patient.");
 	    }
 	    else
