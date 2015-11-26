@@ -1,0 +1,4 @@
+cat stub.sh helloworld.jar > hello.run && chmod +x helloworld.run 
+
+
+cat ftpupload.run FtpUploadChanges.jar > ftpupload.final && chmod +x ftpupload.final
