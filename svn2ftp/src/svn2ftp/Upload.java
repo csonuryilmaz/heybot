@@ -7,6 +7,7 @@ import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import com.jcraft.jsch.SftpATTRS;
 import com.jcraft.jsch.SftpException;
+import com.jcraft.jsch.SftpProgressMonitor;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -83,18 +84,34 @@ public class Upload
 
 	if (output.length() > 0)
 	{// :) no error message
-	    String pattern = "Relative URL:";
-	    int index = output.indexOf(pattern);
-	    if (index > 0)
-	    {
-		output = output.substring(index + pattern.length());
-		index = output.indexOf("\n");
-
-		return output.substring(0, index).trim();
+	    String rUrl = tryGetRowValue(output, "Relative URL:");
+	    if (rUrl == null)
+	    {// try get Relative URL by URL - Repository Root
+		String url = tryGetRowValue(output, "URL:");
+		String rRoot = tryGetRowValue(output, "Repository Root:");
+		if (url != null && rRoot != null)
+		{
+		    return url.replace(rRoot, "^");
+		}
 	    }
 	}
 
 	return "";
+    }
+
+    private String tryGetRowValue(String row, String key)
+    {
+	int index = row.indexOf(key);
+
+	if (index > 0)
+	{
+	    row = row.substring(index + key.length());
+	    index = row.indexOf("\n");
+
+	    return row.substring(0, index).trim();
+	}
+
+	return null;
     }
 
     //<editor-fold defaultstate="collapsed" desc="SFTP SEND">
@@ -134,6 +151,11 @@ public class Upload
 
     private void upload(String changes, boolean absPath, String sftpHost, String sftpUser, String sftpPass, String sftpTargetDir, String sftSourceDir, String repoRootDir)
     {
+	if (!sftSourceDir.endsWith("/"))
+	{// append last /
+	    sftSourceDir += "/";
+	}
+
 	Session session = null;
 	Channel channel = null;
 	ChannelSftp channelSftp = null;
@@ -209,12 +231,13 @@ public class Upload
 		}
 	    }
 
+	    channelSftp.disconnect();
 	    channel.disconnect();
 	    session.disconnect();
 	}
 	catch (JSchException | SftpException | FileNotFoundException ex)
 	{
-	    System.err.println("Ooops! Error while sending files. (" + ex.getMessage() + ")");
+	    System.err.println(System.getProperty("line.separator") + "Ooops! Error while sending files. (" + ex.getMessage() + ")");
 	}
     }
 
@@ -234,13 +257,14 @@ public class Upload
 	}
 	else
 	{
-	    channelSftp.put(new FileInputStream(f), path);
+	    //System.out.println(channelSftp.realpath(path));
+	    channelSftp.put(new FileInputStream(f), path, new UploadProgressMonitor(), ChannelSftp.OVERWRITE);
 	}
     }
 
     private void delete(ChannelSftp channelSftp, String path, String sftSourceDir) throws SftpException
     {
-	System.out.println("[D] " + path);
+	System.out.print("[D] " + path);
 
 	path = path.replace(sftSourceDir, "");// relative path
 
@@ -253,6 +277,7 @@ public class Upload
 	else
 	{
 	    delFile(channelSftp, path);
+	    System.out.println("  [✓]");
 	}
     }
 
@@ -397,5 +422,35 @@ public class Upload
 	    }
 	}
     }
+//</editor-fold>
+
+    //<editor-fold defaultstate="collapsed" desc="sftp put progress monitor">
+    public class UploadProgressMonitor implements SftpProgressMonitor
+    {
+
+	public UploadProgressMonitor()
+	{
+	}
+
+	public void init(int op, java.lang.String src, java.lang.String dest, long max)
+	{
+	    //System.out.println("STARTING: " + op + " " + src + " -> " + dest + " total: " + max);
+	    System.out.print("|-> ");
+	}
+
+	private long total;
+
+	public boolean count(long bytes)
+	{
+	    total += bytes;
+	    return (true);
+	}
+
+	public void end()
+	{
+	    System.out.println(" " + total + " bytes [✓]");
+	}
+    }
+
 //</editor-fold>
 }
