@@ -94,6 +94,7 @@ public class Upload
 		    return url.replace(rRoot, "^");
 		}
 	    }
+	    return rUrl;
 	}
 
 	return "";
