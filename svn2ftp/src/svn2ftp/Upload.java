@@ -74,7 +74,7 @@ public class Upload
 	}
 	else
 	{
-	    System.err.println("Ooops! Missing parameters. Please see help/usage message without using any parameter.");
+	    System.err.println(Svn2Ftp.ERROR_MISSING_PARAMETERS);
 	}
     }
 

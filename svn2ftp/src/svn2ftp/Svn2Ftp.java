@@ -25,9 +25,16 @@ import org.apache.commons.cli.ParseException;
 public class Svn2Ftp
 {
 
-    private final static String VERSION = "1.1";
+    /**
+     * Ex: -o upload -h 10.10.10.108 -u root -p RSohat888 -t /var/www/html/kitapyurdu/ -s /Users/onuryilmaz/kitapyurdu_projects/web/kitapyurdu
+     *
+     * Ex: -o cleanup -ldr /Users/onuryilmaz/kitapyurdu_projects/web/branch -sdr https://kyrepo.sourcerepo.com/kyrepo/web/branch -rdt abab3a53c34f66b92da5cdcbb3bb95a3c78d691e -rdu https://kyrepo-apps.sourcerepo.com/redmine/kyrepo -lim 1
+     */
+    private final static String VERSION = "1.2.0.0";
     private final static String GITHUB = "https://github.com/csonuryilmaz";
-    private final static String NOTES = "ATTENTION! In this version operation <revert> not working. Please only use operation <upload>.";
+    private final static String NOTES = "ATTENTION! In this version operation *revert* not working. ";
+
+    public final static String ERROR_MISSING_PARAMETERS = "Ooops! Missing parameters. Please look at *help message* without using any parameter.";
 
     //<editor-fold defaultstate="collapsed" desc="INTERFACE">
     private static final String NEWLINE = System.getProperty("line.separator");
@@ -38,6 +45,13 @@ public class Svn2Ftp
     {
 	Options options = new Options();
 
+	options.addOption("o", "operation", true, "Operation to run. Arguments can be either:" + NEWLINE
+		+ "upload -> Uploads local changes to remote server." + NEWLINE
+		+ "revert -> Reverts local changes from remote server." + NEWLINE
+		+ "cleanup -> Cleanups *closed* issues from local working directory and subversion.");
+	options.getOption("operation").setRequired(true);
+
+	// OPERATION: upload
 	options.addOption("h", "host", true, "remote server to connect");
 	options.addOption("u", "username", true, "username to login remote servr");
 	options.addOption("p", "password", true, "password to login remote server");
@@ -45,17 +59,13 @@ public class Svn2Ftp
 	options.addOption("s", "source-directory", true, "local working directory to take changes");
 	options.addOption("r", "revision", true, "specific revision to take changes");
 
-	options.addOption("o", "operation", true, "Operation to run. Arguments can be either:" + NEWLINE
-		+ "upload -> Uploads local changes to remote server." + NEWLINE
-		+ "revert -> Reverts local changes from remote server." + NEWLINE
-		+ "If no operation parameter is given, then upload is assumed as default operation.");
-	options.getOption("operation").setRequired(false);
-
-	// set required options
-	options.getOption("host").setRequired(true);
-	options.getOption("username").setRequired(true);
-	options.getOption("password").setRequired(true);
-	options.getOption("target-directory").setRequired(true);
+	// OPERATION: cleanup
+	// host, username, password are same as upload operation
+	options.addOption("ldr", "loc-dir", true, "branch local working directory used as workspace");
+	options.addOption("sdr", "svn-dir", true, "branch subversion directory where all branches kept");
+	options.addOption("rdt", "rdm-token", true, "redmine access token (personal token taken from redmine account page)");
+	options.addOption("rdu", "rdm-url", true, "redmine url (api uri, mostly root url)");
+	options.addOption("lim", "limit", true, "maximum count to delete branches");
 
 	return options;
     }
@@ -68,7 +78,15 @@ public class Svn2Ftp
 	@Override
 	public int compare(T o1, T o2)
 	{
-	    return OPTS_ORDER.indexOf(o1.getOpt()) - OPTS_ORDER.indexOf(o2.getOpt());
+	    int io1 = OPTS_ORDER.indexOf(o1.getOpt());
+	    int io2 = OPTS_ORDER.indexOf(o2.getOpt());
+
+	    if (io1 >= 0)
+	    {
+		return io1 - io2;
+	    }
+
+	    return 1; // no index defined, default tail!
 	}
     }
 
@@ -117,9 +135,13 @@ public class Svn2Ftp
 	    {
 		new Upload().execute(line);
 	    }
+	    else if (operation.equals("cleanup"))
+	    {
+		new Cleanup().execute(line);
+	    }
 	    else if (operation.equals("revert"))
 	    {
-		// @todo: implement operation 
+		// @todo: implement operation
 		System.err.println("Ooops! Not implemented yet. :( Please, be patient.");
 	    }
 	    else
@@ -151,6 +173,46 @@ public class Svn2Ftp
 	return "";
     }
 
+    static boolean tryExecute(String[] command)
+    {
+	String[] output = execute(command);
+
+	if (output[1].length() > 0)
+	{// :(
+	    System.err.println("Ooops! Command execution (" + command + ") failed with message: ");
+	    System.err.println(output[1]);
+
+	    return false;
+	}
+
+	if (output != null)
+	{
+	    System.out.println(output[0]);
+	}
+	return true;
+    }
+
+    private static String[] execute(String[] command)
+    {
+	Process process;
+	try
+	{
+	    process = new ProcessBuilder(command).start(); // array of command and arguments
+
+	    return execute(process);
+	}
+	catch (NumberFormatException ex)
+	{
+	    System.err.println(ex);
+	}
+	catch (IOException | InterruptedException ex)
+	{
+	    System.err.println(ex);
+	}
+
+	return null;
+    }
+
     private static String[] execute(String command)
     {
 	Process process;
@@ -158,30 +220,35 @@ public class Svn2Ftp
 	{
 	    process = Runtime.getRuntime().exec(command);
 
-	    int r = process.waitFor();
-
-	    InputStream ns = process.getInputStream();// normal output stream
-	    InputStream es = process.getErrorStream();// error output stream
-
-	    String[] output = new String[2];
-	    output[0] = read(ns);
-	    output[1] = read(es);
-
-	    ns.close();
-	    es.close();
-
-	    return output;
+	    return execute(process);
 	}
 	catch (NumberFormatException ex)
 	{
 	    System.err.println(ex);
 	}
-	catch (Exception ex)
+	catch (IOException | InterruptedException ex)
 	{
 	    System.err.println(ex);
 	}
 
 	return null;
+    }
+
+    private static String[] execute(Process process) throws InterruptedException, IOException
+    {
+	int r = process.waitFor();
+
+	InputStream ns = process.getInputStream();// normal output stream
+	InputStream es = process.getErrorStream();// error output stream
+
+	String[] output = new String[2];
+	output[0] = read(ns);
+	output[1] = read(es);
+
+	ns.close();
+	es.close();
+
+	return output;
     }
 
     private static String read(InputStream is)
