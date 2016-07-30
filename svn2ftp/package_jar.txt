@@ -1,5 +1,0 @@
-cat stub.sh helloworld.jar > hello.run && chmod +x helloworld.run 
-
-
-cat svn2ftp.run svn2ftp.jar > svn2ftp.final && chmod +x svn2ftp.final
-
