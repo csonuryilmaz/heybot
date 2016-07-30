@@ -8,7 +8,9 @@
 
 It's very easy to use **heybot** and its call syntax is like commanding a bot. It's as easy as saying this:
 
-> *heybot -do something.hb* 
+```
+$ heybot -do something.hb
+```
 
 This is the main syntax and now you've learned most of it. You write details into a file with extension *hb*. Then you say to **heybot**:
 	
