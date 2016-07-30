@@ -1,0 +1,5 @@
+cat stub.sh helloworld.jar > hello.run && chmod +x helloworld.run
+
+
+cat heybot.run heybot.jar > heybot.final && chmod +x heybot.final
+
