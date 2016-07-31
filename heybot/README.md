@@ -44,6 +44,18 @@ Required parameters:
 Optional parameters:
 
 - SOURCE_PATH= Local working directory to take changes from. If not given or empty, *current working directory* is assumed. (pwd)
+
+```
+# File: send_local_changes_to_test_env.hb
+
+OPERATION=upload
+HOST=192.168.2.1
+USERNAME=smith
+PASSWORD=sm123
+REMOTE_PATH=/var/www/html/myproject/
+SOURCE_PATH=/Users/smith/NetBeansProjects/myproject/
+
+```
 	
 **2. OPERATION= Cleanup**
 
