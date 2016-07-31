@@ -50,11 +50,16 @@ Example:
 ```
 # File: send_local_changes_to_test_env.hb
 
+# operation
 OPERATION=upload
+
+# required parameters
 HOST=192.168.2.1
 USERNAME=smith
 PASSWORD=sm123
 REMOTE_PATH=/var/www/html/myproject/
+
+# optional parameters
 SOURCE_PATH=/Users/smith/NetBeansProjects/myproject/
 
 ```
@@ -79,11 +84,16 @@ Example:
 ```
 # File: delete_closed_branches.hb
 
+# operation
 OPERATION=cleanup
+
+# required parameters
 LOCAL_PATH=/Users/smith/NetBeansProjects/web/branch
 SUBVERSION_PATH=https://test.sourcerepo.com/test/web/branch
 REDMINE_TOKEN=abab3a53c34f66b92fg5cdcbb3bb95a3c78d862e
 REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
+
+# optional parameters
 LIMIT=10
 
 ```
