@@ -12,7 +12,7 @@ It's very easy to use **heybot** and its call syntax is like commanding a bot. I
 $ heybot -do something.hb
 ```
 
-This is the main syntax and now you've learned most of it. You write details into a file with extension *hb*. Then you say to **heybot**:
+This is the main syntax and now you've learned most of it. You write details into a file with extension **.hb**. Then you say to **heybot**:
 	
 > Hey bot! Do my job which is defined in the file I gave.
 	
@@ -21,6 +21,8 @@ For example; I want to begin a redmine issue with creating a branch and checking
 ```
 $ heybot -do begin_issue.hb
 ```
+
+As a common practice a **.hb** file starts with parameter *OPERATION*  and it is followed by required parameters to do that operation metioned. In [workspace](https://github.com/csonuryilmaz/utilities/tree/master/heybot/workspace) you can find example **.hb** templates for each operation. You can copy them, and define your own operation by filling parameters. Also it's a best practice to give you **.hb** files a readable name. For ex: send_local_changes_to_test_env.hb
 
 Let's dive into some details and explain them with examples. Below there is a list of operations that you can use with heybot.
 	
