@@ -4,6 +4,10 @@
 
 **heybot** is my best friend on my daily development activities. It's designed to help developers on their day-to-day development activities. It eases *some* chore development activities and improves your productivity. *It's worth trying it.*
 
+###### Requirements:
+
+**heybot** is mainly designed to work in **subversion** and **redmine** environment. If you use [redmine](http://www.redmine.org/) as project management application and [subversion](https://subversion.apache.org/) as version control system, then **heybot** can help you. For other ecosystems, you can fork the project or contribute directly to this project. All useful contributions are wellcome.
+
 ###### Usage:
 
 It's very easy to use **heybot** and its call syntax is like commanding a bot. It's as easy as saying this:
@@ -39,11 +43,22 @@ Required parameters:
 
 Optional parameters:
 
-- SOURCE_PATH= Local working directory to take changes from. If it's not given or empty current working directory is assumed. (pwd)
+- SOURCE_PATH= Local working directory to take changes from. If not given or empty, *current working directory* is assumed. (pwd)
 	
-**2. Cleanup**
+**2. OPERATION= Cleanup**
 
-*todo*
+It deletes *closed* issues (branches) from local working directory and subversion. It is meaningful if you use *one issue is resolved in one branch* paradigm.
+
+Required parameters:
+
+- LOCAL_PATH= Branch local working directory used as workspace.
+- SUBVERSION_PATH= Branch subversion directory where all branches are kept.
+- REDMINE_TOKEN= Redmine API access key taken from [my account page](http://www.redmine.org/projects/redmine/wiki/RedmineAccounts).
+- REDMINE_URL= Redmine API url. (most of the time this is root url of your redmine installation)
+
+Optional parameters:
+
+- LIMIT= Maximum count to delete branches. If not given or empty, *unlimited* is assumed.
 	
 **3. Deploy**
 
