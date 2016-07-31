@@ -75,7 +75,7 @@ public class Upload extends Operation
 	}
 	else
 	{
-	    System.err.println(heybot.ERROR_MISSING_PARAMETERS);
+	    //System.err.println(heybot.ERROR_MISSING_PARAMETERS);
 	}
     }
 

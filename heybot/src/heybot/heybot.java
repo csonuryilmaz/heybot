@@ -1,8 +1,14 @@
 package heybot;
 
+import java.io.FileInputStream;
+import java.io.IOException;
 import operation.Upload;
 import operation.Cleanup;
 import java.util.Comparator;
+import java.util.Locale;
+import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -19,47 +25,115 @@ import org.apache.commons.cli.ParseException;
 public class heybot
 {
 
-    /**
-     * Ex: -o upload -h 10.10.10.108 -u root -p RSohat888 -t /var/www/html/kitapyurdu/ -s /Users/onuryilmaz/kitapyurdu_projects/web/kitapyurdu
-     *
-     * Ex: -o cleanup -ldr /Users/onuryilmaz/kitapyurdu_projects/web/branch -sdr https://kyrepo.sourcerepo.com/kyrepo/web/branch -rdt abab3a53c34f66b92da5cdcbb3bb95a3c78d691e -rdu https://kyrepo-apps.sourcerepo.com/redmine/kyrepo -lim 1
-     */
-    private final static String VERSION = "1.2.0.0";
-    private final static String GITHUB = "https://github.com/csonuryilmaz";
-    private final static String NOTES = "ATTENTION! In this version operation *revert* not working. ";
-
-    public final static String ERROR_MISSING_PARAMETERS = "Ooops! Missing parameters. Please look at *help message* without using any parameter.";
-
-    //<editor-fold defaultstate="collapsed" desc="INTERFACE">
+    private final static String VERSION = "1.3.1.0";
     private static final String NEWLINE = System.getProperty("line.separator");
-    private static final String HEADER = "Some utilities to work with subversion and ftp, remote vs. local changes." + NEWLINE + NEWLINE;
-    private static final String FOOTER = NEWLINE + "For additional information, see " + GITHUB + NEWLINE + "Version: " + VERSION + NEWLINE + NEWLINE + NOTES;
 
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String[] args)
+    {
+	// build programming interface
+	Options options = buildOptions();
+
+	if (args.length == 0)
+	{
+	    printHelp(options);
+	}
+	else
+	{
+	    // parse command line arguments
+	    CommandLine line = getParser(options, args);
+
+	    if (line.hasOption("help"))
+	    {
+		printHelp(options);
+	    }
+	    else
+	    {
+		start(line);
+	    }
+	}
+    }
+
+    private static void start(CommandLine line)
+    {
+	String hbFile = line.getOptionValue("do");
+	if (hbFile == null)
+	{
+	    System.err.println("Ooops! Unknown operation argument.");
+	}
+	else
+	{
+	    try
+	    {
+		tryReadHbFile(hbFile);
+	    }
+	    catch (IOException ex)
+	    {
+		System.err.println("Ooops! Hb file not found or format incompatible. (" + ex.getMessage() + ")");
+	    }
+	}
+    }
+
+    private static void tryReadHbFile(String hbFile) throws IOException
+    {
+	Properties prop = new Properties();
+	prop.load(new FileInputStream(hbFile));
+
+	String operation = prop.getProperty("OPERATION");
+	if (operation == null)
+	{
+	    System.err.println("Ooops! Parameter OPERATION not found in .hb file.");
+	}
+	else
+	{
+	    tryDoOperation(prop, operation);
+	}
+    }
+
+    private static void tryDoOperation(Properties prop, String operation)
+    {
+	operation = operation.toLowerCase(new Locale("tr-TR"));
+
+	switch (operation)
+	{
+	    case "upload":
+		//new Upload().execute(prop);
+		System.out.println("Upload is executed");
+		break;
+	    case "cleanup":
+		//new Cleanup().execute(prop);
+		System.out.println("Cleanup is executed");
+		break;
+	    default:
+		System.err.println("Ooops! Unsupported operation. Please check version and manual.");
+		break;
+	}
+    }
+
+    //<editor-fold defaultstate="collapsed" desc="help">
+    private static final String HEADER = NEWLINE + "Designed to help developers on their day-to-day development activities. Works in subversion and redmine ecosystem." + NEWLINE + NEWLINE;
+
+    private static final String FOOTER = NEWLINE + "For additional information, see " + "https://github.com/csonuryilmaz/utilities/tree/master/heybot" + NEWLINE + NEWLINE + "Version: " + VERSION + NEWLINE + NEWLINE;
+
+    private static void printHelp(Options options)
+    {
+	HelpFormatter formatter = new HelpFormatter();
+	formatter.setOptionComparator(new MyOptionComparator());
+	formatter.printHelp("heybot", HEADER, options, FOOTER, true);
+    }
+
+//</editor-fold>
+    //<editor-fold defaultstate="collapsed" desc="syntax">
     private static Options buildOptions()
     {
 	Options options = new Options();
 
-	options.addOption("o", "operation", true, "Operation to run. Arguments can be either:" + NEWLINE
-		+ "upload -> Uploads local changes to remote server." + NEWLINE
-		+ "revert -> Reverts local changes from remote server." + NEWLINE
-		+ "cleanup -> Cleanups *closed* issues from local working directory and subversion.");
-	options.getOption("operation").setRequired(true);
+	options.addOption("d", "do", true, "Heybot operation file with .hb extension." + NEWLINE + "something.hb");
+	options.getOption("do").setRequired(true);
 
-	// OPERATION: upload
-	options.addOption("h", "host", true, "remote server to connect");
-	options.addOption("u", "username", true, "username to login remote servr");
-	options.addOption("p", "password", true, "password to login remote server");
-	options.addOption("t", "target-directory", true, "remote working directory to send changes");
-	options.addOption("s", "source-directory", true, "local working directory to take changes");
-	options.addOption("r", "revision", true, "specific revision to take changes");
-
-	// OPERATION: cleanup
-	// host, username, password are same as upload operation
-	options.addOption("ldr", "loc-dir", true, "branch local working directory used as workspace");
-	options.addOption("sdr", "svn-dir", true, "branch subversion directory where all branches kept");
-	options.addOption("rdt", "rdm-token", true, "redmine access token (personal token taken from redmine account page)");
-	options.addOption("rdu", "rdm-url", true, "redmine url (api uri, mostly root url)");
-	options.addOption("lim", "limit", true, "maximum count to delete branches");
+	options.addOption("h", "help", false, "Prints this help message.");
 
 	return options;
     }
@@ -67,7 +141,7 @@ public class heybot
     private static class MyOptionComparator<T extends Option> implements Comparator<T>
     {
 
-	private static final String OPTS_ORDER = "ohtupsr"; // short option names
+	private static final String OPTS_ORDER = "oh"; // short option names
 
 	@Override
 	public int compare(T o1, T o2)
@@ -101,48 +175,5 @@ public class heybot
 	}
 	return null;
     }
-
-//</editor-fold>
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String[] args)
-    {
-	// build programming interface
-	Options options = buildOptions();
-
-	if (args.length == 0)
-	{
-	    // print usage message
-	    HelpFormatter formatter = new HelpFormatter();
-	    formatter.setOptionComparator(new MyOptionComparator());
-	    formatter.printHelp("heybot", HEADER, options, FOOTER, true);
-	}
-	else
-	{
-	    // parse command line arguments
-	    CommandLine line = getParser(options, args);
-
-	    // try get operation argument
-	    String operation = line.getOptionValue("operation");
-	    if (operation == null || operation.equals("upload"))
-	    {
-		new Upload().execute(line);
-	    }
-	    else if (operation.equals("cleanup"))
-	    {
-		new Cleanup().execute(line);
-	    }
-	    else if (operation.equals("revert"))
-	    {
-		// @todo: implement operation
-		System.err.println("Ooops! Not implemented yet. :( Please, be patient.");
-	    }
-	    else
-	    {
-		System.err.println("Ooops! Unknown operation argument.");
-	    }
-	}
-    }
-
+    //</editor-fold>
 }
