@@ -45,6 +45,8 @@ Optional parameters:
 
 - SOURCE_PATH= Local working directory to take changes from. If not given or empty, *current working directory* is assumed. (pwd)
 
+Example:
+
 ```
 # File: send_local_changes_to_test_env.hb
 
@@ -71,6 +73,20 @@ Required parameters:
 Optional parameters:
 
 - LIMIT= Maximum count to delete branches. If not given or empty, *unlimited* is assumed.
+
+Example:
+
+```
+# File: delete_closed_branches.hb
+
+OPERATION=cleanup
+LOCAL_PATH=/Users/smith/NetBeansProjects/web/branch
+SUBVERSION_PATH=https://test.sourcerepo.com/test/web/branch
+REDMINE_TOKEN=abab3a53c34f66b92fg5cdcbb3bb95a3c78d862e
+REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
+LIMIT=10
+
+```
 	
 **3. Deploy**
 
