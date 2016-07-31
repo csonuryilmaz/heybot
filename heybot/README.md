@@ -26,9 +26,20 @@ As a common practice a **.hb** file starts with parameter *OPERATION*  and it is
 
 Let's dive into some details and explain them with examples. Below there is a list of operations that you can use with heybot.
 	
-**1. Upload** 
+**1. OPERATION= Upload** 
 
-*todo*
+It uploads local changes in the working copy (output of *svn st* command) to a remote server by SFTP protocol.
+
+Required parameters:
+
+- HOST= IP of remote server to connect.
+- USERNAME= Username to login remote server.
+- PASSWORD= Password to login remote server.
+- REMOTE_PATH= Remote working directory to send changes.
+
+Optional parameters:
+
+- SOURCE_PATH= Local working directory to take changes from. If it's not given or empty current working directory is assumed. (pwd)
 	
 **2. Cleanup**
 
