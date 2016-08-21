@@ -98,15 +98,3 @@ LIMIT=10
 
 ```
 	
-**3. Deploy**
-
-*todo*
-
-
-
-**things to do on my day off**
-
-- [ ] Send new version is deployed e-mail to some recipients like newsletter when a version is deployed. (after deploy operation)
-- [ ] Auto sync start date (in progress),end date (deployed/closed) and *status* with related issues. Support <--> Other projects (web,mobile,cronint)
-- [ ] Auto add related issue's assignee to other related issue's watcher list. Support <--> Other projects (web,mobile,cronint)
-- [ ] When a branch is detected in a repository then auto-start the related issue. (in progress)
