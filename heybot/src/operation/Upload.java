@@ -8,14 +8,13 @@ import com.jcraft.jsch.Session;
 import com.jcraft.jsch.SftpATTRS;
 import com.jcraft.jsch.SftpException;
 import com.jcraft.jsch.SftpProgressMonitor;
-import heybot.heybot;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.Vector;
-import org.apache.commons.cli.CommandLine;
 
 /**
  * Operation: upload
@@ -27,19 +26,20 @@ public class Upload extends Operation
 
     private final static int SFTPPORT = 22;
 
-    public void execute(CommandLine line)
+    @Override
+    public void execute(Properties prop)
     {
 	// try get parameters
-	String sftpHost = line.getOptionValue("host");
-	String sftpUser = line.getOptionValue("username");
-	String sftpPass = line.getOptionValue("password");
-	String sftpTargetDir = line.getOptionValue("target-directory");
-	String sftpSourceDir = line.getOptionValue("source-directory");
-	String revision = line.getOptionValue("revision");
+	String sftpHost = prop.getProperty("HOST");
+	String sftpUser = prop.getProperty("USERNAME");
+	String sftpPass = prop.getProperty("PASSWORD");
+	String sftpTargetDir = prop.getProperty("REMOTE_PATH");
+	String sftpSourceDir = prop.getProperty("SOURCE_PATH");
+	String revision = "";// @todo
 
 	if (sftpHost != null && sftpUser != null && sftpPass != null && sftpTargetDir != null)
 	{
-	    if (sftpSourceDir == null)
+	    if (sftpSourceDir == null || sftpSourceDir.length() == 0)
 	    {// try to assign default argument
 		sftpSourceDir = tryExecute("pwd");
 	    }
@@ -75,7 +75,7 @@ public class Upload extends Operation
 	}
 	else
 	{
-	    //System.err.println(heybot.ERROR_MISSING_PARAMETERS);
+	    System.err.println("Ooops! Missing required parameters.(HOST,USERNAME,PASSWORD,REMOTE_PATH)");
 	}
     }
 

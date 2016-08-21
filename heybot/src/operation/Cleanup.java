@@ -4,12 +4,11 @@ import com.taskadapter.redmineapi.RedmineException;
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.Issue;
-import heybot.heybot;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.Locale;
-import org.apache.commons.cli.CommandLine;
+import java.util.Properties;
 
 /**
  * Operation: cleanup
@@ -27,14 +26,15 @@ public class Cleanup extends Operation
 
     private RedmineManager redmineManager;
 
-    public void execute(CommandLine line)
+    @Override
+    public void execute(Properties prop)
     {
 	// try get parameters
-	String localWorkingDirectory = line.getOptionValue("loc-dir");
-	String svnBranchDirectory = line.getOptionValue("svn-dir");
-	String redmineAccessToken = line.getOptionValue("rdm-token");
-	String redmineUrl = line.getOptionValue("rdm-url");
-	String limit = line.getOptionValue("limit");
+	String localWorkingDirectory = prop.getProperty("LOCAL_PATH");
+	String svnBranchDirectory = prop.getProperty("SUBVERSION_PATH");
+	String redmineAccessToken = prop.getProperty("REDMINE_TOKEN");
+	String redmineUrl = prop.getProperty("REDMINE_URL");
+	String limit = prop.getProperty("LIMIT");
 
 	String svnCommand = tryExecute("which svn");
 

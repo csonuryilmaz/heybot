@@ -2,13 +2,12 @@ package heybot;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import operation.Upload;
-import operation.Cleanup;
+import java.net.URISyntaxException;
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.Properties;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import operation.Cleanup;
+import operation.Upload;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -25,7 +24,7 @@ import org.apache.commons.cli.ParseException;
 public class heybot
 {
 
-    private final static String VERSION = "1.3.1.0";
+    private final static String VERSION = "1.4.0.0";
     private static final String NEWLINE = System.getProperty("line.separator");
 
     /**
@@ -59,20 +58,16 @@ public class heybot
     private static void start(CommandLine line)
     {
 	String hbFile = line.getOptionValue("do");
-	if (hbFile == null)
+
+	hbFile = getFullPath(hbFile);
+
+	try
 	{
-	    System.err.println("Ooops! Unknown operation argument.");
+	    tryReadHbFile(hbFile);
 	}
-	else
+	catch (IOException ex)
 	{
-	    try
-	    {
-		tryReadHbFile(hbFile);
-	    }
-	    catch (IOException ex)
-	    {
-		System.err.println("Ooops! Hb file not found or format incompatible. (" + ex.getMessage() + ")");
-	    }
+	    System.err.println("Ooops! Hb file not found or format incompatible. (" + ex.getMessage() + ")");
 	}
     }
 
@@ -99,16 +94,34 @@ public class heybot
 	switch (operation)
 	{
 	    case "upload":
-		//new Upload().execute(prop);
-		System.out.println("Upload is executed");
+		new Upload().execute(prop);
 		break;
 	    case "cleanup":
-		//new Cleanup().execute(prop);
-		System.out.println("Cleanup is executed");
+		new Cleanup().execute(prop);
 		break;
 	    default:
 		System.err.println("Ooops! Unsupported operation. Please check version and manual.");
 		break;
+	}
+    }
+
+    private static String getFullPath(String hbFile)
+    {
+	if (hbFile.contains("/"))
+	{
+	    return hbFile; // already full path is given
+	}
+	else
+	{
+	    try
+	    {
+		return new java.io.File(heybot.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath()).getParent() + "/workspace/" + hbFile;
+	    }
+	    catch (URISyntaxException ex)
+	    {
+		System.err.println("Ooops! URISyntaxException caught." + ex.getMessage());
+		return "";
+	    }
 	}
     }
 
