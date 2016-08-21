@@ -45,7 +45,7 @@ public class Cleanup extends Operation
 	else
 	{
 	    int max;
-	    if (limit == null)
+	    if (limit == null || limit.length() == 0)
 	    {
 		max = Integer.MAX_VALUE;
 	    }
