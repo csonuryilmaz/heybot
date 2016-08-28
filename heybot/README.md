@@ -102,13 +102,13 @@ LIMIT=10
 
 *todo*
 
-**4. OPERATION= Review&Test**
+**4. OPERATION= Review**
 
 It updates the status of issue as *testing*, *in review* or anything you defined in your redmine configuration. Then tries to merge changes from an issue to an existing working copy. (most of the time, existing working copy is trunk) It preemptively postpones any conflicts for later resolution.
 
 Required Parameters:
 
-- ISSUE= Issue number(or ID) to review&test. (merge from)
+- ISSUE= Issue number(or ID) to review. (merge from)
 - ISSUE_STATUS_TO_UPDATE= Issue status will be updated to defined parameter, which indicates the operation done.
 - SUBVERSION_PATH= Branch subversion directory where all branches are kept.
 - REDMINE_TOKEN= Redmine API access key taken from [my account page](http://www.redmine.org/projects/redmine/wiki/RedmineAccounts).
@@ -122,10 +122,10 @@ Optional parameters:
 Example:
 
 ```
-# File: delete_closed_branches.hb
+# File: review_issue.hb
 
 # operation
-OPERATION=review&test
+OPERATION=review
 
 # required parameters
 ISSUE=892
