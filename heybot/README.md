@@ -102,6 +102,43 @@ LIMIT=10
 
 *todo*
 
+**4. OPERATION= Review&Test**
+
+It updates the status of issue as *testing*, *in review* or anything you defined in your redmine configuration. Then tries to merge changes from an issue to an existing working copy. (most of the time, existing working copy is trunk) It preemptively postpones any conflicts for later resolution.
+
+Required Parameters:
+
+- ISSUE= Issue number(or ID) to review&test. (merge from)
+- ISSUE_STATUS_TO_UPDATE= Issue status will be updated to defined parameter, which indicates the operation done.
+- SUBVERSION_PATH= Branch subversion directory where all branches are kept.
+- REDMINE_TOKEN= Redmine API access key taken from [my account page](http://www.redmine.org/projects/redmine/wiki/RedmineAccounts).
+- REDMINE_URL= Redmine API url. (most of the time this is root url of your redmine installation)
+
+Optional parameters:
+
+- SOURCE_PATH= Existing working copy to make changes. (merge to) If not given or empty, *current working directory* is assumed. (pwd)
+- ISSUE_STATUS_SHOULD_BE= The status of issue that can be reviewed and eligible to test. If issue status is not equals to this parameter, operation won't begin.
+
+Example:
+
+```
+# File: delete_closed_branches.hb
+
+# operation
+OPERATION=review&test
+
+# required parameters
+ISSUE=892
+ISSUE_STATUS_TO_UPDATE=Testing
+SUBVERSION_PATH=https://test.sourcerepo.com/test/web/branch
+REDMINE_TOKEN=abab3a53c34f66b92fg5cdcbb3bb95a3c78d862e
+REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
+
+# optional parameters
+SOURCE_PATH=/Users/smith/NetBeansProjects/myproject/
+ISSUE_STATUS_SHOULD_BE=Resolved
+
+```
 
 
 **things to do on my day off**
