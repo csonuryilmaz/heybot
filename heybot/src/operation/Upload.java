@@ -79,43 +79,6 @@ public class Upload extends Operation
 	}
     }
 
-    private String tryGetRepoRootDir(String svnCommand, String sftpSourceDir)
-    {
-	String output = tryExecute(svnCommand + " info " + sftpSourceDir);
-
-	if (output.length() > 0)
-	{// :) no error message
-	    String rUrl = tryGetRowValue(output, "Relative URL:");
-	    if (rUrl == null)
-	    {// try get Relative URL by URL - Repository Root
-		String url = tryGetRowValue(output, "URL:");
-		String rRoot = tryGetRowValue(output, "Repository Root:");
-		if (url != null && rRoot != null)
-		{
-		    return url.replace(rRoot, "^");
-		}
-	    }
-	    return rUrl;
-	}
-
-	return "";
-    }
-
-    private String tryGetRowValue(String row, String key)
-    {
-	int index = row.indexOf(key);
-
-	if (index > 0)
-	{
-	    row = row.substring(index + key.length());
-	    index = row.indexOf("\n");
-
-	    return row.substring(0, index).trim();
-	}
-
-	return null;
-    }
-
     //<editor-fold defaultstate="collapsed" desc="SFTP SEND">
     private void start(String sftpHost, String sftpTargetDir, String sftpUser, String sftpPass, String sftpSourceDir, String revision, String svnCommand, String repoRootDir)
     {

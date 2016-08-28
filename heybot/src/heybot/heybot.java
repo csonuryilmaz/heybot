@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.Properties;
 import operation.Cleanup;
 import operation.Upload;
+import operation.Review;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -98,6 +99,9 @@ public class heybot
 		break;
 	    case "cleanup":
 		new Cleanup().execute(prop);
+		break;
+	    case "review":
+		new Review().execute(prop);
 		break;
 	    default:
 		System.err.println("Ooops! Unsupported operation. Please check version and manual.");
