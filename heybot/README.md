@@ -6,7 +6,7 @@
 
 ###### Requirements:
 
-**heybot** is mainly designed to work in **subversion** and **redmine** environment. If you use [redmine](http://www.redmine.org/) as project management application and [subversion](https://subversion.apache.org/) as version control system, then **heybot** can help you. For other ecosystems, you can fork the project or contribute directly to this project. All useful contributions are wellcome.
+**heybot** is mainly designed to work in **subversion**, **redmine** and **slack** environment. If you use [redmine](http://www.redmine.org/) as project management/issue tracking application, [subversion](https://subversion.apache.org/) as version control system and [slack](https://slack.com/) as communication environment then **heybot** can help you. For other ecosystems, you can fork the project or contribute directly to this project. All useful contributions are wellcome.
 
 ###### Usage:
 
@@ -140,6 +140,40 @@ ISSUE_STATUS_SHOULD_BE=Resolved
 
 ```
 
+**4. OPERATION= Check-New**
+
+It checks whether *redmine* has new issues with given status(optional) and sends a notification message to defined *slack* channel. For example; you can get notifications about newly added issues from a redmine project.
+
+Required Parameters:
+
+- LAST_ISSUE= Last issue number that has been notified about. (This parameter will be modified by *heybot* after each execution.) If doesn't have value, 0 assumed.
+- PROJECT= Project name to follow new issues.
+- REDMINE_TOKEN= Redmine API access key taken from [my account page](http://www.redmine.org/projects/redmine/wiki/RedmineAccounts).
+- REDMINE_URL= Redmine API url. (most of the time this is root url of your redmine installation)
+- WEBHOOK_URL= Slack incoming webhook to send notifications.
+
+Optional Parameters:
+
+- ISSUE_STATUS= Check status of newly added issue with this defined value.
+
+Example:
+
+```
+# File: check_new_issue.hb
+
+# operation
+OPERATION=check-new
+
+# required parameters
+LAST_ISSUE=892
+PROJECT=support
+REDMINE_TOKEN=abab3a53c34f66b92fg5cdcbb3bb95a3c78d862e
+REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
+
+# optional parameters
+ISSUE_STATUS=New
+
+```
 
 **things to do on my day off**
 
@@ -149,4 +183,3 @@ ISSUE_STATUS_SHOULD_BE=Resolved
 - [ ] When a branch is detected in a repository then auto-start the related issue.
 - [ ] Cleanup: Append issue number to commit messages.
 - [ ] Release script to execute when heybot new version is ready.
-- [ ] Test an issue operation.
