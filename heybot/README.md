@@ -142,7 +142,7 @@ ISSUE_STATUS_SHOULD_BE=Resolved
 
 **4. OPERATION= Check-New**
 
-It checks whether *redmine* has new issues with given status(optional) and sends a notification message to defined *slack* channel. For example; you can get notifications about newly added issues from a redmine project.
+It checks whether *redmine* has new issues with given status(optional) and sends a notification message to defined *slack* channel/user. (Post to channel configuration is done from slack panel. Please, check out below notes.) For example; you can get notifications about newly added issues from a redmine project.
 
 Required Parameters:
 
@@ -154,7 +154,7 @@ Required Parameters:
 
 Optional Parameters:
 
-- ISSUE_STATUS= Check status of newly added issue with this defined value.
+- ISSUE_STATUS= Check status of newly added issue with this defined value. If empty, there will be no status check.
 
 Example:
 
@@ -174,6 +174,20 @@ REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
 ISSUE_STATUS=New
 
 ```
+
+
+###### Notes:
+
+**1. How to obtain slack incoming webhook URL?**
+
+Go to yourteam.slack.com/apps/build/custom-integration and click on *Incoming Webhooks*, then select a channel or user you want to post your messages to.
+
+Once done, you’ll see your incoming webhook integration’s configuration page.
+
+Scroll down and there’ll be a Webhook URL in the format https://hooks.slack.com/services/TXXXXXXXX/BXXXXXXXX/token. Save that URL somewhere, we’ll need it later. You can further change the icon and name of the integration in this page itself.
+
+
+
 
 **things to do on my day off**
 
