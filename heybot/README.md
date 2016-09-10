@@ -169,6 +169,7 @@ LAST_ISSUE=892
 PROJECT=support
 REDMINE_TOKEN=abab3a53c34f66b92fg5cdcbb3bb95a3c78d862e
 REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
+WEBHOOK_URL=https://hooks.slack.com/services/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
 
 # optional parameters
 ISSUE_STATUS=New
