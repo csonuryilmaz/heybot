@@ -1,9 +1,18 @@
 package operation;
 
+import com.taskadapter.redmineapi.RedmineException;
+import com.taskadapter.redmineapi.RedmineManager;
+import com.taskadapter.redmineapi.bean.Issue;
+import com.taskadapter.redmineapi.bean.IssueStatus;
+import com.taskadapter.redmineapi.bean.Project;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
 
 /**
@@ -185,4 +194,76 @@ public abstract class Operation
 	return null;
     }
 
+    //<editor-fold defaultstate="collapsed" desc="REDMINE">
+    protected int tyrGetIssueStatusId(RedmineManager redmineManager, String issueStatus)
+    {
+	Locale trLocale = new Locale("tr-TR");
+
+	try
+	{
+	    List<IssueStatus> list = redmineManager.getIssueManager().getStatuses();
+	    for (IssueStatus status : list)
+	    {
+		if (status.getName().toLowerCase(trLocale).equals(issueStatus.toLowerCase(trLocale)))
+		{
+		    return status.getId();
+		}
+	    }
+	}
+	catch (RedmineException ex)
+	{
+	    System.err.println("Ooops! Couldn't get issue statuses.(" + ex.getMessage() + ")");
+	}
+
+	return 0; // not found
+    }
+
+    protected int tryGetProjectId(RedmineManager redmineManager, String projectName)
+    {
+	Locale trLocale = new Locale("tr-TR");
+
+	try
+	{
+	    List<Project> projects = redmineManager.getProjectManager().getProjects();
+	    for (Project project : projects)
+	    {
+		if (project.getName().toLowerCase(trLocale).equals(projectName.toLowerCase(trLocale)))
+		{
+		    return project.getId();
+		}
+	    }
+	}
+	catch (RedmineException ex)
+	{
+	    System.err.println("Ooops! Couldn't get projects.(" + ex.getMessage() + ")");
+	}
+
+	return 0; // not found
+    }
+
+    protected List<Issue> getProjectIssues(RedmineManager redmineManager, int filterProjectId, int filterIssueStatusId, int offset, int limit, String sort)
+    {
+
+	HashMap<String, String> params = new HashMap<>();
+	params.put("project_id", Integer.toString(filterProjectId));
+	params.put("status_id", Integer.toString(filterIssueStatusId));
+
+	// default
+	params.put("offset", Integer.toString(offset));
+	params.put("limit", Integer.toString(limit));
+	params.put("sort", sort);
+
+	try
+	{
+	    return redmineManager.getIssueManager().getIssues(params).getResults();
+	}
+	catch (RedmineException ex)
+	{
+	    System.err.println("Ooops! Couldn't get issues.(" + ex.getMessage() + ")");
+	}
+
+	return new ArrayList<>();
+    }
+
+//</editor-fold>
 }

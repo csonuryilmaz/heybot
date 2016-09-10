@@ -1,11 +1,13 @@
 package heybot;
 
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.Properties;
+import operation.CheckNew;
 import operation.Cleanup;
 import operation.Upload;
 import operation.Review;
@@ -85,6 +87,7 @@ public class heybot
 	else
 	{
 	    tryDoOperation(prop, operation);
+	    prop.store(new FileOutputStream(hbFile), "Last runtime:");
 	}
     }
 
@@ -102,6 +105,9 @@ public class heybot
 		break;
 	    case "review":
 		new Review().execute(prop);
+		break;
+	    case "check-new":
+		new CheckNew().execute(prop);
 		break;
 	    default:
 		System.err.println("Ooops! Unsupported operation. Please check version and manual.");

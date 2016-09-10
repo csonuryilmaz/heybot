@@ -8,8 +8,6 @@ import com.taskadapter.redmineapi.bean.IssueStatus;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Operaiton: Review.

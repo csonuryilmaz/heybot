@@ -1,0 +1,145 @@
+package operation;
+
+import com.github.seratch.jslack.Slack;
+import com.github.seratch.jslack.api.model.Attachment;
+import com.github.seratch.jslack.api.model.Field;
+import com.github.seratch.jslack.api.webhook.Payload;
+import com.github.seratch.jslack.api.webhook.WebhookResponse;
+import com.taskadapter.redmineapi.RedmineManager;
+import com.taskadapter.redmineapi.RedmineManagerFactory;
+import com.taskadapter.redmineapi.bean.Issue;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
+
+/**
+ *
+ * @author onuryilmaz
+ */
+public class CheckNew extends Operation
+{
+
+    private RedmineManager redmineManager;
+
+    @Override
+    public void execute(Properties prop)
+    {
+	String lastIssueId = prop.getProperty("LAST_ISSUE");
+	String projectName = prop.getProperty("PROJECT");
+	String redmineAccessToken = prop.getProperty("REDMINE_TOKEN");
+	String redmineUrl = prop.getProperty("REDMINE_URL");
+	String slackWebHookUrl = prop.getProperty("WEBHOOK_URL");
+	// optional
+	String issueStatus = prop.getProperty("ISSUE_STATUS");
+
+	// default values
+	int filterLastIssueId = 0;
+	if (lastIssueId != null && lastIssueId.length() > 0)
+	{
+	    filterLastIssueId = Integer.parseInt(lastIssueId);
+	}
+
+	if (isParamatersNotEmpty(lastIssueId, projectName, redmineAccessToken, redmineUrl, slackWebHookUrl))
+	{
+	    // connect redmine
+	    redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
+
+	    List<Issue> issues = getIssues(issueStatus, projectName, filterLastIssueId);
+	    if (issues.size() > 0)
+	    {
+		for (int i = issues.size() - 1; i >= 0; i--)
+		{// notify issues ascending
+		    notifySlack(slackWebHookUrl, issues.get(i), redmineUrl, projectName);
+		}
+
+		prop.setProperty("LAST_ISSUE", Integer.toString(issues.get(0).getId()));
+	    }
+	    else
+	    {
+		System.out.println("There is no new issue is detected.");
+	    }
+	}
+    }
+
+    private List<Issue> getIssues(String issueStatus, String projectName, int filterLastIssueId)
+    {
+	int filterIssueStatusId = 0;
+	if (issueStatus != null && issueStatus.length() > 0)
+	{
+	    filterIssueStatusId = tyrGetIssueStatusId(redmineManager, issueStatus);
+	}
+	int filterProjectId = tryGetProjectId(redmineManager, projectName);
+
+	List<Issue> issues = getProjectIssues(redmineManager, filterProjectId, filterIssueStatusId, 0, 10, "id:desc");
+
+	if (filterLastIssueId > 0)
+	{// filter
+	    return filterIssues(issues, filterLastIssueId);
+	}
+
+	return issues;
+    }
+
+    private boolean isParamatersNotEmpty(String lastIssueId, String projectName, String redmineAccessToken, String redmineUrl, String slackWebHookUrl)
+    {
+	if (lastIssueId == null || projectName == null || redmineAccessToken == null || redmineUrl == null || slackWebHookUrl == null || lastIssueId.length() == 0 || projectName.length() == 0 || redmineAccessToken.length() == 0 || redmineUrl.length() == 0 || slackWebHookUrl.length() == 0)
+	{
+	    System.err.println("Ooops! Missing required parameters.");
+	    return false;
+	}
+
+	return true;// :)
+    }
+
+    private List<Issue> filterIssues(List<Issue> issues, int filterIssueStatusId)
+    {
+	List<Issue> filteredIssues = new ArrayList<>();
+	for (Issue issue : issues)
+	{
+	    if (issue.getId() > filterIssueStatusId)
+	    {
+		filteredIssues.add(issue);
+	    }
+	}
+
+	return filteredIssues;
+    }
+
+    private void notifySlack(String slackWebHookUrl, Issue issue, String redmineUrl, String projectName)
+    {
+	Attachment attachment = Attachment.builder().text(issue.getSubject())
+		.pretext("Heads up! ~" + projectName + "~" + " has a new issue.")
+		.color("#36a64f")
+		.fallback("New issue detected by check-new operation of heybot.")
+		.title("#" + issue.getId())
+		.titleLink(redmineUrl + "/issues/" + issue.getId())
+		.footer(issue.getAuthorName())
+		.fields(new ArrayList<Field>())
+		.build();
+
+	ArrayList<Attachment> attachments = new ArrayList<Attachment>()
+	{
+	};
+	attachments.add(attachment);
+
+	Payload payload = Payload.builder()
+		.attachments(attachments)
+		.build();
+
+	WebhookResponse response;
+	try
+	{
+	    System.out.print("#" + issue.getId() + ": ");
+	    response = Slack.getInstance().send(slackWebHookUrl, payload);
+
+	    System.out.println(response.toString());
+	}
+	catch (IOException ex)
+	{
+	    System.err.println("Ooops! Slack notification problem! (" + ex.getMessage() + ")");
+	}
+
+    }
+
+}
