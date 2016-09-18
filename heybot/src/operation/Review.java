@@ -30,6 +30,7 @@ public class Review extends Operation
 	String svnBranchDir = prop.getProperty("SUBVERSION_PATH");
 	String redmineAccessToken = prop.getProperty("REDMINE_TOKEN");
 	String redmineUrl = prop.getProperty("REDMINE_URL");
+	String mergeRoot = prop.getProperty("MERGE_ROOT");
 
 	if (issueId != null && targetStatus != null && svnBranchDir != null && redmineAccessToken != null && redmineUrl != null)
 	{
@@ -48,7 +49,7 @@ public class Review extends Operation
 	    {
 		if (isIssueStatusEligible(issue, sourceStatus, targetStatus))
 		{
-		    merge(localWorkingDir, svnBranchDir, issueId);
+		    merge(localWorkingDir, svnBranchDir, issueId, mergeRoot);
 		    setIssueStatus(issue, targetStatus);
 		}
 		else
@@ -102,7 +103,7 @@ public class Review extends Operation
 	return currentStatus.equals(statusWillBe.toLowerCase(trLocale));
     }
 
-    private void merge(String localWorkingDir, String svnBranchDir, String issueId)
+    private void merge(String localWorkingDir, String svnBranchDir, String issueId, String mergeRoot)
     {
 	String svnCommand = tryExecute("which svn");
 
@@ -123,7 +124,11 @@ public class Review extends Operation
 	System.out.println(tryExecute(svnCommand + " up " + localWorkingDir));
 	System.out.println();
 	System.out.println("[ Merging Changes From Branch ]");
-	System.out.println(tryExecute(svnCommand + " merge --accept postpone " + getMergeSourceDir(svnBranchDir, issueId, tryGetRepoRootDir(svnCommand, localWorkingDir)) + " " + localWorkingDir));
+	if (mergeRoot == null || mergeRoot.length() == 0)
+	{
+	    mergeRoot = tryGetRepoRootDir(svnCommand, localWorkingDir);
+	}
+	System.out.println(tryExecute(svnCommand + " merge --accept postpone " + getMergeSourceDir(svnBranchDir, issueId, mergeRoot) + " " + localWorkingDir));
 	System.out.println();
 	System.out.println("[ Latest Status in Local Working Copy ]");
 	System.out.println(tryExecute(svnCommand + " st " + localWorkingDir));
@@ -150,10 +155,11 @@ public class Review extends Operation
 	    {
 		issue.setStatusId(targetStatusId);
 		redmineManager.getIssueManager().update(issue);
+		System.out.println(System.getProperty("line.separator") + "[Success]: Issue status is updated to " + targetStatus + ".");
 	    }
 	    else
 	    {
-		System.out.println("[Info]: Issue status is already " + targetStatus + ".");
+		System.out.println(System.getProperty("line.separator") + "[Info]: Issue status is already " + targetStatus + ".");
 	    }
 	}
 	catch (RedmineException ex)

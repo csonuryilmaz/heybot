@@ -78,7 +78,7 @@ public class Cleanup extends Operation
 	    {
 		System.out.println("ISSUE: " + issueId + " is closed.");
 
-		deleteBranchFromSvnRepository(svnCommand, svnBranchDirectory, branch);
+		deleteBranchFromSvnRepository(svnCommand, svnBranchDirectory, branch, issueId);
 		deleteBranch(localWorkingDirectory, branch);
 
 		if (--max <= 0)
@@ -176,7 +176,7 @@ public class Cleanup extends Operation
 	return null; // unknown!
     }
 
-    private void deleteBranchFromSvnRepository(String svnCommand, String svnBranchDirectory, String branch)
+    private void deleteBranchFromSvnRepository(String svnCommand, String svnBranchDirectory, String branch, int issueId)
     {
 	String path;
 	if (svnBranchDirectory.endsWith("/"))
@@ -191,7 +191,7 @@ public class Cleanup extends Operation
 	System.out.println("Deleting from " + path + "  ...");
 	if (tryExecute(new String[]
 	{
-	    svnCommand, "delete", path, "-m", "Branch is deleted by *heybot* cleanup."
+	    svnCommand, "delete", path, "-m", "#" + issueId + " Branch is deleted by *heybot* cleanup."
 	}))
 	{
 	    System.out.println("  [✓]");
