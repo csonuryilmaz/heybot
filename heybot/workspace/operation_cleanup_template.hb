@@ -3,7 +3,7 @@ OPERATION=cleanup
 
 # required parameters
 LOCAL_PATH=
-SUBVERSION_PATH=
+STATUS=
 REDMINE_TOKEN=
 REDMINE_URL=
 
