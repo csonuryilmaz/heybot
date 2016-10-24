@@ -66,12 +66,12 @@ SOURCE_PATH=/Users/smith/NetBeansProjects/myproject/
 	
 **2. OPERATION= Cleanup**
 
-It deletes *closed* issues (branches) from local working directory and subversion. It is meaningful if you use *one issue is resolved in one branch* paradigm.
+It deletes issues (branches) which is *closed*,*deployed* or any status you defined, from local working directory. By deleting passive branches it saves your disk space. It is meaningful when you use *one issue is resolved in one branch* paradigm.
 
 Required parameters:
 
 - LOCAL_PATH= Branch local working directory used as workspace.
-- SUBVERSION_PATH= Branch subversion directory where all branches are kept.
+- STATUS= Status/Statuses to check for cleanup operation.(comma seperated)
 - REDMINE_TOKEN= Redmine API access key taken from [my account page](http://www.redmine.org/projects/redmine/wiki/RedmineAccounts).
 - REDMINE_URL= Redmine API url. (most of the time this is root url of your redmine installation)
 
