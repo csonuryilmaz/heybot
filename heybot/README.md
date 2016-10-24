@@ -89,7 +89,7 @@ OPERATION=cleanup
 
 # required parameters
 LOCAL_PATH=/Users/smith/NetBeansProjects/web/branch
-SUBVERSION_PATH=https://test.sourcerepo.com/test/web/branch
+STATUS=Closed,Deployed
 REDMINE_TOKEN=abab3a53c34f66b92fg5cdcbb3bb95a3c78d862e
 REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
 
