@@ -177,7 +177,11 @@ WEBHOOK_URL=https://hooks.slack.com/services/T0VSADVPB/B28037H5L/xH61HbZAsJUzicA
 ISSUE_STATUS=New
 
 ```
+Also you can schedule this operation with a crontab entry. For example, below entry will check new issues at 5 minutes interval;
 
+```
+*/5 * * * * /usr/local/bin/heybot -d check_new.hb 1> /dev/null 2> /var/www/html/heybot.log
+```
 
 ###### Notes:
 
