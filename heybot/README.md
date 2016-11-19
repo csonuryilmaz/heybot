@@ -98,9 +98,39 @@ LIMIT=10
 
 ```
 	
-**3. Deploy**
+**3. Cleanup-Svn**
 
-*todo*
+It deletes issues which is *closed*,*deployed* or any status you defined, from subversion branches path. By deleting passive branches it removes some garbage from your subversion. It is meaningful when you use *one issue is resolved in one branch* paradigm.
+
+Required parameters:
+
+- BRANCH_PATH= Subversion branch path that you keep your branches.
+- STATUS= Status/Statuses to check for cleanup operation.(comma seperated)
+- REDMINE_TOKEN= Redmine API access key taken from [my account page](http://www.redmine.org/projects/redmine/wiki/RedmineAccounts).
+- REDMINE_URL= Redmine API url. (most of the time this is root url of your redmine installation)
+
+Optional parameters:
+
+- LIMIT= Maximum count to delete branches. If not given or empty, *unlimited* is assumed.
+
+Example:
+
+```
+# File: remove_done_branches.hb
+
+# operation
+OPERATION=cleanup
+
+# required parameters
+BRANCH_PATH=https://test.sourcerepo.com/test/web/branch
+STATUS=Closed,Deployed
+REDMINE_TOKEN=abab3a53c34f66b92fg5cdcbb3bb95a3c78d862e
+REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
+
+# optional parameters
+LIMIT=10
+
+```
 
 **4. OPERATION= Review**
 
@@ -142,7 +172,7 @@ MERGE_ROOT=/myproject
 
 ```
 
-**4. OPERATION= Check-New**
+**5. OPERATION= Check-New**
 
 It checks whether *redmine* has new issues with given status(optional) and sends a notification message to defined *slack* channel/user. (Post to channel configuration is done from slack panel. Please, check out below notes.) For example; you can get notifications about newly added issues from a redmine project.
 
