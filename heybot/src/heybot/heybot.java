@@ -9,6 +9,7 @@ import java.util.Locale;
 import java.util.Properties;
 import operation.CheckNew;
 import operation.Cleanup;
+import operation.CleanupSvn;
 import operation.Upload;
 import operation.Review;
 import org.apache.commons.cli.CommandLine;
@@ -27,7 +28,7 @@ import org.apache.commons.cli.ParseException;
 public class heybot
 {
 
-    private final static String VERSION = "1.6.2.0";
+    private final static String VERSION = "1.7.0.0";
     private static final String NEWLINE = System.getProperty("line.separator");
 
     /**
@@ -109,6 +110,9 @@ public class heybot
 	    case "check-new":
 		new CheckNew().execute(prop);
 		break;
+	    case "cleanup-svn":
+		new CleanupSvn().execute(prop);
+		break;
 	    default:
 		System.err.println("Ooops! Unsupported operation. Please check version and manual.");
 		break;
@@ -138,7 +142,7 @@ public class heybot
     //<editor-fold defaultstate="collapsed" desc="help">
     private static final String HEADER = NEWLINE + "Designed to help developers on their day-to-day development activities. Works in subversion and redmine ecosystem." + NEWLINE + NEWLINE;
 
-    private static final String FOOTER = NEWLINE + "For additional information, see " + "https://github.com/csonuryilmaz/utilities/tree/master/heybot" + NEWLINE + NEWLINE + "Version: " + VERSION + NEWLINE + NEWLINE;
+    private static final String FOOTER = NEWLINE + "For additional information, see " + "https://github.com/csonuryilmaz/projects/tree/master/heybot" + NEWLINE + NEWLINE + "Version: " + VERSION + NEWLINE + NEWLINE;
 
     private static void printHelp(Options options)
     {

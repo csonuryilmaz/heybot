@@ -1,0 +1,14 @@
+# operation
+OPERATION=review
+
+# required parameters
+ISSUE=
+ISSUE_STATUS_TO_UPDATE=
+SUBVERSION_PATH=
+REDMINE_TOKEN=
+REDMINE_URL=
+
+# optional parameters
+SOURCE_PATH=
+ISSUE_STATUS_SHOULD_BE=
+MERGE_ROOT=
