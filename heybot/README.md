@@ -98,7 +98,7 @@ LIMIT=10
 
 ```
 	
-**3. Cleanup-Svn**
+**3. OPERATION= Cleanup-Svn**
 
 It deletes issues which is *closed*,*deployed* or any status you defined, from subversion branches path. By deleting passive branches it removes some garbage from your subversion. It is meaningful when you use *one issue is resolved in one branch* paradigm.
 
@@ -213,6 +213,70 @@ Also you can schedule this operation with a crontab entry. For example, below en
 */5 * * * * /usr/local/bin/heybot -d check_new.hb 1> /dev/null 2> /var/www/html/heybot.log
 ```
 
+**6. OPERATION= Sync-Issue**
+
+In our software development life cycle, we have a redmine project which is used like a _ticket system_ for our customers. When they discover a bug or need a revision, they open a new issue on that redmine project. Let's name it **support** project. All those issues on **support** project are physically related to development issues which reside in our internal development projects. Although life-cycle of a typical development issue is very detailed, life-cycle of a typical **support** issue is very simple: New -> In Progress -> Closed. (Sometimes it can have this cycle when it's paused for some time: In Progress -> On Hold -> In Progress) These states are enough for customers to track their issues roughly. When they need to see the details, they can open an issue and look at detailed statuses of related issues just in a minute.
+
+Although we manage and update statuses of issues at our internal development projects very often in order to track our internal process, we don't have any time to sync state of internal issues to their related **support** issues. This process contains not only syncing statuses but also adding internal issues' assignees as watchers to support issues and updating start dates, end dates of support issues from internal issues correctly. Why adding assignee as watcher? Because developer, who's working with internal issue, should get latest changes and notifications from its related support issue in order to get things done correctly and on time. Why updating start and end dates? Because most of the issues aren't handled as soon as it's opened. They wait in queue for days and sometimes weeks before they are handled.
+
+This operation is built to help us manage this mechanical process. Goal is to automatically manage status, assignee-watcher, start date and end date of an **support** issue by processing its related internal or development issues.
+
+Required Parameters:
+
+- SUPPORT_PROJECT= Support or ticket project name which is used by customers. (N)
+- SUPPORT_NEW_STATUS= Support status which is corresponding to **new** status.
+- SUPPORT_IN_PROGRESS_STATUS= Support status which is corresponding to **in progress** status.
+- SUPPORT_ON_HOLD_STATUS= Support status which is corresponding to **on hold** status.
+- SUPPORT_CLOSED_STATUS= Support status which is corresponding to **closed** status.
+- INTERNAL_NEW_STATUS= Internal statuses which are corresponding to **new** status of SUPPORT. (N)
+- INTERNAL_IN_PROGRESS_STATUS=  Internal statuses which are corresponding to **in progress** status of SUPPORT. (N)
+- INTERNAL_ON_HOLD_STATUS= Internal statuses which are corresponding to **on hold** status of SUPPORT. (N)
+- INTERNAL_CLOSED_STATUS= Internal statuses which are corresponding to **closed** status of SUPPORT. (N)
+- SUPPORT_WATCHER= Internal issue fields to check as support issue watcher. (N)
+- REDMINE_TOKEN= Redmine API access key taken from [my account page](http://www.redmine.org/projects/redmine/wiki/RedmineAccounts).
+- REDMINE_URL= Redmine API url. (most of the time this is root url of your redmine installation)
+
+Internal Parameters:
+
+- LAST_CHECK_TIME= Last execution time of this operation. (This parameter will be modified by *heybot* after each execution. It's designed to improve efficiency of the operation. It will process changes from last execution time. So you can execute the operation very often, in short durations.)
+
+Notes:
+
+- **(N)** If there are more than one value to enter, you can write all of them as comma-separated values. Please check examples.
+- **NEW** In order to update *support* issue as *new* status, **all** of the related *internal* issues must be in *new* status.
+- **IN_PROGRESS** In order to update *support* issue as *in progress* status **one** of the related *internal* issues is enough to be in *in progress* status.
+- **ON_HOLD** In order to update *support* issue as *on hold* status **one** of the related *internal* issues is enough to be in *on hold* status.
+- **CLOSED** In order to update *support* issue as *closed* status, **all** of the related *internal* issues must be in *closed* status.
+- It detects **start date** from *in progress* status logs of related internal issues. Minimum internal *in progress* date will set as start date of support issue.
+- It detects **due date** from *closed* status logs of related internal issues. Maximum internal *closed* date will set as due date of support issue.
+- It maintains watchers of support issues automatically. First detects all watcher candidates from internal issues defined by SUPPORT_WATCHER fields. Then compares them with support issue watchers. After comparison it adds or deletes watchers.
+
+Example:
+
+```
+# File: sync_support_issue.hb
+
+# operation
+OPERATION=sync-issue
+
+# required parameters
+SUPPORT_PROJECT=Support
+SUPPORT_NEW_STATUS=New
+SUPPORT_IN_PROGRESS_STATUS=In Progress
+SUPPORT_ON_HOLD_STATUS=Feedback
+SUPPORT_CLOSED_STATUS=Closed
+INTERNAL_NEW_STATUS=New
+INTERNAL_IN_PROGRESS_STATUS=Rework,In Progress,Resolved,In Review,Reviewed,In Test,Accepted
+INTERNAL_ON_HOLD_STATUS=Feedback
+INTERNAL_CLOSED_STATUS=Closed,Canceled,Deployed
+SUPPORT_WATCHER=Assignee,Reviewer
+REDMINE_TOKEN=abab3a53c34f66b92fg5cdcbb3bb95a3c78d862e
+REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
+
+# internal parameters
+LAST_CHECK_TIME=Sat Nov 19 15:45:11 EET 2016
+```
+
 ###### Notes:
 
 **1. How to obtain slack incoming webhook URL?**
@@ -229,8 +293,5 @@ Scroll down and there’ll be a Webhook URL in the format https://hooks.slack.co
 **things to do on my day off**
 
 - [ ] Send new version is deployed e-mail to some recipients like newsletter when a version is deployed. (after deploy operation)
-- [ ] Auto sync start date (in progress),end date (deployed/closed) and *status* with related issues. Support <--> Other projects (web,mobile,cronint)
 - [ ] Auto add related issue's assignee to other related issue's watcher list. Support <--> Other projects (web,mobile,cronint)
-- [ ] When a branch is detected in a repository then auto-start the related issue.
-- [ ] Cleanup: Append issue number to commit messages.
 - [ ] Release script to execute when heybot new version is ready.
