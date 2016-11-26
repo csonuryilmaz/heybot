@@ -12,6 +12,7 @@ import operation.Cleanup;
 import operation.CleanupSvn;
 import operation.Upload;
 import operation.Review;
+import operation.SyncIssue;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -28,7 +29,7 @@ import org.apache.commons.cli.ParseException;
 public class heybot
 {
 
-    private final static String VERSION = "1.7.0.0";
+    private final static String VERSION = "1.8.0.0";
     private static final String NEWLINE = System.getProperty("line.separator");
 
     /**
@@ -112,6 +113,9 @@ public class heybot
 		break;
 	    case "cleanup-svn":
 		new CleanupSvn().execute(prop);
+		break;
+	    case "sync-issue":
+		new SyncIssue().execute(prop);
 		break;
 	    default:
 		System.err.println("Ooops! Unsupported operation. Please check version and manual.");

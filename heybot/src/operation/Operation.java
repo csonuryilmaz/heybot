@@ -9,11 +9,19 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
+import java.util.TimeZone;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Base class for all operations in operation package.
@@ -22,6 +30,21 @@ import java.util.Properties;
  */
 public abstract class Operation
 {
+
+    private final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    private final Locale trLocale = new Locale("tr-TR");
+
+    protected Operation(String[] mandatoryParameters)
+    {
+	this.mandatoryParameters = mandatoryParameters;
+	dateTimeFormat.setTimeZone(TimeZone.getTimeZone("Asia/Baghdad"));
+    }
+
+    protected Operation()
+    {
+	this.mandatoryParameters = null;
+	dateTimeFormat.setTimeZone(TimeZone.getTimeZone("Asia/Baghdad"));
+    }
 
     //<editor-fold defaultstate="collapsed" desc="execute shell command">
     protected String tryExecute(String command)
@@ -265,5 +288,75 @@ public abstract class Operation
 	return new ArrayList<>();
     }
 
+//</editor-fold>
+    //<editor-fold defaultstate="collapsed" desc="PARAMETERS">
+    protected final String[] mandatoryParameters;
+
+    protected boolean areMandatoryParametersNotEmpty(Properties props)
+    {
+	if (mandatoryParameters != null)
+	{
+	    String value;
+	    for (String parameter : mandatoryParameters)
+	    {
+		value = props.getProperty(parameter);
+		if (value == null || value.trim().length() == 0)
+		{
+		    System.err.println("Ooops! Missing required parameter.(" + parameter + ")");
+		    return false;
+		}
+	    }
+	}
+
+	return true;
+    }
+
+    protected String getParameterString(Properties props, String parameter, boolean isLowerCased)
+    {
+	String sValue = props.getProperty(parameter);
+	if (sValue != null)
+	{
+	    sValue = sValue.trim();
+	    if (isLowerCased)
+	    {
+		sValue = sValue.toLowerCase(trLocale);
+	    }
+	}
+
+	return sValue;
+    }
+
+    protected String[] getParameterStringArray(Properties props, String parameter, boolean isLowerCased)
+    {
+	return getParameterString(props, parameter, isLowerCased).split(",");
+    }
+
+    protected HashSet<String> getParameterStringHash(Properties props, String parameter, boolean isLowerCased)
+    {
+	return new HashSet<>(Arrays.asList(getParameterStringArray(props, parameter, isLowerCased)));
+    }
+
+    protected Date getParameterDateTime(Properties props, String parameter)
+    {
+	String sValue = getParameterString(props, parameter, false);
+	if (sValue != null && sValue.length() > 0)
+	{
+	    try
+	    {
+		return dateTimeFormat.parse(sValue);
+	    }
+	    catch (ParseException ex)
+	    {
+		System.err.println("Ooops! Date time value could not be parsed. (" + sValue + ") (" + ex.getMessage() + ")");
+	    }
+	}
+
+	return null;
+    }
+
+    protected void setParameterDateTime(Properties props, String parameter, Date dValue)
+    {
+	props.setProperty(parameter, dateTimeFormat.format(dValue));
+    }
 //</editor-fold>
 }
