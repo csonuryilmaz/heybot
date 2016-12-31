@@ -228,6 +228,7 @@ Required Parameters:
 - SUPPORT_IN_PROGRESS_STATUS= Support status which is corresponding to **in progress** status.
 - SUPPORT_ON_HOLD_STATUS= Support status which is corresponding to **on hold** status.
 - SUPPORT_CLOSED_STATUS= Support status which is corresponding to **closed** status.
+- INTERNAL_PROJECT= Internal development projects which are used by your team. (N)
 - INTERNAL_NEW_STATUS= Internal statuses which are corresponding to **new** status of SUPPORT. (N)
 - INTERNAL_IN_PROGRESS_STATUS=  Internal statuses which are corresponding to **in progress** status of SUPPORT. (N)
 - INTERNAL_ON_HOLD_STATUS= Internal statuses which are corresponding to **on hold** status of SUPPORT. (N)
@@ -265,6 +266,7 @@ SUPPORT_NEW_STATUS=New
 SUPPORT_IN_PROGRESS_STATUS=In Progress
 SUPPORT_ON_HOLD_STATUS=Feedback
 SUPPORT_CLOSED_STATUS=Closed
+INTERNAL_PROJECT=web,mobile,cronint
 INTERNAL_NEW_STATUS=New
 INTERNAL_IN_PROGRESS_STATUS=Rework,In Progress,Resolved,In Review,Reviewed,In Test,Accepted
 INTERNAL_ON_HOLD_STATUS=Feedback
@@ -293,5 +295,4 @@ Scroll down and there’ll be a Webhook URL in the format https://hooks.slack.co
 **things to do on my day off**
 
 - [ ] Send new version is deployed e-mail to some recipients like newsletter when a version is deployed. (after deploy operation)
-- [ ] Auto add related issue's assignee to other related issue's watcher list. Support <--> Other projects (web,mobile,cronint)
 - [ ] Release script to execute when heybot new version is ready.
