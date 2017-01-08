@@ -1,8 +1,11 @@
 package operation;
 
+import com.taskadapter.redmineapi.Include;
+import com.taskadapter.redmineapi.Params;
 import com.taskadapter.redmineapi.RedmineException;
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.bean.Issue;
+import com.taskadapter.redmineapi.bean.IssueRelation;
 import com.taskadapter.redmineapi.bean.IssueStatus;
 import com.taskadapter.redmineapi.bean.Project;
 import java.io.BufferedReader;
@@ -13,6 +16,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -32,6 +36,7 @@ public abstract class Operation
 {
 
     private final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    private final SimpleDateFormat dateTimeFormatOnlyDate = new SimpleDateFormat("yyyy-MM-dd");
     private final Locale trLocale = new Locale("tr-TR");
 
     protected Operation(String[] mandatoryParameters)
@@ -288,6 +293,102 @@ public abstract class Operation
 	return new ArrayList<>();
     }
 
+    protected Issue[] getProjectIssues(RedmineManager redmineManager, Project[] filterProjects, Date filterUpdatedOnStart, Date filterUpdatedOnEnd, int offset, int limit, String sort)
+    {
+
+	com.taskadapter.redmineapi.Params params = new Params().add("set_filter", "1");
+
+	params.add("f[]", "project_id");
+	params.add("op[project_id]", "=");
+	for (Project project : filterProjects)
+	{
+	    params.add("v[project_id][]", Integer.toString(project.getId()));
+	}
+
+	params.add("f[]", "updated_on");
+	params.add("op[updated_on]", "><");
+	params.add("v[updated_on][]", dateTimeFormatOnlyDate.format(filterUpdatedOnStart));
+	params.add("v[updated_on][]", dateTimeFormatOnlyDate.format(filterUpdatedOnEnd));
+
+	// default
+	params.add("offset", Integer.toString(offset));
+	params.add("limit", Integer.toString(limit));
+	params.add("sort", sort);
+
+	try
+	{
+	    List<Issue> issues = redmineManager.getIssueManager().getIssues(params).getResults();
+
+	    return issues.toArray(new Issue[issues.size()]);
+	}
+	catch (RedmineException ex)
+	{
+	    System.err.println("Ooops! Couldn't get issues.(" + ex.getMessage() + ")");
+	}
+
+	return new Issue[0];
+    }
+
+    protected Project[] getProjects(RedmineManager redmineManager, String[] projectNames)
+    {
+	List<Project> projects = new ArrayList<>();
+	for (String projectName : projectNames)
+	{
+	    int projectId = tryGetProjectId(redmineManager, projectName);
+	    if (projectId > 0)
+	    {
+		try
+		{
+		    projects.add(redmineManager.getProjectManager().getProjectById(projectId));
+		}
+		catch (RedmineException ex)
+		{
+		    System.err.println("Ooops! Project not found by id " + projectId + " (" + projectName + ")." + ex.getMessage());
+		}
+	    }
+	}
+
+	return projects.toArray(new Project[projects.size()]);
+    }
+
+    protected Collection<IssueRelation> getIssueRelations(RedmineManager redmineManager, int issueId)
+    {
+	Issue issue = getIssue(redmineManager, issueId, Include.relations);
+	if (issue != null)
+	{
+	    return issue.getRelations();
+	}
+
+	return new ArrayList<>();
+    }
+
+    protected Issue getIssue(RedmineManager redmineManager, int issueId, Include... include)
+    {
+	try
+	{
+	    return redmineManager.getIssueManager().getIssueById(issueId, include);
+	}
+	catch (RedmineException ex)
+	{
+	    System.err.println("Ooops! Relations could not be get for issue #" + issueId + ". (" + ex.getMessage() + ")");
+	}
+
+	return null;
+    }
+
+    protected boolean isIssueInProject(Issue issue, Project[] projects)
+    {
+	for (Project project : projects)
+	{
+	    if ((int) issue.getProjectId() == project.getId())
+	    {
+		return true;
+	    }
+	}
+
+	return false;
+    }
+
 //</editor-fold>
     //<editor-fold defaultstate="collapsed" desc="PARAMETERS">
     protected final String[] mandatoryParameters;
@@ -358,5 +459,17 @@ public abstract class Operation
     {
 	props.setProperty(parameter, dateTimeFormat.format(dValue));
     }
+//</editor-fold>
+
+    //<editor-fold defaultstate="collapsed" desc="DEBUG">
+    protected void debugIssuesToString(Issue[] issues)
+    {
+	System.out.println("total issues: " + issues.length);
+	for (int i = 0; i < issues.length; i++)
+	{
+	    System.out.println("issue[" + i + "]:\t #" + issues[i].getId() + " - " + issues[i].getSubject());
+	}
+    }
+
 //</editor-fold>
 }
