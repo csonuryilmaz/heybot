@@ -7,14 +7,11 @@ import com.taskadapter.redmineapi.bean.Issue;
 import com.taskadapter.redmineapi.bean.IssueStatus;
 import com.taskadapter.redmineapi.bean.Watcher;
 import com.taskadapter.redmineapi.bean.WatcherFactory;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class Diff
 {
@@ -23,9 +20,9 @@ public class Diff
 
     private final Issue issue;
 
-    private HashMap<Integer, Watcher> watchers = new HashMap<>();
+    private final HashMap<Integer, Watcher> watchers = new HashMap<>();
 
-    private HashMap<String, Integer> statusTable = new HashMap<String, Integer>()
+    private final HashMap<String, Integer> statusTable = new HashMap<String, Integer>()
     {
 	{
 	    put("total", 0);
@@ -138,7 +135,10 @@ public class Diff
     public void checkWatchers(Issue otherIssue)
     {
 	tryAddWatcher(otherIssue.getAuthorId());
-	tryAddWatcher(otherIssue.getAssigneeId());
+	if (otherIssue.getAssigneeId() != null)
+	{
+	    tryAddWatcher(otherIssue.getAssigneeId());
+	}
 
 	Collection<CustomField> customFields = otherIssue.getCustomFields();
 	for (CustomField customField : customFields)

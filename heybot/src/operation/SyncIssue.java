@@ -71,6 +71,10 @@ public class SyncIssue extends Operation
 	    String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
 
 	    Date lastCheckTime = getParameterDateTime(prop, PARAMETER_LAST_CHECK_TIME);
+	    if (lastCheckTime == null)
+	    {
+		lastCheckTime = new Date();
+	    }
 
 	    // connect redmine
 	    redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
@@ -80,11 +84,17 @@ public class SyncIssue extends Operation
 	    Project[] internalProjects = getProjects(redmineManager, getParameterStringArray(prop, PARAMETER_INTERNAL_PROJECT, true));
 	    Project[] supportProjects = getProjects(redmineManager, getParameterStringArray(prop, PARAMETER_SUPPORT_PROJECT, true));
 
+	    System.out.println("Last check time=" + dateTimeFormat.format(lastCheckTime));
+
+	    System.out.println("Getting last updated internal issues ...");
 	    Issue[] internalIssues = getLastUpdatedInternalIssues(lastCheckTime, internalProjects);
 	    //debugIssuesToString(internalIssues);
+	    System.out.println("Total=" + internalIssues.length);
 
+	    System.out.println("Getting their related support issues ...");
 	    Issue[] supportIssues = getRelatedSupportIssues(internalIssues, supportProjects);
 	    //debugIssuesToString(supportIssues);
+	    System.out.println("Total=" + supportIssues.length);
 
 	    checkSupportIssuesAgainstRelatedInternalIssues(supportIssues, internalProjects);
 

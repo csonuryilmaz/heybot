@@ -24,8 +24,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.TimeZone;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Base class for all operations in operation package.
@@ -35,8 +33,8 @@ import java.util.logging.Logger;
 public abstract class Operation
 {
 
-    private final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    private final SimpleDateFormat dateTimeFormatOnlyDate = new SimpleDateFormat("yyyy-MM-dd");
+    protected final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    protected final SimpleDateFormat dateTimeFormatOnlyDate = new SimpleDateFormat("yyyy-MM-dd");
     private final Locale trLocale = new Locale("tr-TR");
 
     protected Operation(String[] mandatoryParameters)
