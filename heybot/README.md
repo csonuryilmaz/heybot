@@ -239,7 +239,7 @@ Required Parameters:
 
 Internal Parameters:
 
-- LAST_CHECK_TIME= Last execution time of this operation. (This parameter will be modified by *heybot* after each execution. It's designed to improve efficiency of the operation. It will process changes from last execution time. So you can execute the operation very often, in short durations.)
+- LAST_CHECK_TIME= Last execution time of this operation. (This parameter will be modified by *heybot* after each execution. It's designed to improve efficiency of the operation. It will process changes from last execution time. So you can execute the operation very often, in short durations. If empty, current timestamp will be set as last check time.)
 
 Notes:
 
@@ -288,11 +288,3 @@ Go to yourteam.slack.com/apps/build/custom-integration and click on *Incoming We
 Once done, you’ll see your incoming webhook integration’s configuration page.
 
 Scroll down and there’ll be a Webhook URL in the format https://hooks.slack.com/services/TXXXXXXXX/BXXXXXXXX/token. Save that URL somewhere, we’ll need it later. You can further change the icon and name of the integration in this page itself.
-
-
-
-
-**things to do on my day off**
-
-- [ ] Send new version is deployed e-mail to some recipients like newsletter when a version is deployed. (after deploy operation)
-- [ ] Release script to execute when heybot new version is ready.
