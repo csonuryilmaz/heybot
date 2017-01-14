@@ -29,7 +29,7 @@ import org.apache.commons.cli.ParseException;
 public class heybot
 {
 
-    private final static String VERSION = "1.8.0.0";
+    private final static String VERSION = "1.8.0.3";
     private static final String NEWLINE = System.getProperty("line.separator");
 
     /**
@@ -146,7 +146,7 @@ public class heybot
     //<editor-fold defaultstate="collapsed" desc="help">
     private static final String HEADER = NEWLINE + "Designed to help developers on their day-to-day development activities. Works in subversion and redmine ecosystem." + NEWLINE + NEWLINE;
 
-    private static final String FOOTER = NEWLINE + "For additional information, see " + "https://github.com/csonuryilmaz/projects/tree/master/heybot" + NEWLINE + NEWLINE + "Version: " + VERSION + NEWLINE + NEWLINE;
+    private static final String FOOTER = NEWLINE + "For more information:" + NEWLINE + "https://github.com/csonuryilmaz/projects/tree/master/heybot" + NEWLINE + "For latest versions:" + NEWLINE + "https://github.com/csonuryilmaz/projects/releases/latest" + NEWLINE + NEWLINE + "v" + VERSION + NEWLINE;
 
     private static void printHelp(Options options)
     {

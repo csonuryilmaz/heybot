@@ -20,18 +20,36 @@ import java.util.Properties;
 public class CheckNew extends Operation
 {
 
+    //<editor-fold defaultstate="collapsed" desc="parameters">
+    // mandatory
+    private final static String PARAMETER_LAST_ISSUE = "LAST_ISSUE";
+    private final static String PARAMETER_PROJECT = "PROJECT";
+    private final static String PARAMETER_REDMINE_TOKEN = "REDMINE_TOKEN";
+    private final static String PARAMETER_REDMINE_URL = "REDMINE_URL";
+    private final static String PARAMETER_WEBHOOK_URL = "WEBHOOK_URL";
+    // optional
+    private final static String PARAMETER_ISSUE_STATUS = "ISSUE_STATUS";
+//</editor-fold>
     private RedmineManager redmineManager;
+
+    public CheckNew()
+    {
+	super(new String[]
+	{
+	    PARAMETER_LAST_ISSUE, PARAMETER_PROJECT, PARAMETER_REDMINE_TOKEN, PARAMETER_REDMINE_URL, PARAMETER_WEBHOOK_URL
+	});
+    }
 
     @Override
     public void execute(Properties prop)
     {
-	String lastIssueId = prop.getProperty("LAST_ISSUE");
-	String projectName = prop.getProperty("PROJECT");
-	String redmineAccessToken = prop.getProperty("REDMINE_TOKEN");
-	String redmineUrl = prop.getProperty("REDMINE_URL");
-	String slackWebHookUrl = prop.getProperty("WEBHOOK_URL");
+	String lastIssueId = getParameterString(prop, PARAMETER_LAST_ISSUE, false);
+	String projectName = getParameterString(prop, PARAMETER_PROJECT, true);
+	String redmineAccessToken = getParameterString(prop, PARAMETER_REDMINE_TOKEN, false);
+	String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
+	String slackWebHookUrl = getParameterString(prop, PARAMETER_WEBHOOK_URL, false);
 	// optional
-	String issueStatus = prop.getProperty("ISSUE_STATUS");
+	String issueStatus = getParameterString(prop, PARAMETER_ISSUE_STATUS, true);
 
 	// default values
 	int filterLastIssueId = 0;
@@ -40,25 +58,22 @@ public class CheckNew extends Operation
 	    filterLastIssueId = Integer.parseInt(lastIssueId);
 	}
 
-	if (isParamatersNotEmpty(lastIssueId, projectName, redmineAccessToken, redmineUrl, slackWebHookUrl))
+	// connect redmine
+	redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
+
+	List<Issue> issues = getIssues(issueStatus, projectName, filterLastIssueId);
+	if (issues.size() > 0)
 	{
-	    // connect redmine
-	    redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
-
-	    List<Issue> issues = getIssues(issueStatus, projectName, filterLastIssueId);
-	    if (issues.size() > 0)
-	    {
-		for (int i = issues.size() - 1; i >= 0; i--)
-		{// notify issues ascending
-		    notifySlack(slackWebHookUrl, issues.get(i), redmineUrl, projectName);
-		}
-
-		prop.setProperty("LAST_ISSUE", Integer.toString(issues.get(0).getId()));
+	    for (int i = issues.size() - 1; i >= 0; i--)
+	    {// notify issues ascending
+		notifySlack(slackWebHookUrl, issues.get(i), redmineUrl, projectName);
 	    }
-	    else
-	    {
-		System.out.println("There is no new issue is detected.");
-	    }
+
+	    prop.setProperty("LAST_ISSUE", Integer.toString(issues.get(0).getId()));
+	}
+	else
+	{
+	    System.out.println("There is no new issue is detected.");
 	}
     }
 
@@ -79,17 +94,6 @@ public class CheckNew extends Operation
 	}
 
 	return issues;
-    }
-
-    private boolean isParamatersNotEmpty(String lastIssueId, String projectName, String redmineAccessToken, String redmineUrl, String slackWebHookUrl)
-    {
-	if (lastIssueId == null || projectName == null || redmineAccessToken == null || redmineUrl == null || slackWebHookUrl == null || lastIssueId.length() == 0 || projectName.length() == 0 || redmineAccessToken.length() == 0 || redmineUrl.length() == 0 || slackWebHookUrl.length() == 0)
-	{
-	    System.err.println("Ooops! Missing required parameters.");
-	    return false;
-	}
-
-	return true;// :)
     }
 
     private List<Issue> filterIssues(List<Issue> issues, int filterIssueStatusId)
