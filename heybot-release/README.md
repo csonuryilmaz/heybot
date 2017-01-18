@@ -207,11 +207,6 @@ WEBHOOK_URL=https://hooks.slack.com/services/T0VSADVPB/B28037H5L/xH61HbZAsJUzicA
 ISSUE_STATUS=New
 
 ```
-Also you can schedule this operation with a crontab entry. For example, below entry will check new issues at 5 minutes interval;
-
-```
-*/5 * * * * /usr/local/bin/heybot -d check_new.hb 1> /dev/null 2> /var/www/html/heybot.log
-```
 
 **6. OPERATION= Sync-Issue**
 
@@ -288,3 +283,21 @@ Go to yourteam.slack.com/apps/build/custom-integration and click on *Incoming We
 Once done, you’ll see your incoming webhook integration’s configuration page.
 
 Scroll down and there’ll be a Webhook URL in the format https://hooks.slack.com/services/TXXXXXXXX/BXXXXXXXX/token. Save that URL somewhere, we’ll need it later. You can further change the icon and name of the integration in this page itself.
+
+**2. Running operations with scheduling.**
+
+You can schedule some operations with a crontab entry. For example, below entry will check new issues at 5 minutes interval;
+
+```
+*/5 * * * * /usr/local/bin/heybot -d check_new.hb > /var/www/html/heybot.log 2>&1
+```
+Other examples from my crontab file:
+
+```
+*/5 * * * * /usr/local/bin/heybot -d check_new.hb > /var/www/html/heybot_check_new.log 2>&1
+0 8 * * 1 /usr/local/bin/heybot -d cleanup.hb > /var/www/html/heybot_cleanup.log 2>&1
+*/10 * * * * /usr/local/bin/heybot -d sync_support.hb > /var/www/html/heybot_sync_support.log 2>&1
+```
+
+
+
