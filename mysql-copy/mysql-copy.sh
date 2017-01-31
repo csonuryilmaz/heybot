@@ -4,7 +4,7 @@
 while [[ $# -gt 1 ]]
 do
     key="$1"
-    echo "xxx"
+
     case $key in
 	-u|--user)
 	DBUSER="$2"
@@ -67,7 +67,23 @@ function cloneViews {
     openCredentialsFile
 
     MYSQL_VIEWS=$(echo "SHOW FULL TABLES WHERE Table_Type = 'VIEW'" | mysql $DBCONN $DB_OLD | tail -n +2 | awk '{ print $1 }');
-    echo $MYSQL_VIEWS
+    [ $? -ne 0 ] && exit $?;
+
+    TOTAL_COUNT=0
+    SUCCESS_COUNT=0
+    for VIEW in $MYSQL_VIEWS; do
+
+	echo -n -e "${VIEW} \t";
+	VIEW="\`${VIEW}\`";
+
+	CREATE_VIEW_SQL=$(echo "SHOW CREATE TABLE ${VIEW}" | mysql $DBCONN $DB_OLD | tail -n 1 | awk -F$'\t' '{ print $2 }' | sed -e "s/CREATE/CREATE OR REPLACE/1");
+	$(echo "${CREATE_VIEW_SQL}" | mysql $DBCONN $DB_NEW);
+
+	[ $? = 0 ] && echo "[ok]" && SUCCESS_COUNT=$((SUCCESS_COUNT+1));
+
+	TOTAL_COUNT=$((TOTAL_COUNT+1))
+    done;
+    echo "-- Summary: ${SUCCESS_COUNT}/${TOTAL_COUNT} views successfully cloned."
 
     closeCredentialsFile
 }
