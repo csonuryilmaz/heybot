@@ -90,6 +90,25 @@ function cloneViews {
 
 function cloneFunctions {
     echo "Begin functions clone (may take a while) ... "
+    logCommandLineArguments
+    openCredentialsFile
+
+    MYSQL_FUNCTIONS=$(echo "SHOW FUNCTION STATUS WHERE Db='${DB_OLD}'" | mysql $DBCONN $DB_OLD | tail -n +2 | awk '{ print $2 }');
+    [ $? -ne 0 ] && exit $?;
+
+    TOTAL_COUNT=0
+    SUCCESS_COUNT=0
+    for FUNCTION in $MYSQL_FUNCTIONS; do
+
+	echo -n -e "${FUNCTION} \t";
+
+	CREATE_FUNCTION_SQL=$(mysql $DBCONN --skip-column-names --raw --batch $DB_OLD -e "SELECT CONCAT('DROP FUNCTION IF EXISTS ${FUNCTION};\nDELIMITER //\nCREATE FUNCTION \`', specific_name, '\`(', param_list, ') RETURNS ', \`returns\`  , ' DETERMINISTIC \n', body_utf8, ' //\nDELIMITER ;\n') AS \`stmt\` FROM \`mysql\`.\`proc\` WHERE \`db\` = '${DB_OLD}' AND specific_name = '${FUNCTION}';" | mysql $DBCONN $DB_NEW);
+
+	[ $? = 0 ] && echo "[ok]" && SUCCESS_COUNT=$((SUCCESS_COUNT+1));
+
+	TOTAL_COUNT=$((TOTAL_COUNT+1))
+    done;
+    echo "-- Summary: ${SUCCESS_COUNT}/${TOTAL_COUNT} views successfully cloned."
 }
 
 function cloneProcedures {
