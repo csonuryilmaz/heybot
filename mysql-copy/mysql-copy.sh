@@ -140,6 +140,29 @@ function cloneProcedures {
 
 function cloneTriggers {
     echo "Begin triggers clone (may take a while) ... "
+    logCommandLineArguments
+    openCredentialsFile
+
+    MYSQL_TRIGGERS=$(echo "SHOW TRIGGERS" | mysql $DBCONN $DB_OLD | tail -n +2 | awk '{ print $1 }');
+    [ $? -ne 0 ] && exit $?;
+
+    TOTAL_COUNT=0
+    SUCCESS_COUNT=0
+    for TRIGGER in $MYSQL_TRIGGERS; do
+
+	echo -n -e "${TRIGGER} \t";
+	TRIGGER="\`${TRIGGER}\`";
+
+	CREATE_TRIGGER_SQL=$(echo "SHOW CREATE TRIGGER ${TRIGGER}" | mysql $DBCONN $DB_OLD | tail -n 1 | awk -F$'\t' '{ print $3 }' | sed -e "s/\r//g");
+	$(echo -e "DROP TRIGGER IF EXISTS ${TRIGGER};\nDELIMITER //\n${CREATE_TRIGGER_SQL} //\nDELIMITER ;\n" | mysql $DBCONN $DB_NEW);
+
+	[ $? = 0 ] && echo "[ok]" && SUCCESS_COUNT=$((SUCCESS_COUNT+1));
+
+	TOTAL_COUNT=$((TOTAL_COUNT+1))
+    done;
+    echo "-- Summary: ${SUCCESS_COUNT}/${TOTAL_COUNT} triggers successfully cloned."
+
+    closeCredentialsFile
 }
 
 echo "Please enter your choice:";
