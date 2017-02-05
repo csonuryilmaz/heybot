@@ -108,11 +108,34 @@ function cloneFunctions {
 
 	TOTAL_COUNT=$((TOTAL_COUNT+1))
     done;
-    echo "-- Summary: ${SUCCESS_COUNT}/${TOTAL_COUNT} views successfully cloned."
+    echo "-- Summary: ${SUCCESS_COUNT}/${TOTAL_COUNT} functions successfully cloned."
+
+    closeCredentialsFile
 }
 
 function cloneProcedures {
     echo "Begin procedures clone (may take a while) ... "
+    logCommandLineArguments
+    openCredentialsFile
+
+    MYSQL_PROCEDURES=$(echo "SHOW PROCEDURE STATUS WHERE Db='${DB_OLD}'" | mysql $DBCONN $DB_OLD | tail -n +2 | awk '{ print $2 }');
+    [ $? -ne 0 ] && exit $?;
+
+    TOTAL_COUNT=0
+    SUCCESS_COUNT=0
+    for PROCEDURE in $MYSQL_PROCEDURES; do
+
+	echo -n -e "${PROCEDURE} \t";
+
+	CREATE_PROCEDURE_SQL=$(mysql $DBCONN --skip-column-names --raw --batch $DB_OLD -e "SELECT CONCAT('DROP PROCEDURE IF EXISTS ${PROCEDURE};\nDELIMITER //\nCREATE PROCEDURE \`', specific_name, '\`(', param_list, ') LANGUAGE ', \`language\` , ' DETERMINISTIC \n CONTAINS SQL \n SQL SECURITY ', \`security_type\` , '\n', body_utf8, ' //\nDELIMITER ;\n') AS \`stmt\` FROM \`mysql\`.\`proc\` WHERE \`db\` = '${DB_OLD}' AND specific_name = '${PROCEDURE}';" | mysql $DBCONN $DB_NEW);
+
+	[ $? = 0 ] && echo "[ok]" && SUCCESS_COUNT=$((SUCCESS_COUNT+1));
+
+	TOTAL_COUNT=$((TOTAL_COUNT+1))
+    done;
+    echo "-- Summary: ${SUCCESS_COUNT}/${TOTAL_COUNT} procedures successfully cloned."
+
+    closeCredentialsFile
 }
 
 function cloneTriggers {
