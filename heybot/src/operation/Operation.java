@@ -453,6 +453,17 @@ public abstract class Operation
 	return null;
     }
 
+    protected boolean getParameterBoolean(Properties props, String parameter)
+    {
+	String sValue = getParameterString(props, parameter, true);
+	if (sValue != null && sValue.length() > 0)
+	{
+	    return Boolean.parseBoolean(sValue);
+	}
+
+	return false;
+    }
+
     protected void setParameterDateTime(Properties props, String parameter, Date dValue)
     {
 	props.setProperty(parameter, dateTimeFormat.format(dValue));

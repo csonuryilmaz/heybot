@@ -258,4 +258,14 @@ public class Diff
 
     }
 
+    public void checkStartDate(Issue targetIssue)
+    {
+	throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    public void checkDueDate(Issue targetIssue)
+    {
+	throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
 }

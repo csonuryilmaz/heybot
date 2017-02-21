@@ -35,6 +35,9 @@ public class SyncIssue extends Operation
     private final static String PARAMETER_SUPPORT_WATCHER = "SUPPORT_WATCHER";
     private final static String PARAMETER_REDMINE_TOKEN = "REDMINE_TOKEN";
     private final static String PARAMETER_REDMINE_URL = "REDMINE_URL";
+    // optional
+    private final static String PARAMETER_SUPPORT_SYNC_START_DATE = "SUPPORT_SYNC_START_DATE";
+    private final static String PARAMETER_SUPPORT_SYNC_DUE_DATE = "SUPPORT_SYNC_DUE_DATE";
     // internal
     private final static String PARAMETER_LAST_CHECK_TIME = "LAST_CHECK_TIME";
 
@@ -96,7 +99,10 @@ public class SyncIssue extends Operation
 	    //debugIssuesToString(supportIssues);
 	    System.out.println("Total=" + supportIssues.length);
 
-	    checkSupportIssuesAgainstRelatedInternalIssues(supportIssues, internalProjects);
+	    boolean syncStartDateEnabled = getParameterBoolean(prop, PARAMETER_SUPPORT_SYNC_START_DATE);
+	    boolean syncDueDateEnabled = getParameterBoolean(prop, PARAMETER_SUPPORT_SYNC_DUE_DATE);
+
+	    checkSupportIssuesAgainstRelatedInternalIssues(supportIssues, internalProjects, syncStartDateEnabled, syncDueDateEnabled);
 
 	    setParameterDateTime(prop, PARAMETER_LAST_CHECK_TIME, new Date());
 	}
@@ -130,7 +136,7 @@ public class SyncIssue extends Operation
 	return supportIssues.values().toArray(new Issue[supportIssues.values().size()]);
     }
 
-    private void checkSupportIssuesAgainstRelatedInternalIssues(Issue[] supportIssues, Project[] internalProjects)
+    private void checkSupportIssuesAgainstRelatedInternalIssues(Issue[] supportIssues, Project[] internalProjects, boolean syncStartDateEnabled, boolean syncDueDateEnabled)
     {
 	for (Issue supportIssue : supportIssues)
 	{
@@ -138,13 +144,13 @@ public class SyncIssue extends Operation
 	    Diff diff = new Diff(supportIssue);
 	    for (IssueRelation relation : relations)
 	    {
-		checkSupportIssueRelation(supportIssue, relation, internalProjects, diff);
+		checkSupportIssueRelation(supportIssue, relation, internalProjects, diff, syncStartDateEnabled, syncDueDateEnabled);
 	    }
 	    diff.apply(redmineManager);
 	}
     }
 
-    private void checkSupportIssueRelation(Issue sourceIssue, IssueRelation relation, Project[] internalProjects, Diff diff)
+    private void checkSupportIssueRelation(Issue sourceIssue, IssueRelation relation, Project[] internalProjects, Diff diff, boolean syncStartDateEnabled, boolean syncDueDateEnabled)
     {
 	if (relation.getType().equals("relates"))
 	{
@@ -163,6 +169,14 @@ public class SyncIssue extends Operation
 		System.out.println("Checking support #" + sourceIssue.getId() + " against internal #" + targetIssue.getId());
 		diff.checkStatus(targetIssue.getStatusId(), targetIssue.getStatusName());
 		diff.checkWatchers(targetIssue);
+		if (syncStartDateEnabled)
+		{
+		    diff.checkStartDate(targetIssue);
+		}
+		if (syncDueDateEnabled)
+		{
+		    diff.checkDueDate(targetIssue);
+		}
 	    }
 	}
     }
