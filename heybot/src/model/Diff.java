@@ -5,9 +5,13 @@ import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.bean.CustomField;
 import com.taskadapter.redmineapi.bean.Issue;
 import com.taskadapter.redmineapi.bean.IssueStatus;
+import com.taskadapter.redmineapi.bean.Journal;
+import com.taskadapter.redmineapi.bean.JournalDetail;
 import com.taskadapter.redmineapi.bean.Watcher;
 import com.taskadapter.redmineapi.bean.WatcherFactory;
+import java.util.Calendar;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -33,6 +37,9 @@ public class Diff
 	}
     };
 
+    private Date supportStartDate = null;
+    private Date supportDueDate = null;
+
     private static HashSet<String> newStatuses;
     private static HashSet<String> inProgressStatuses;
     private static HashSet<String> onHoldStatuses;
@@ -44,6 +51,8 @@ public class Diff
     private static int closedStatusId;
 
     private static HashSet<String> supportWatchers;
+
+    private final static HashMap<Integer, IssueStatus> statuses = new HashMap<>();
 
     public static void initialize(RedmineManager redmineManager, HashSet<String> newStatuses, HashSet<String> inProgressStatuses, HashSet<String> onHoldStatuses, HashSet<String> closedStatuses, String newStatus, String inProgressStatus, String onHoldStatus, String closedStatus, HashSet<String> supportWatchers)
     {
@@ -86,6 +95,7 @@ public class Diff
 		{
 		    Diff.closedStatusId = status.getId();
 		}
+		Diff.statuses.put(status.getId(), status);
 	    }
 	}
 	catch (RedmineException ex)
@@ -165,6 +175,14 @@ public class Diff
     {
 	applyStatus(redmineManager);
 	applyWatchers(redmineManager);
+	if (issue.getStatusId() != Diff.newStatusId)
+	{
+	    applyStartDate(redmineManager);
+	}
+	if (issue.getStatusId() == Diff.closedStatusId)
+	{
+	    applyDueDate(redmineManager);
+	}
     }
 
     private void applyStatus(RedmineManager redmineManager)
@@ -260,12 +278,120 @@ public class Diff
 
     public void checkStartDate(Issue targetIssue)
     {
-	throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	Date internalStartDate = getStartDateFromJournals(targetIssue);
+	if (internalStartDate != null)
+	{
+	    internalStartDate = trimTime(internalStartDate);
+	    if (supportStartDate == null || internalStartDate.before(supportStartDate))
+	    {
+		supportStartDate = internalStartDate;
+	    }
+	}
     }
 
     public void checkDueDate(Issue targetIssue)
     {
-	throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	Date internalDueDate = getDueDateFromJournals(targetIssue);
+	if (internalDueDate != null)
+	{
+	    internalDueDate = trimTime(internalDueDate);
+	    if (supportDueDate == null || internalDueDate.after(supportDueDate))
+	    {
+		supportDueDate = internalDueDate;
+	    }
+	}
+    }
+
+    private boolean isJournalDetailNewToInProgress(JournalDetail journalDetail)
+    {
+	if (journalDetail.getName().equals("status_id"))
+	{
+	    String oldStatus = getStatusById(journalDetail.getOldValue());
+	    String newStatus = getStatusById(journalDetail.getNewValue());
+
+	    return isStatusNew(oldStatus) && (isStatusInProgress(newStatus) || isStatusOnHold(newStatus) || isStatusClosed(newStatus));
+	}
+	return false;
+    }
+
+    private String getStatusById(String statusId)
+    {
+	return Diff.statuses.get(Integer.parseInt(statusId)).getName().toLowerCase(trLocale);
+    }
+
+    private Date getStartDateFromJournals(Issue targetIssue)
+    {
+	for (Journal journal : targetIssue.getJournals())
+	{
+	    for (JournalDetail journalDetail : journal.getDetails())
+	    {
+		if (isJournalDetailNewToInProgress(journalDetail))
+		{
+		    return journal.getCreatedOn();
+		}
+	    }
+	}
+
+	return null;
+    }
+
+    private Date getDueDateFromJournals(Issue targetIssue)
+    {
+	for (Journal journal : targetIssue.getJournals())
+	{
+	    for (JournalDetail journalDetail : journal.getDetails())
+	    {
+		if (isJournalDetailInProgressToClosed(journalDetail))
+		{
+		    return journal.getCreatedOn();
+		}
+	    }
+	}
+
+	return null;
+    }
+
+    private boolean isJournalDetailInProgressToClosed(JournalDetail journalDetail)
+    {
+	if (journalDetail.getName().equals("status_id"))
+	{
+	    String oldStatus = getStatusById(journalDetail.getOldValue());
+	    String newStatus = getStatusById(journalDetail.getNewValue());
+
+	    return isStatusClosed(newStatus) && (isStatusInProgress(oldStatus) || isStatusOnHold(oldStatus) || isStatusNew(oldStatus));
+	}
+	return false;
+    }
+
+    private void applyStartDate(RedmineManager redmineManager)
+    {
+	if (supportStartDate != null && (issue.getStartDate() == null || supportStartDate.before(issue.getStartDate())))
+	{
+	    issue.setStartDate(supportStartDate);
+	    System.out.println("Issue start date update: " + supportStartDate);
+	    updateIssue(redmineManager);
+	}
+    }
+
+    private void applyDueDate(RedmineManager redmineManager)
+    {
+	if (supportDueDate != null && (issue.getDueDate() == null || supportDueDate.after(issue.getDueDate())))
+	{
+	    issue.setDueDate(supportDueDate);
+	    System.out.println("Issue due date update: " + supportDueDate);
+	    updateIssue(redmineManager);
+	}
+    }
+
+    private Date trimTime(Date date)
+    {
+	Calendar cal = Calendar.getInstance();
+	cal.setTime(date);
+	cal.set(Calendar.HOUR_OF_DAY, 0);
+	cal.set(Calendar.MINUTE, 0);
+	cal.set(Calendar.SECOND, 0);
+	cal.set(Calendar.MILLISECOND, 0);
+	return cal.getTime();
     }
 
 }

@@ -157,11 +157,11 @@ public class SyncIssue extends Operation
 	    Issue targetIssue;
 	    if (relation.getIssueToId() != (int) sourceIssue.getId())
 	    {
-		targetIssue = getIssue(redmineManager, relation.getIssueToId(), Include.watchers);
+		targetIssue = getIssue(redmineManager, relation.getIssueToId(), Include.watchers, Include.journals);
 	    }
 	    else
 	    {
-		targetIssue = getIssue(redmineManager, relation.getIssueId(), Include.watchers);
+		targetIssue = getIssue(redmineManager, relation.getIssueId(), Include.watchers, Include.journals);
 	    }
 
 	    if (targetIssue != null && isIssueInProject(targetIssue, internalProjects))
