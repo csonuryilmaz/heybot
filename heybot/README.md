@@ -228,6 +228,8 @@ Required Parameters:
 - SUPPORT_IN_PROGRESS_STATUS= Support status which is corresponding to **in progress** status.
 - SUPPORT_ON_HOLD_STATUS= Support status which is corresponding to **on hold** status.
 - SUPPORT_CLOSED_STATUS= Support status which is corresponding to **closed** status.
+- SUPPORT_SYNC_START_DATE= Modify support issue start date from internal issues. (new -> *) **true** || **false**
+- SUPPORT_SYNC_DUE_DATE= Modify support issue due date from internal issues. (* -> closed) **true** || **false**
 - INTERNAL_PROJECT= Internal development projects which are used by your team. (N)
 - INTERNAL_NEW_STATUS= Internal statuses which are corresponding to **new** status of SUPPORT. (N)
 - INTERNAL_IN_PROGRESS_STATUS=  Internal statuses which are corresponding to **in progress** status of SUPPORT. (N)
@@ -266,6 +268,8 @@ SUPPORT_NEW_STATUS=New
 SUPPORT_IN_PROGRESS_STATUS=In Progress
 SUPPORT_ON_HOLD_STATUS=Feedback
 SUPPORT_CLOSED_STATUS=Closed
+SUPPORT_SYNC_START_DATE=true
+SUPPORT_SYNC_DUE_DATE=true
 INTERNAL_PROJECT=web,mobile,cronint
 INTERNAL_NEW_STATUS=New
 INTERNAL_IN_PROGRESS_STATUS=Rework,In Progress,Resolved,In Review,Reviewed,In Test,Accepted
