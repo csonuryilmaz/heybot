@@ -4,8 +4,6 @@ import com.taskadapter.redmineapi.RedmineException;
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.Issue;
-import java.io.File;
-import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -23,39 +21,38 @@ public class CleanupSvn extends Operation
     private RedmineManager redmineManager;
     private final Locale trLocale = new Locale("tr-TR");
 
+    //<editor-fold defaultstate="collapsed" desc="parameters">
+    // mandatory
+    private final static String PARAMETER_BRANCH_PATH = "BRANCH_PATH";
+    private final static String PARAMETER_STATUS = "STATUS";
+    private final static String PARAMETER_REDMINE_TOKEN = "REDMINE_TOKEN";
+    private final static String PARAMETER_REDMINE_URL = "REDMINE_URL";
+    // optional
+    private final static String PARAMETER_LIMIT = "LIMIT";
+
+//</editor-fold>
+    public CleanupSvn()
+    {
+	super(new String[]
+	{
+	    PARAMETER_BRANCH_PATH, PARAMETER_STATUS, PARAMETER_REDMINE_TOKEN, PARAMETER_REDMINE_URL
+	}
+	);
+    }
+
     @Override
     public void execute(Properties prop)
     {
-	// try get parameters
-	String svnBranchPath = prop.getProperty("BRANCH_PATH");
-	String status = prop.getProperty("STATUS");
-	String redmineAccessToken = prop.getProperty("REDMINE_TOKEN");
-	String redmineUrl = prop.getProperty("REDMINE_URL");
-	String limit = prop.getProperty("LIMIT");
+	if (areMandatoryParametersNotEmpty(prop))
+	{
+	    String svnBranchPath = getParameterString(prop, PARAMETER_BRANCH_PATH, false);
+	    HashSet<String> statuses = getParameterStringHash(prop, PARAMETER_STATUS, true);
+	    String redmineAccessToken = getParameterString(prop, PARAMETER_REDMINE_TOKEN, false);
+	    String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
 
-	int max;
-	if (limit == null || limit.length() == 0)
-	{
-	    max = Integer.MAX_VALUE;
-	}
-	else
-	{
-	    max = Integer.parseInt(limit);
-	}
+	    int max = getParameterInt(prop, PARAMETER_LIMIT, Integer.MAX_VALUE);
 
-	HashSet<String> statuses = null;
-	if (status != null && status.length() > 0)
-	{
-	    statuses = new HashSet<>(Arrays.asList(status.toLowerCase(trLocale).split(",")));
-	}
-
-	if (svnBranchPath != null && statuses != null && statuses.size() > 0 && redmineAccessToken != null && redmineUrl != null)
-	{
 	    start(svnBranchPath, redmineAccessToken, redmineUrl, max, statuses);
-	}
-	else
-	{
-	    System.err.println("Ooops! Missing required parameters.(BRANCH_PATH,STATUS,REDMINE_TOKEN,REDMINE_URL)");
 	}
     }
 

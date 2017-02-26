@@ -26,19 +26,37 @@ public class Upload extends Operation
 
     private final static int SFTPPORT = 22;
 
+    //<editor-fold defaultstate="collapsed" desc="parameters">
+    // mandatory
+    private final static String PARAMETER_HOST = "HOST";
+    private final static String PARAMETER_USERNAME = "USERNAME";
+    private final static String PARAMETER_PASSWORD = "PASSWORD";
+    private final static String PARAMETER_REMOTE_PATH = "REMOTE_PATH";
+    // optional
+    private final static String PARAMETER_SOURCE_PATH = "SOURCE_PATH";
+
+    //</editor-fold>
+    public Upload()
+    {
+	super(new String[]
+	{
+	    PARAMETER_HOST, PARAMETER_USERNAME, PARAMETER_PASSWORD, PARAMETER_REMOTE_PATH
+	}
+	);
+    }
+
     @Override
     public void execute(Properties prop)
     {
-	// try get parameters
-	String sftpHost = prop.getProperty("HOST");
-	String sftpUser = prop.getProperty("USERNAME");
-	String sftpPass = prop.getProperty("PASSWORD");
-	String sftpTargetDir = prop.getProperty("REMOTE_PATH");
-	String sftpSourceDir = prop.getProperty("SOURCE_PATH");
-	String revision = "";// @todo
-
-	if (sftpHost != null && sftpUser != null && sftpPass != null && sftpTargetDir != null)
+	if (areMandatoryParametersNotEmpty(prop))
 	{
+	    String sftpHost = getParameterString(prop, PARAMETER_HOST, false);
+	    String sftpUser = getParameterString(prop, PARAMETER_USERNAME, false);
+	    String sftpPass = getParameterString(prop, PARAMETER_PASSWORD, false);
+	    String sftpTargetDir = getParameterString(prop, PARAMETER_REMOTE_PATH, false);
+	    String sftpSourceDir = getParameterString(prop, PARAMETER_SOURCE_PATH, false);
+	    String revision = "";// @todo
+
 	    if (sftpSourceDir == null || sftpSourceDir.length() == 0)
 	    {// try to assign default argument
 		sftpSourceDir = tryExecute("pwd");
@@ -72,10 +90,6 @@ public class Upload extends Operation
 		    start(sftpHost, sftpTargetDir, sftpUser, sftpPass, sftpSourceDir, revision, svnCommand, repoRootDir);
 		}
 	    }
-	}
-	else
-	{
-	    System.err.println("Ooops! Missing required parameters.(HOST,USERNAME,PASSWORD,REMOTE_PATH)");
 	}
     }
 

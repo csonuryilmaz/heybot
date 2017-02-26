@@ -19,21 +19,42 @@ public class Review extends Operation
 
     private RedmineManager redmineManager;
 
+    //<editor-fold defaultstate="collapsed" desc="parameters">
+    // mandatory
+    private final static String PARAMETER_ISSUE = "ISSUE";
+    private final static String PARAMETER_ISSUE_STATUS_TO_UPDATE = "ISSUE_STATUS_TO_UPDATE";
+    private final static String PARAMETER_SUBVERSION_PATH = "SUBVERSION_PATH";
+    private final static String PARAMETER_REDMINE_TOKEN = "REDMINE_TOKEN";
+    private final static String PARAMETER_REDMINE_URL = "REDMINE_URL";
+    // optional
+    private final static String PARAMETER_ISSUE_STATUS_SHOULD_BE = "ISSUE_STATUS_SHOULD_BE";
+    private final static String PARAMETER_SOURCE_PATH = "SOURCE_PATH";
+    private final static String PARAMETER_MERGE_ROOT = "MERGE_ROOT";
+
+//</editor-fold>
+    public Review()
+    {
+	super(new String[]
+	{
+	    PARAMETER_ISSUE, PARAMETER_ISSUE_STATUS_TO_UPDATE, PARAMETER_SUBVERSION_PATH, PARAMETER_REDMINE_TOKEN, PARAMETER_REDMINE_URL
+	}
+	);
+    }
+
     @Override
     public void execute(Properties prop)
     {
-	// try get parameters
-	String issueId = prop.getProperty("ISSUE");
-	String targetStatus = prop.getProperty("ISSUE_STATUS_TO_UPDATE");
-	String sourceStatus = prop.getProperty("ISSUE_STATUS_SHOULD_BE");
-	String localWorkingDir = prop.getProperty("SOURCE_PATH");
-	String svnBranchDir = prop.getProperty("SUBVERSION_PATH");
-	String redmineAccessToken = prop.getProperty("REDMINE_TOKEN");
-	String redmineUrl = prop.getProperty("REDMINE_URL");
-	String mergeRoot = prop.getProperty("MERGE_ROOT");
-
-	if (issueId != null && targetStatus != null && svnBranchDir != null && redmineAccessToken != null && redmineUrl != null)
+	if (areMandatoryParametersNotEmpty(prop))
 	{
+	    String issueId = getParameterString(prop, PARAMETER_ISSUE, false);
+	    String targetStatus = getParameterString(prop, PARAMETER_ISSUE_STATUS_TO_UPDATE, false);
+	    String sourceStatus = getParameterString(prop, PARAMETER_ISSUE_STATUS_SHOULD_BE, false);
+	    String localWorkingDir = getParameterString(prop, PARAMETER_SOURCE_PATH, false);
+	    String svnBranchDir = getParameterString(prop, PARAMETER_SUBVERSION_PATH, false);
+	    String redmineAccessToken = getParameterString(prop, PARAMETER_REDMINE_TOKEN, false);
+	    String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
+	    String mergeRoot = getParameterString(prop, PARAMETER_MERGE_ROOT, false);
+
 	    if (localWorkingDir == null || localWorkingDir.length() == 0)
 	    {// try to assign default argument
 		localWorkingDir = tryExecute("pwd");
@@ -58,11 +79,6 @@ public class Review extends Operation
 		}
 	    }
 	}
-	else
-	{
-	    System.err.println("Ooops! Missing required parameters.(ISSUE,ISSUE_STATUS_TO_UPDATE,SUBVERSION_PATH,REDMINE_TOKEN,REDMINE_URL)");
-	}
-
     }
 
     private Issue tryGetIssue(String issueId)

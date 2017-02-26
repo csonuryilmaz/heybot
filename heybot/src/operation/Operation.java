@@ -468,6 +468,17 @@ public abstract class Operation
     {
 	props.setProperty(parameter, dateTimeFormat.format(dValue));
     }
+
+    protected int getParameterInt(Properties props, String parameter, int defaultValue)
+    {
+	String sValue = getParameterString(props, parameter, false);
+	if (sValue != null && sValue.length() > 0)
+	{
+	    return Integer.parseInt(sValue);
+	}
+
+	return defaultValue;
+    }
 //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="DEBUG">

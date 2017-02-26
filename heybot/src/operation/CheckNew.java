@@ -43,37 +43,32 @@ public class CheckNew extends Operation
     @Override
     public void execute(Properties prop)
     {
-	String lastIssueId = getParameterString(prop, PARAMETER_LAST_ISSUE, false);
-	String projectName = getParameterString(prop, PARAMETER_PROJECT, true);
-	String redmineAccessToken = getParameterString(prop, PARAMETER_REDMINE_TOKEN, false);
-	String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
-	String slackWebHookUrl = getParameterString(prop, PARAMETER_WEBHOOK_URL, false);
-	// optional
-	String issueStatus = getParameterString(prop, PARAMETER_ISSUE_STATUS, true);
-
-	// default values
-	int filterLastIssueId = 0;
-	if (lastIssueId != null && lastIssueId.length() > 0)
+	if (areMandatoryParametersNotEmpty(prop))
 	{
-	    filterLastIssueId = Integer.parseInt(lastIssueId);
-	}
+	    int filterLastIssueId = getParameterInt(prop, PARAMETER_LAST_ISSUE, 0);
+	    String projectName = getParameterString(prop, PARAMETER_PROJECT, true);
+	    String redmineAccessToken = getParameterString(prop, PARAMETER_REDMINE_TOKEN, false);
+	    String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
+	    String slackWebHookUrl = getParameterString(prop, PARAMETER_WEBHOOK_URL, false);
+	    // optional
+	    String issueStatus = getParameterString(prop, PARAMETER_ISSUE_STATUS, true);
 
-	// connect redmine
-	redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
+	    redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
 
-	List<Issue> issues = getIssues(issueStatus, projectName, filterLastIssueId);
-	if (issues.size() > 0)
-	{
-	    for (int i = issues.size() - 1; i >= 0; i--)
-	    {// notify issues ascending
-		notifySlack(slackWebHookUrl, issues.get(i), redmineUrl, projectName);
+	    List<Issue> issues = getIssues(issueStatus, projectName, filterLastIssueId);
+	    if (issues.size() > 0)
+	    {
+		for (int i = issues.size() - 1; i >= 0; i--)
+		{// notify issues ascending
+		    notifySlack(slackWebHookUrl, issues.get(i), redmineUrl, projectName);
+		}
+
+		prop.setProperty(PARAMETER_LAST_ISSUE, Integer.toString(issues.get(0).getId()));
 	    }
-
-	    prop.setProperty("LAST_ISSUE", Integer.toString(issues.get(0).getId()));
-	}
-	else
-	{
-	    System.out.println("There is no new issue is detected.");
+	    else
+	    {
+		System.out.println("There is no new issue is detected.");
+	    }
 	}
     }
 
