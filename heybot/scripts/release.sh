@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 
-VERSION="1.8.0.0"
+VERSION="1.8.2.4"
 
 RELEASE_PATH="../../heybot-release/heybot_$VERSION"
 
@@ -21,3 +21,6 @@ cp ./uninstall.sh "$RELEASE_PATH/"
 cd "$RELEASE_PATH/../"
 tar -zcvf "heybot_$VERSION.tar.gz" "heybot_$VERSION"
 rm -Rf "heybot_$VERSION"
+mkdir "heybot_$VERSION"
+mv "heybot_$VERSION.tar.gz" "heybot_$VERSION/"
+cp ../heybot/README.md "heybot_$VERSION/"

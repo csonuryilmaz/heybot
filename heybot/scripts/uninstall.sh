@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 echo "Clearing current installation if exists ..."
 sudo rm -f /usr/local/bin/heybot
