@@ -17,11 +17,11 @@ $ heybot -do something.hb
 ```
 
 This is the main syntax and now you've learned most of it. You write details into a file with extension **.hb**. Then you say to **heybot**:
-	
+
 > Hey bot! Do my job which is defined in the file I gave.
-	
+
 For example; I want to begin a redmine issue with creating a branch and checking it out to my workspace, I call this:
-	
+
 ```
 $ heybot -do begin_issue.hb
 ```
@@ -29,8 +29,8 @@ $ heybot -do begin_issue.hb
 As a common practice a **.hb** file starts with parameter *OPERATION*  and it is followed by required parameters to do that operation metioned. In [workspace](https://github.com/csonuryilmaz/utilities/tree/master/heybot/workspace) you can find example **.hb** templates for each operation. You can copy them, and define your own operation by filling parameters. Also it's a best practice to give you **.hb** files a readable name. For ex: send_local_changes_to_test_env.hb
 
 Let's dive into some details and explain them with examples. Below there is a list of operations that you can use with heybot.
-	
-**1. OPERATION= Upload** 
+
+**1. OPERATION= Upload**
 
 It uploads local changes in the working copy (output of *svn st* command) to a remote server by SFTP protocol.
 
@@ -63,7 +63,7 @@ REMOTE_PATH=/var/www/html/myproject/
 SOURCE_PATH=/Users/smith/NetBeansProjects/myproject/
 
 ```
-	
+
 **2. OPERATION= Cleanup**
 
 It deletes issues (branches) which is *closed*,*deployed* or any status you defined, from local working directory. By deleting passive branches it saves your disk space. It is meaningful when you use *one issue is resolved in one branch* paradigm.
@@ -97,7 +97,7 @@ REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
 LIMIT=10
 
 ```
-	
+
 **3. OPERATION= Cleanup-Svn**
 
 It deletes issues which is *closed*,*deployed* or any status you defined, from subversion branches path. By deleting passive branches it removes some garbage from your subversion. It is meaningful when you use *one issue is resolved in one branch* paradigm.
@@ -178,7 +178,6 @@ It checks whether *redmine* has new issues with given status(optional) and sends
 
 Required Parameters:
 
-- LAST_ISSUE= Last issue number that has been notified about. (This parameter will be modified by *heybot* after each execution.) If doesn't have value, 0 assumed.
 - PROJECT= Project name to follow new issues.
 - REDMINE_TOKEN= Redmine API access key taken from [my account page](http://www.redmine.org/projects/redmine/wiki/RedmineAccounts).
 - REDMINE_URL= Redmine API url. (most of the time this is root url of your redmine installation)
@@ -187,6 +186,10 @@ Required Parameters:
 Optional Parameters:
 
 - ISSUE_STATUS= Check status of newly added issue with this defined value. If empty, there will be no status check.
+
+Internal Parameters:
+
+- LAST_ISSUE= Last issue number that has been notified about. (This parameter will be modified by *heybot* after each execution.) If doesn't have value, 0 assumed.
 
 Example:
 
@@ -197,7 +200,6 @@ Example:
 OPERATION=check-new
 
 # required parameters
-LAST_ISSUE=892
 PROJECT=support
 REDMINE_TOKEN=abab3a53c34f66b92fg5cdcbb3bb95a3c78d862e
 REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
@@ -205,6 +207,9 @@ WEBHOOK_URL=https://hooks.slack.com/services/T0VSADVPB/B28037H5L/xH61HbZAsJUzicA
 
 # optional parameters
 ISSUE_STATUS=New
+
+# internal parameters
+LAST_ISSUE=892
 
 ```
 Also you can schedule this operation with a crontab entry. For example, below entry will check new issues at 5 minutes interval;
