@@ -10,7 +10,6 @@ import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.Issue;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 
 /**
@@ -22,13 +21,14 @@ public class CheckNew extends Operation
 
     //<editor-fold defaultstate="collapsed" desc="parameters">
     // mandatory
-    private final static String PARAMETER_LAST_ISSUE = "LAST_ISSUE";
     private final static String PARAMETER_PROJECT = "PROJECT";
     private final static String PARAMETER_REDMINE_TOKEN = "REDMINE_TOKEN";
     private final static String PARAMETER_REDMINE_URL = "REDMINE_URL";
     private final static String PARAMETER_WEBHOOK_URL = "WEBHOOK_URL";
     // optional
     private final static String PARAMETER_ISSUE_STATUS = "ISSUE_STATUS";
+    // internal
+    private final static String PARAMETER_LAST_ISSUE = "LAST_ISSUE";
 //</editor-fold>
     private RedmineManager redmineManager;
 
@@ -36,7 +36,7 @@ public class CheckNew extends Operation
     {
 	super(new String[]
 	{
-	    PARAMETER_LAST_ISSUE, PARAMETER_PROJECT, PARAMETER_REDMINE_TOKEN, PARAMETER_REDMINE_URL, PARAMETER_WEBHOOK_URL
+	    PARAMETER_PROJECT, PARAMETER_REDMINE_TOKEN, PARAMETER_REDMINE_URL, PARAMETER_WEBHOOK_URL
 	});
     }
 
@@ -55,15 +55,15 @@ public class CheckNew extends Operation
 
 	    redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
 
-	    List<Issue> issues = getIssues(issueStatus, projectName, filterLastIssueId);
-	    if (issues.size() > 0)
+	    Issue[] issues = getIssues(issueStatus, projectName, filterLastIssueId);
+	    if (issues.length > 0)
 	    {
-		for (int i = issues.size() - 1; i >= 0; i--)
-		{// notify issues ascending
-		    notifySlack(slackWebHookUrl, issues.get(i), redmineUrl, projectName);
+		for (Issue issue : issues)
+		{
+		    notifySlack(slackWebHookUrl, issue, redmineUrl, projectName);
 		}
 
-		prop.setProperty(PARAMETER_LAST_ISSUE, Integer.toString(issues.get(0).getId()));
+		prop.setProperty(PARAMETER_LAST_ISSUE, Integer.toString(issues[issues.length - 1].getId()));
 	    }
 	    else
 	    {
@@ -72,37 +72,25 @@ public class CheckNew extends Operation
 	}
     }
 
-    private List<Issue> getIssues(String issueStatus, String projectName, int filterLastIssueId)
+    private Issue[] getIssues(String issueStatus, String projectName, int filterLastIssueId)
     {
 	int filterIssueStatusId = 0;
 	if (issueStatus != null && issueStatus.length() > 0)
 	{
-	    filterIssueStatusId = tyrGetIssueStatusId(redmineManager, issueStatus);
+	    filterIssueStatusId = tryGetIssueStatusId(redmineManager, issueStatus);
 	}
 	int filterProjectId = tryGetProjectId(redmineManager, projectName);
 
-	List<Issue> issues = getProjectIssues(redmineManager, filterProjectId, filterIssueStatusId, 0, 10, "id:desc");
-
 	if (filterLastIssueId > 0)
-	{// filter
-	    return filterIssues(issues, filterLastIssueId);
-	}
-
-	return issues;
-    }
-
-    private List<Issue> filterIssues(List<Issue> issues, int filterIssueStatusId)
-    {
-	List<Issue> filteredIssues = new ArrayList<>();
-	for (Issue issue : issues)
 	{
-	    if (issue.getId() > filterIssueStatusId)
-	    {
-		filteredIssues.add(issue);
-	    }
-	}
+	    Issue lastIssue = getIssue(redmineManager, filterLastIssueId);
 
-	return filteredIssues;
+	    return getProjectIssues(redmineManager, filterProjectId, filterIssueStatusId, lastIssue.getCreatedOn(), lastIssue.getId(), "id:asc");
+	}
+	else
+	{
+	    return getProjectIssues(redmineManager, filterProjectId, filterIssueStatusId, 0, 1, "id:desc");
+	}
     }
 
     private void notifySlack(String slackWebHookUrl, Issue issue, String redmineUrl, String projectName)
