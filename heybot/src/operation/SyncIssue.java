@@ -122,12 +122,25 @@ public class SyncIssue extends Operation
 	    Collection<IssueRelation> relations = getIssueRelations(redmineManager, internalIssue.getId());
 	    for (IssueRelation relation : relations)
 	    {
-		if (relation.getType().equals("relates") && !supportIssues.containsKey(relation.getIssueToId()))
+		if (relation.getType().equals("relates"))
 		{
-		    Issue relatedIssue = getIssue(redmineManager, relation.getIssueToId(), Include.relations, Include.watchers);
-		    if (relatedIssue != null && isIssueInProject(relatedIssue, supportProjects))
+		    int otherIssueId;
+		    if ((int) relation.getIssueToId() != internalIssue.getId())
 		    {
-			supportIssues.put(relatedIssue.getId(), relatedIssue);
+			otherIssueId = relation.getIssueToId();
+		    }
+		    else
+		    {
+			otherIssueId = relation.getIssueId();
+		    }
+
+		    if (!supportIssues.containsKey(otherIssueId))
+		    {
+			Issue relatedIssue = getIssue(redmineManager, otherIssueId, Include.relations, Include.watchers);
+			if (relatedIssue != null && isIssueInProject(relatedIssue, supportProjects))
+			{
+			    supportIssues.put(relatedIssue.getId(), relatedIssue);
+			}
 		    }
 		}
 	    }
