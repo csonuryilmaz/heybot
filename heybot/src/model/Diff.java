@@ -183,6 +183,10 @@ public class Diff
 	{
 	    applyDueDate(redmineManager);
 	}
+	else if (issue.getDueDate() != null)
+	{
+	    resetDueDate(redmineManager);
+	}
     }
 
     private void applyStatus(RedmineManager redmineManager)
@@ -381,6 +385,13 @@ public class Diff
 	    System.out.println("Issue due date update: " + supportDueDate);
 	    updateIssue(redmineManager);
 	}
+    }
+
+    private void resetDueDate(RedmineManager redmineManager)
+    {
+	issue.setDueDate(null);
+	System.out.println("Issue due date is cleared.");
+	updateIssue(redmineManager);
     }
 
     private Date trimTime(Date date)
