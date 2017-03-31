@@ -29,7 +29,7 @@ import org.apache.commons.cli.ParseException;
 public class heybot
 {
 
-    private final static String VERSION = "1.8.2.4";
+    private final static String VERSION = "1.8.2.6";
     private static final String NEWLINE = System.getProperty("line.separator");
 
     /**
