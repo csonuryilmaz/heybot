@@ -258,6 +258,7 @@ Notes:
 - It detects **start date** from *in progress* status logs of related internal issues. Minimum internal *in progress* date will set as start date of support issue.
 - It detects **due date** from *closed* status logs of related internal issues. Maximum internal *closed* date will set as due date of support issue.
 - It maintains watchers of support issues automatically. First detects all watcher candidates from internal issues defined by SUPPORT_WATCHER fields. Then compares them with support issue watchers. After comparison it adds or deletes watchers.
+- Some updates on issues (for example, adding a relation to an issue) don't update issue's **updated on** timestamp. In this case, heybot sync-issue operation won't catch the updated issue. This situation totally comes from redmine design, so it's not a bug. [(details)](https://github.com/csonuryilmaz/projects/issues/19)
 
 Example:
 
