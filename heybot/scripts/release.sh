@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="1.8.2.6"
+VERSION="1.8.2.7"
 
 RELEASE_PATH="../../heybot-release/heybot_$VERSION"
 
