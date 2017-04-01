@@ -34,19 +34,26 @@ public abstract class Operation
 {
 
     protected final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    protected final SimpleDateFormat dateTimeFormatInUTC = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     protected final SimpleDateFormat dateTimeFormatOnlyDate = new SimpleDateFormat("yyyy-MM-dd");
     private final Locale trLocale = new Locale("tr-TR");
 
     protected Operation(String[] mandatoryParameters)
     {
 	this.mandatoryParameters = mandatoryParameters;
-	dateTimeFormat.setTimeZone(TimeZone.getTimeZone("Asia/Baghdad"));
+	setTimeZones();
     }
 
     protected Operation()
     {
 	this.mandatoryParameters = null;
+	setTimeZones();
+    }
+
+    private void setTimeZones()
+    {
 	dateTimeFormat.setTimeZone(TimeZone.getTimeZone("Asia/Baghdad"));
+	dateTimeFormatInUTC.setTimeZone(TimeZone.getTimeZone("UTC"));
     }
 
     //<editor-fold defaultstate="collapsed" desc="execute shell command">
@@ -303,8 +310,8 @@ public abstract class Operation
 
 	params.add("f[]", "updated_on");
 	params.add("op[updated_on]", "><");
-	params.add("v[updated_on][]", dateTimeFormatOnlyDate.format(filterUpdatedOnStart));
-	params.add("v[updated_on][]", dateTimeFormatOnlyDate.format(filterUpdatedOnEnd));
+	params.add("v[updated_on][]", getTimeStampInUTCDatePart(filterUpdatedOnStart));
+	params.add("v[updated_on][]", getTimeStampInUTCDatePart(filterUpdatedOnEnd));
 
 	// default
 	params.add("offset", Integer.toString(offset));
@@ -532,4 +539,13 @@ public abstract class Operation
     }
 
 //</editor-fold>
+    private String getTimeStampInUTCDatePart(Date timeStamp)
+    {
+	return getTimeStampInUTC(timeStamp).split(" ")[0];
+    }
+
+    private String getTimeStampInUTC(Date timeStamp)
+    {
+	return dateTimeFormatInUTC.format(timeStamp);
+    }
 }
