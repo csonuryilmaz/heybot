@@ -1,6 +1,4 @@
-### projects
-
-This repository contains **heybot** source code (netbeans java project) and stable releases.
+This repository contains **heybot** source code and stable releases. Source code is java project which is developed in Netbeans IDE.
 
 All feedbacks and contributions are wellcome. Happy coding! :coffee:
 
