@@ -10,6 +10,7 @@ import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.Issue;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Properties;
 
 /**
@@ -29,6 +30,7 @@ public class CheckNew extends Operation
     private final static String PARAMETER_ISSUE_STATUS = "ISSUE_STATUS";
     // internal
     private final static String PARAMETER_LAST_ISSUE = "LAST_ISSUE";
+    private final static String PARAMETER_LAST_CREATED_ON = "LAST_CREATED_ON";
 //</editor-fold>
     private RedmineManager redmineManager;
 
@@ -45,17 +47,19 @@ public class CheckNew extends Operation
     {
 	if (areMandatoryParametersNotEmpty(prop))
 	{
-	    int filterLastIssueId = getParameterInt(prop, PARAMETER_LAST_ISSUE, 0);
 	    String projectName = getParameterString(prop, PARAMETER_PROJECT, true);
 	    String redmineAccessToken = getParameterString(prop, PARAMETER_REDMINE_TOKEN, false);
 	    String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
 	    String slackWebHookUrl = getParameterString(prop, PARAMETER_WEBHOOK_URL, false);
 	    // optional
 	    String issueStatus = getParameterString(prop, PARAMETER_ISSUE_STATUS, true);
+	    // internal
+	    int filterLastIssueId = getParameterInt(prop, PARAMETER_LAST_ISSUE, 0);
+	    Date filterCreatedOn = getParameterDateTime(prop, PARAMETER_LAST_CREATED_ON);
 
 	    redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
 
-	    Issue[] issues = getIssues(issueStatus, projectName, filterLastIssueId);
+	    Issue[] issues = getIssues(issueStatus, projectName, filterLastIssueId, filterCreatedOn);
 	    if (issues.length > 0)
 	    {
 		for (Issue issue : issues)
@@ -63,7 +67,9 @@ public class CheckNew extends Operation
 		    notifySlack(slackWebHookUrl, issue, redmineUrl, projectName);
 		}
 
-		prop.setProperty(PARAMETER_LAST_ISSUE, Integer.toString(issues[issues.length - 1].getId()));
+		Issue lastIssue = issues[issues.length - 1];
+		prop.setProperty(PARAMETER_LAST_ISSUE, Integer.toString(lastIssue.getId()));
+		prop.setProperty(PARAMETER_LAST_CREATED_ON, dateTimeFormat.format(lastIssue.getCreatedOn()));
 	    }
 	    else
 	    {
@@ -72,7 +78,7 @@ public class CheckNew extends Operation
 	}
     }
 
-    private Issue[] getIssues(String issueStatus, String projectName, int filterLastIssueId)
+    private Issue[] getIssues(String issueStatus, String projectName, int filterLastIssueId, Date filterCreatedOn)
     {
 	int filterIssueStatusId = 0;
 	if (issueStatus != null && issueStatus.length() > 0)
@@ -84,8 +90,18 @@ public class CheckNew extends Operation
 	if (filterLastIssueId > 0)
 	{
 	    Issue lastIssue = getIssue(redmineManager, filterLastIssueId);
+	    if (lastIssue == null)
+	    {
+		System.out.println("Last issue #" + filterLastIssueId + " is not found!");
+	    }
+	    else
+	    {
+		System.out.println("Filter issue newer than: #" + lastIssue.getId());
+		filterCreatedOn = lastIssue.getCreatedOn();
+	    }
+	    System.out.println("Filter issue created on: " + dateTimeFormat.format(filterCreatedOn));
 
-	    return getProjectIssues(redmineManager, filterProjectId, filterIssueStatusId, lastIssue.getCreatedOn(), lastIssue.getId(), "id:asc");
+	    return getProjectIssues(redmineManager, filterProjectId, filterIssueStatusId, filterCreatedOn, filterLastIssueId, "id:asc");
 	}
 	else
 	{

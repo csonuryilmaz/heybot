@@ -84,7 +84,7 @@ public abstract class Operation
 
 	if (output[1].length() > 0)
 	{// :(
-	    System.err.println("Ooops! Command execution (" + command + ") failed with message: ");
+	    System.err.println("Ooops! Command execution (" + command[0] + ") failed with message: ");
 	    System.err.println(output[1]);
 
 	    return false;
@@ -373,7 +373,7 @@ public abstract class Operation
 	}
 	catch (RedmineException ex)
 	{
-	    System.err.println("Ooops! Relations could not be get for issue #" + issueId + ". (" + ex.getMessage() + ")");
+	    System.err.println("Ooops! Issue could not be get for #" + issueId + ". (" + ex.getMessage() + ")");
 	}
 
 	return null;
@@ -403,7 +403,7 @@ public abstract class Operation
 
 	params.add("f[]", "created_on");
 	params.add("op[created_on]", ">=");
-	params.add("v[created_on][]", dateTimeFormatOnlyDate.format(filterCreatedOnStart));
+	params.add("v[created_on][]", getTimeStampInUTCDatePart(filterCreatedOnStart));
 
 	params.add("f[]", "status_id");
 	params.add("op[status_id]", "=");
