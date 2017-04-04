@@ -190,6 +190,7 @@ Optional Parameters:
 Internal Parameters:
 
 - LAST_ISSUE= Last issue number that has been notified about. (This parameter will be modified by *heybot* after each execution.) If doesn't have value, 0 assumed.
+- LAST_CREATED_ON= Last notified issue's created timestamp. (This parameter will be modified by *heybot* after each execution.) When last notified issue is deleted or unreachable this timestamp is used to filter new issues.
 
 Example:
 
@@ -210,6 +211,7 @@ ISSUE_STATUS=New
 
 # internal parameters
 LAST_ISSUE=892
+LAST_CREATED_ON=2017-04-03 11\:40\:10
 
 ```
 Also you can schedule this operation with a crontab entry. For example, below entry will check new issues at 5 minutes interval;
