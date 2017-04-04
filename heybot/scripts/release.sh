@@ -2,7 +2,7 @@
 
 VERSION="1.8.2.7"
 
-RELEASE_PATH="../../heybot-release/heybot_$VERSION"
+RELEASE_PATH="../../release/heybot_$VERSION"
 
 if [ -d "$RELEASE_PATH" ]; then
   rm -Rf "$RELEASE_PATH"
