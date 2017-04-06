@@ -10,6 +10,7 @@ import java.util.Properties;
 import operation.CheckNew;
 import operation.Cleanup;
 import operation.CleanupSvn;
+import operation.NextVersion;
 import operation.Upload;
 import operation.Review;
 import operation.SyncIssue;
@@ -29,7 +30,7 @@ import org.apache.commons.cli.ParseException;
 public class heybot
 {
 
-    private final static String VERSION = "1.8.2.8";
+    private final static String VERSION = "1.9.0.0-alfa";
     private static final String NEWLINE = System.getProperty("line.separator");
 
     /**
@@ -116,6 +117,9 @@ public class heybot
 		break;
 	    case "sync-issue":
 		new SyncIssue().execute(prop);
+		break;
+	    case "next-version":
+		new NextVersion().execute(prop);
 		break;
 	    default:
 		System.err.println("Ooops! Unsupported operation. Please check version and manual.");

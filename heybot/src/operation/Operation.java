@@ -8,6 +8,8 @@ import com.taskadapter.redmineapi.bean.Issue;
 import com.taskadapter.redmineapi.bean.IssueRelation;
 import com.taskadapter.redmineapi.bean.IssueStatus;
 import com.taskadapter.redmineapi.bean.Project;
+import com.taskadapter.redmineapi.bean.SavedQuery;
+import com.taskadapter.redmineapi.bean.Version;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -265,6 +267,48 @@ public abstract class Operation
 	catch (RedmineException ex)
 	{
 	    System.err.println("Ooops! Couldn't get projects.(" + ex.getMessage() + ")");
+	}
+
+	return 0; // not found
+    }
+
+    protected int tryGetVersionId(RedmineManager redmineManager, int projectId, String versionName)
+    {
+	try
+	{
+	    List<Version> versions = redmineManager.getProjectManager().getVersions(projectId);
+	    for (Version version : versions)
+	    {
+		if (version.getName().toLowerCase(trLocale).equals(versionName))
+		{
+		    return version.getId();
+		}
+	    }
+	}
+	catch (RedmineException ex)
+	{
+	    System.err.println("Ooops! Couldn't get versions.(" + ex.getMessage() + ")");
+	}
+
+	return 0; // not found
+    }
+
+    protected int tryGetSavedQueryId(RedmineManager redmineManager, String projectKey, String queryName)
+    {
+	try
+	{
+	    List<SavedQuery> savedQueries = redmineManager.getIssueManager().getSavedQueries(projectKey);
+	    for (SavedQuery savedQuery : savedQueries)
+	    {
+		if (savedQuery.getName().toLowerCase(trLocale).equals(queryName))
+		{
+		    return savedQuery.getId();
+		}
+	    }
+	}
+	catch (RedmineException ex)
+	{
+	    System.err.println("Ooops! Couldn't get versions.(" + ex.getMessage() + ")");
 	}
 
 	return 0; // not found
@@ -547,5 +591,21 @@ public abstract class Operation
     private String getTimeStampInUTC(Date timeStamp)
     {
 	return dateTimeFormatInUTC.format(timeStamp);
+    }
+
+    protected Issue[] getProjectIssues(RedmineManager redmineManager, String projectKey, int savedQueryId)
+    {
+	try
+	{
+	    List<Issue> issues = redmineManager.getIssueManager().getIssues(projectKey, savedQueryId);
+
+	    return issues.toArray(new Issue[issues.size()]);
+	}
+	catch (RedmineException ex)
+	{
+	    System.err.println("Ooops! Couldn't get issues.(" + ex.getMessage() + ")");
+	}
+
+	return new Issue[0];
     }
 }
