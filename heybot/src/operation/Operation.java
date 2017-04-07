@@ -618,4 +618,18 @@ public abstract class Operation
 
 	return new Issue[0];
     }
+
+    protected Version getVersion(RedmineManager redmineManager, int versionId)
+    {
+	try
+	{
+	    return redmineManager.getProjectManager().getVersionById(versionId);
+	}
+	catch (RedmineException ex)
+	{
+	    System.err.println("Ooops! Version could not be get by id " + versionId + ". (" + ex.getMessage() + ")");
+	}
+
+	return null;
+    }
 }

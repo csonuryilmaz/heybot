@@ -90,29 +90,15 @@ public class NextVersion extends Operation
 			setParameterInt(prop, PARAMETER_VERSION_ID, version.getId());
 		    }
 		}
-
-		int filterSavedQueryId = tryGetSavedQueryId(redmineManager, filterProject, filterQuery);
-		if (filterSavedQueryId > 0)
-		{
-		    Issue[] issues = getProjectIssues(redmineManager, filterProject, filterSavedQueryId);
-		    if (issues.length > 0)
-		    {
-			for (Issue issue : issues)
-			{
-			    System.out.println("#" + issue.getId() + " " + issue.getSubject());
-			}
-		    }
-		    else
-		    {
-			System.out.println("There is no ready to release and unversioned issue fouund.");
-		    }
-
-		    System.out.println("done");
-		}
 		else
 		{
-		    System.err.println("Ooops! Couldn't find saved query. Saved query contains ready and unversioned issues.");
+		    version = getVersion(redmineManager, versionId);
 		}
+
+		Issue[] issues = getReadyUnversionedIssues(redmineManager, filterProject, filterQuery);
+
+		assignTargetVersion(redmineManager, issues, version);
+
 	    }
 	    else
 	    {
@@ -172,6 +158,43 @@ public class NextVersion extends Operation
 	}
 
 	return null;
+    }
+
+    private Issue[] getReadyUnversionedIssues(RedmineManager redmineManager, String filterProject, String filterQuery)
+    {
+	int filterSavedQueryId = tryGetSavedQueryId(redmineManager, filterProject, filterQuery);
+	if (filterSavedQueryId > 0)
+	{
+	    Issue[] issues = getProjectIssues(redmineManager, filterProject, filterSavedQueryId);
+	    System.out.println("Ready to release and unversioned " + issues.length + " issue(s) found.");
+
+	    return issues;
+	}
+	else
+	{
+	    System.err.println("Ooops! Couldn't find saved query. Saved query contains ready and unversioned issues.");
+	}
+
+	return new Issue[0];
+    }
+
+    private void assignTargetVersion(RedmineManager redmineManager, Issue[] issues, Version version)
+    {
+	for (Issue issue : issues)
+	{
+	    System.out.println("#" + issue.getId() + " " + issue.getSubject());
+
+	    issue.setTargetVersion(version);
+	    try
+	    {
+		redmineManager.getIssueManager().update(issue);
+		System.out.println("[✓] Target Version: [" + version.getName() + "]");
+	    }
+	    catch (RedmineException ex)
+	    {
+		System.err.println("Ooops! Can't assign target version. (" + ex.getMessage() + ")");
+	    }
+	}
     }
 
 }
