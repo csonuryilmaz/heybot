@@ -560,6 +560,16 @@ public abstract class Operation
 	props.setProperty(parameter, dateTimeFormat.format(dValue));
     }
 
+    protected void setParameterString(Properties props, String parameter, String sValue)
+    {
+	props.setProperty(parameter, sValue.trim());
+    }
+
+    protected void setParameterInt(Properties props, String parameter, int iValue)
+    {
+	props.setProperty(parameter, String.valueOf(iValue));
+    }
+
     protected int getParameterInt(Properties props, String parameter, int defaultValue)
     {
 	String sValue = getParameterString(props, parameter, false);
