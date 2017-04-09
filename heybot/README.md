@@ -1,14 +1,29 @@
 # heybot
 
-###### Purpose:
+### Table of Contents
+  1. [Introduction](#1-introduction)  
+  2. [Requirements](#2-requirements)  
+  3. [Usage](#3-usage)  
+  4. [Operations](4#-operations)  
+    4.1. [Upload](41#-upload)  
+    4.2. [Cleanup](42#-cleanup)  
+    4.3. [Cleanup-Svn](43#-cleanup-svn)  
+    4.4. [Review](44#-review)  
+    4.5. [Check-New](45#-check-new)  
+    4.6. [Sync-Issue](46#-sync-issue)  
+  5. [Notes](5#-notes)  
+    5.1 [How to obtain slack incoming webhook URL?](51#-how-to-obtain-slack-incoming-webhook-url?)  
+
+
+#### 1. Introduction
 
 **heybot** is my best friend on my daily development activities. It's designed to help developers on their day-to-day development activities. It eases *some* chore development activities and improves your productivity. *It's worth trying it.*
 
-###### Requirements:
+#### 2. Requirements
 
 **heybot** is mainly designed to work in **subversion**, **redmine** and **slack** environment. If you use [redmine](http://www.redmine.org/) as project management/issue tracking application, [subversion](https://subversion.apache.org/) as version control system and [slack](https://slack.com/) as communication environment then **heybot** can help you. For other ecosystems, you can fork the project or contribute directly to this project. All useful contributions are wellcome.
 
-###### Usage:
+#### 3. Usage
 
 It's very easy to use **heybot** and its call syntax is like commanding a bot. It's as easy as saying this:
 
@@ -28,9 +43,13 @@ $ heybot -do begin_issue.hb
 
 As a common practice a **.hb** file starts with parameter *OPERATION*  and it is followed by required parameters to do that operation metioned. In [workspace](https://github.com/csonuryilmaz/utilities/tree/master/heybot/workspace) you can find example **.hb** templates for each operation. You can copy them, and define your own operation by filling parameters. Also it's a best practice to give you **.hb** files a readable name. For ex: send_local_changes_to_test_env.hb
 
-Let's dive into some details and explain them with examples. Below there is a list of operations that you can use with heybot.
+Let's dive into some details and explain them with examples.
 
-**1. OPERATION= Upload**
+#### 4. Operations
+
+Below there is a list of operations that you can use with heybot.
+
+##### 4.1. Upload
 
 It uploads local changes in the working copy (output of *svn st* command) to a remote server by SFTP protocol.
 
@@ -64,7 +83,7 @@ SOURCE_PATH=/Users/smith/NetBeansProjects/myproject/
 
 ```
 
-**2. OPERATION= Cleanup**
+##### 4.2. Cleanup
 
 It deletes issues (branches) which is *closed*,*deployed* or any status you defined, from local working directory. By deleting passive branches it saves your disk space. It is meaningful when you use *one issue is resolved in one branch* paradigm.
 
@@ -98,7 +117,7 @@ LIMIT=10
 
 ```
 
-**3. OPERATION= Cleanup-Svn**
+##### 4.3. Cleanup-Svn
 
 It deletes issues which is *closed*,*deployed* or any status you defined, from subversion branches path. By deleting passive branches it removes some garbage from your subversion. It is meaningful when you use *one issue is resolved in one branch* paradigm.
 
@@ -132,7 +151,7 @@ LIMIT=10
 
 ```
 
-**4. OPERATION= Review**
+##### 4.4. Review
 
 It updates the status of issue as *testing*, *in review* or anything you defined in your redmine configuration. Then tries to merge changes from an issue to an existing working copy. (most of the time, existing working copy is trunk) It preemptively postpones any conflicts for later resolution.
 
@@ -172,7 +191,7 @@ MERGE_ROOT=/myproject
 
 ```
 
-**5. OPERATION= Check-New**
+##### 4.5. Check-New
 
 It checks whether *redmine* has new issues with given status(optional) and sends a notification message to defined *slack* channel/user. (Post to channel configuration is done from slack panel. Please, check out below notes.) For example; you can get notifications about newly added issues from a redmine project.
 
@@ -220,7 +239,7 @@ Also you can schedule this operation with a crontab entry. For example, below en
 */5 * * * * /usr/local/bin/heybot -d check_new.hb 1> /dev/null 2> /var/www/html/heybot.log
 ```
 
-**6. OPERATION= Sync-Issue**
+##### 4.6. Sync-Issue
 
 In our software development life cycle, we have a redmine project which is used like a _ticket system_ for our customers. When they discover a bug or need a revision, they open a new issue on that redmine project. Let's name it **support** project. All those issues on **support** project are physically related to development issues which reside in our internal development projects. Although life-cycle of a typical development issue is very detailed, life-cycle of a typical **support** issue is very simple: New -> In Progress -> Closed. (Sometimes it can have this cycle when it's paused for some time: In Progress -> On Hold -> In Progress) These states are enough for customers to track their issues roughly. When they need to see the details, they can open an issue and look at detailed statuses of related issues just in a minute.
 
@@ -291,9 +310,11 @@ REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
 LAST_CHECK_TIME=Sat Nov 19 15:45:11 EET 2016
 ```
 
-###### Notes:
+#### 5. Notes
 
-**1. How to obtain slack incoming webhook URL?**
+Here are some general notes that can help you in various ways.
+
+##### 5.1. How to obtain slack incoming webhook URL?
 
 Go to yourteam.slack.com/apps/build/custom-integration and click on *Incoming Webhooks*, then select a channel or user you want to post your messages to.
 
