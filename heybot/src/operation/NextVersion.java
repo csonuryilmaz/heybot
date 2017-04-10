@@ -7,8 +7,6 @@ import com.taskadapter.redmineapi.bean.Issue;
 import com.taskadapter.redmineapi.bean.Version;
 import com.taskadapter.redmineapi.bean.VersionFactory;
 import java.util.Properties;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import model.VersionTag;
 
 /**
@@ -33,6 +31,7 @@ public class NextVersion extends Operation
     private final static String PARAMETER_APPEND_CURRENT = "APPEND_CURRENT";
     // internal
     private final static String PARAMETER_VERSION_TAG = "VERSION_TAG";
+    private final static String PARAMETER_PREVIOUS_VERSION_TAG = "PREVIOUS_VERSION_TAG";
     private final static String PARAMETER_VERSION_ID = "VERSION_ID";
 
     //</editor-fold>
@@ -73,36 +72,17 @@ public class NextVersion extends Operation
 	    int projectId = tryGetProjectId(redmineManager, filterProject);
 	    if (projectId > 0)
 	    {
-		if (closePreviousVersion)
-		{
-		    closeVersion(redmineManager, versionId);
-		}
-
 		Issue[] issues = getReadyUnversionedIssues(redmineManager, filterProject, filterQuery);
-
-		VersionTag versionTag = new VersionTag(getParameterString(prop, PARAMETER_VERSION_TAG, false),
-			getParameterStringHash(prop, PARAMETER_MAJOR_TRACKER, true),
-			getParameterStringHash(prop, PARAMETER_MINOR_TRACKER, true),
-			getParameterStringHash(prop, PARAMETER_PATCH_TRACKER, true));
-		versionTag.next(issues);
-
-		Version version;
-		if (!appendCurrentVersion)
+		if (issues.length > 0)
 		{
-		    version = createVersion(redmineManager, projectId, versionTitle, versionTag.toString());
-		    if (version != null)
+		    if (closePreviousVersion)
 		    {
-			setParameterString(prop, PARAMETER_VERSION_TAG, versionTag.toString());
-			setParameterInt(prop, PARAMETER_VERSION_ID, version.getId());
+			closeVersion(redmineManager, versionId);
 		    }
-		}
-		else
-		{
-		    version = getVersion(redmineManager, versionId);
-		}
 
-		assignTargetVersion(redmineManager, issues, version);
-
+		    Version version = getNextVersion(redmineManager, prop, issues, projectId, appendCurrentVersion, versionId, versionTitle);
+		    assignTargetVersion(redmineManager, issues, version);
+		}
 	    }
 	    else
 	    {
@@ -194,6 +174,70 @@ public class NextVersion extends Operation
 		System.err.println("Ooops! Can't assign target version. (" + ex.getMessage() + ")");
 	    }
 	}
+    }
+
+    private boolean updateVersion(RedmineManager redmineManager, Version version, String versionTitle, String versionTag)
+    {
+	String versionName = versionTitle + "-" + versionTag;
+	try
+	{
+	    System.out.println("Updating redmine version: [" + version.getName() + "] -> [" + versionName + "]");
+	    version.setName(versionName);
+
+	    redmineManager.getProjectManager().update(version);
+	    System.out.println("[✓] VERSION_ID=" + version.getId());
+
+	    return true;
+	}
+	catch (RedmineException ex)
+	{
+	    System.err.println("Ooops! Can't update existing version. (" + ex.getMessage() + ")");
+	}
+
+	return false;
+    }
+
+    private Version getNextVersion(RedmineManager redmineManager, Properties prop, Issue[] issues, int projectId, boolean appendCurrentVersion, int versionId, String versionTitle) throws Exception
+    {
+	VersionTag versionTag;
+	if (appendCurrentVersion)
+	{
+	    versionTag = new VersionTag(getParameterString(prop, PARAMETER_VERSION_TAG, false),
+		    getParameterString(prop, PARAMETER_PREVIOUS_VERSION_TAG, false),
+		    getParameterStringHash(prop, PARAMETER_MAJOR_TRACKER, true),
+		    getParameterStringHash(prop, PARAMETER_MINOR_TRACKER, true),
+		    getParameterStringHash(prop, PARAMETER_PATCH_TRACKER, true));
+	}
+	else
+	{
+	    versionTag = new VersionTag(getParameterString(prop, PARAMETER_VERSION_TAG, false),
+		    getParameterStringHash(prop, PARAMETER_MAJOR_TRACKER, true),
+		    getParameterStringHash(prop, PARAMETER_MINOR_TRACKER, true),
+		    getParameterStringHash(prop, PARAMETER_PATCH_TRACKER, true));
+	}
+	versionTag.next(issues);
+
+	Version version;
+	if (appendCurrentVersion)
+	{
+	    version = getVersion(redmineManager, versionId);
+	    if (version != null && updateVersion(redmineManager, version, versionTitle, versionTag.toString()))
+	    {
+		setParameterString(prop, PARAMETER_VERSION_TAG, versionTag.toString());
+	    }
+	}
+	else
+	{
+	    version = createVersion(redmineManager, projectId, versionTitle, versionTag.toString());
+	    if (version != null)
+	    {
+		setParameterString(prop, PARAMETER_PREVIOUS_VERSION_TAG, getParameterString(prop, PARAMETER_VERSION_TAG, false));
+		setParameterString(prop, PARAMETER_VERSION_TAG, versionTag.toString());
+		setParameterInt(prop, PARAMETER_VERSION_ID, version.getId());
+	    }
+	}
+
+	return version;
     }
 
 }
