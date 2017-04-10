@@ -190,7 +190,7 @@ public abstract class Operation
     }
     //</editor-fold>
 
-    public abstract void execute(Properties prop);
+    public abstract void execute(Properties prop) throws Exception;
 
     protected String tryGetRepoRootDir(String svnCommand, String sftpSourceDir)
     {

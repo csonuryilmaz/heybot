@@ -9,6 +9,7 @@ import com.taskadapter.redmineapi.bean.VersionFactory;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import model.VersionTag;
 
 /**
  *
@@ -24,6 +25,9 @@ public class NextVersion extends Operation
     private final static String PARAMETER_FILTER_PROJECT = "FILTER_PROJECT";
     private final static String PARAMETER_FILTER_QUERY = "FILTER_QUERY";
     private final static String PARAMETER_VERSION_TITLE = "VERSION_TITLE";
+    private final static String PARAMETER_MAJOR_TRACKER = "MAJOR_TRACKER";
+    private final static String PARAMETER_MINOR_TRACKER = "MINOR_TRACKER";
+    private final static String PARAMETER_PATCH_TRACKER = "PATCH_TRACKER";
     // optional
     private final static String PARAMETER_CLOSE_PREVIOUS = "CLOSE_PREVIOUS";
     private final static String PARAMETER_APPEND_CURRENT = "APPEND_CURRENT";
@@ -38,31 +42,30 @@ public class NextVersion extends Operation
     {
 	super(new String[]
 	{
-	    PARAMETER_REDMINE_TOKEN, PARAMETER_REDMINE_URL, PARAMETER_FILTER_PROJECT, PARAMETER_FILTER_QUERY, PARAMETER_VERSION_TITLE
+	    PARAMETER_REDMINE_TOKEN, PARAMETER_REDMINE_URL, PARAMETER_FILTER_PROJECT, PARAMETER_FILTER_QUERY, PARAMETER_VERSION_TITLE, PARAMETER_MAJOR_TRACKER, PARAMETER_MINOR_TRACKER, PARAMETER_PATCH_TRACKER
 	}
 	);
     }
 
     @Override
-    public void execute(Properties prop)
+    public void execute(Properties prop) throws Exception
     {
 	if (areMandatoryParametersNotEmpty(prop))
 	{
-	    // mandatory
 	    String redmineAccessToken = getParameterString(prop, PARAMETER_REDMINE_TOKEN, false);
 	    String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
 	    String filterProject = getParameterString(prop, PARAMETER_FILTER_PROJECT, true);
 	    String filterQuery = getParameterString(prop, PARAMETER_FILTER_QUERY, true);
 	    String versionTitle = getParameterString(prop, PARAMETER_VERSION_TITLE, false);
-	    // optional
+
 	    boolean closePreviousVersion = getParameterBoolean(prop, PARAMETER_CLOSE_PREVIOUS);
 	    boolean appendCurrentVersion = getParameterBoolean(prop, PARAMETER_APPEND_CURRENT);
+
 	    if (appendCurrentVersion)
 	    {
 		closePreviousVersion = false;
 	    }
 	    // internal
-	    String versionTag = getParameterString(prop, PARAMETER_VERSION_TAG, false);
 	    int versionId = getParameterInt(prop, PARAMETER_VERSION_ID, 0);
 
 	    redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
@@ -75,18 +78,21 @@ public class NextVersion extends Operation
 		    closeVersion(redmineManager, versionId);
 		}
 
-		// compute new version tag
-		// ...
-		// ...
-		versionTag = "2.21.0.0";
+		Issue[] issues = getReadyUnversionedIssues(redmineManager, filterProject, filterQuery);
+
+		VersionTag versionTag = new VersionTag(getParameterString(prop, PARAMETER_VERSION_TAG, false),
+			getParameterStringHash(prop, PARAMETER_MAJOR_TRACKER, true),
+			getParameterStringHash(prop, PARAMETER_MINOR_TRACKER, true),
+			getParameterStringHash(prop, PARAMETER_PATCH_TRACKER, true));
+		versionTag.next(issues);
 
 		Version version;
 		if (!appendCurrentVersion)
 		{
-		    version = createVersion(redmineManager, projectId, versionTitle, versionTag);
+		    version = createVersion(redmineManager, projectId, versionTitle, versionTag.toString());
 		    if (version != null)
 		    {
-			setParameterString(prop, PARAMETER_VERSION_TAG, versionTag);
+			setParameterString(prop, PARAMETER_VERSION_TAG, versionTag.toString());
 			setParameterInt(prop, PARAMETER_VERSION_ID, version.getId());
 		    }
 		}
@@ -94,8 +100,6 @@ public class NextVersion extends Operation
 		{
 		    version = getVersion(redmineManager, versionId);
 		}
-
-		Issue[] issues = getReadyUnversionedIssues(redmineManager, filterProject, filterQuery);
 
 		assignTargetVersion(redmineManager, issues, version);
 
@@ -135,11 +139,6 @@ public class NextVersion extends Operation
 
     private Version createVersion(RedmineManager redmineManager, int projectId, String versionTitle, String versionTag)
     {
-	if (versionTag == null || versionTag.length() == 0)
-	{
-	    versionTag = "1.0.0.0";
-	}
-
 	String versionName = versionTitle + "-" + versionTag;
 	try
 	{
