@@ -3,16 +3,17 @@
 ### Table of Contents
   1. [Introduction](#1-introduction)  
   2. [Requirements](#2-requirements)  
-  3. [Usage](#3-usage)  
-  4. [Operations](#4-operations)  
-    4.1. [Upload](#41-upload)  
-    4.2. [Cleanup](#42-cleanup)  
-    4.3. [Cleanup-Svn](#43-cleanup-svn)  
-    4.4. [Review](#44-review)  
-    4.5. [Check-New](#45-check-new)  
-    4.6. [Sync-Issue](#46-sync-issue)  
-  5. [Notes](#5-notes)  
-    5.1 [How to obtain slack incoming webhook URL?](#51-how-to-obtain-slack-incoming-webhook-url)  
+  3. [Installation](#3-installation)  
+  4. [Usage](#4-usage)  
+  5. [Operations](#5-operations)  
+    5.1. [Upload](#51-upload)  
+    5.2. [Cleanup](#52-cleanup)  
+    5.3. [Cleanup-Svn](#53-cleanup-svn)  
+    5.4. [Review](#54-review)  
+    5.5. [Check-New](#55-check-new)  
+    5.6. [Sync-Issue](#56-sync-issue)  
+  6. [Notes](#6-notes)  
+    6.1 [How to obtain slack incoming webhook URL?](#61-how-to-obtain-slack-incoming-webhook-url)  
 
 
 #### 1. Introduction
@@ -23,7 +24,35 @@
 
 **heybot** is mainly designed to work in **subversion**, **redmine** and **slack** environment. If you use [redmine](http://www.redmine.org/) as project management/issue tracking application, [subversion](https://subversion.apache.org/) as version control system and [slack](https://slack.com/) as communication environment then **heybot** can help you. For other ecosystems, you can fork the project or contribute directly to this project. All useful contributions are wellcome.
 
-#### 3. Usage
+#### 3. Installation
+
+Heybot is tested and works on mac osx and gnu/linux distributions. Java 1.8+ (jre/jdk) have to be installed before *heybot*. You can check whether it's installed and version is sufficient by:
+```
+$ java -version
+java version "1.8.0_65"
+Java(TM) SE Runtime Environment (build 1.8.0_65-b17)
+Java HotSpot(TM) 64-Bit Server VM (build 25.65-b01, mixed mode)
+```
+Download latest version of **heybot** from [releases](https://github.com/csonuryilmaz/heybot/releases) or:
+```
+$ wget https://github.com/csonuryilmaz/projects/releases/download/1.9.0.4/heybot_1.9.0.4.tar.gz
+```
+Extract archive and change directory:
+```
+$ tar -zxvf heybot_1.9.0.4.tar.gz
+$ cd heybot_1.9.0.4
+```
+Run installation script:
+```
+$ chmod a+x install.sh
+$ ./install.sh
+```
+It will ask for sudo permission, so your user should be a sudoer. Or you can run installation script as root. If everything is okay, you should see logo, version and help documentation when you run:
+```
+$ heybot
+```
+
+#### 4. Usage
 
 It's very easy to use **heybot** and its call syntax is like commanding a bot. It's as easy as saying this:
 
@@ -45,11 +74,11 @@ As a common practice a **.hb** file starts with parameter *OPERATION*  and it is
 
 Let's dive into some details and explain them with examples.
 
-#### 4. Operations
+#### 5. Operations
 
 Below there is a list of operations that you can use with heybot.
 
-##### 4.1. Upload
+##### 5.1. Upload
 
 It uploads local changes in the working copy (output of *svn st* command) to a remote server by SFTP protocol.
 
@@ -83,7 +112,7 @@ SOURCE_PATH=/Users/smith/NetBeansProjects/myproject/
 
 ```
 
-##### 4.2. Cleanup
+##### 5.2. Cleanup
 
 It deletes issues (branches) which is *closed*,*deployed* or any status you defined, from local working directory. By deleting passive branches it saves your disk space. It is meaningful when you use *one issue is resolved in one branch* paradigm.
 
@@ -117,7 +146,7 @@ LIMIT=10
 
 ```
 
-##### 4.3. Cleanup-Svn
+##### 5.3. Cleanup-Svn
 
 It deletes issues which is *closed*,*deployed* or any status you defined, from subversion branches path. By deleting passive branches it removes some garbage from your subversion. It is meaningful when you use *one issue is resolved in one branch* paradigm.
 
@@ -151,7 +180,7 @@ LIMIT=10
 
 ```
 
-##### 4.4. Review
+##### 5.4. Review
 
 It updates the status of issue as *testing*, *in review* or anything you defined in your redmine configuration. Then tries to merge changes from an issue to an existing working copy. (most of the time, existing working copy is trunk) It preemptively postpones any conflicts for later resolution.
 
@@ -191,7 +220,7 @@ MERGE_ROOT=/myproject
 
 ```
 
-##### 4.5. Check-New
+##### 5.5. Check-New
 
 It checks whether *redmine* has new issues with given status(optional) and sends a notification message to defined *slack* channel/user. (Post to channel configuration is done from slack panel. Please, check out below notes.) For example; you can get notifications about newly added issues from a redmine project.
 
@@ -239,7 +268,7 @@ Also you can schedule this operation with a crontab entry. For example, below en
 */5 * * * * /usr/local/bin/heybot -d check_new.hb 1> /dev/null 2> /var/www/html/heybot.log
 ```
 
-##### 4.6. Sync-Issue
+##### 5.6. Sync-Issue
 
 In our software development life cycle, we have a redmine project which is used like a _ticket system_ for our customers. When they discover a bug or need a revision, they open a new issue on that redmine project. Let's name it **support** project. All those issues on **support** project are physically related to development issues which reside in our internal development projects. Although life-cycle of a typical development issue is very detailed, life-cycle of a typical **support** issue is very simple: New -> In Progress -> Closed. (Sometimes it can have this cycle when it's paused for some time: In Progress -> On Hold -> In Progress) These states are enough for customers to track their issues roughly. When they need to see the details, they can open an issue and look at detailed statuses of related issues just in a minute.
 
@@ -310,11 +339,11 @@ REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
 LAST_CHECK_TIME=Sat Nov 19 15:45:11 EET 2016
 ```
 
-#### 5. Notes
+#### 6. Notes
 
 Here are some general notes that can help you in various ways.
 
-##### 5.1. How to obtain slack incoming webhook URL?
+##### 6.1. How to obtain slack incoming webhook URL?
 
 Go to yourteam.slack.com/apps/build/custom-integration and click on *Incoming Webhooks*, then select a channel or user you want to post your messages to.
 
