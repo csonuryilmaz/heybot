@@ -29,7 +29,7 @@ import org.apache.commons.cli.ParseException;
 public class heybot
 {
 
-    private final static String VERSION = "1.9.0.0-alfa";
+    private final static String VERSION = "1.9.0.4";
     private static final String NEWLINE = System.getProperty("line.separator");
 
     /**
@@ -39,6 +39,7 @@ public class heybot
     {
 	Options options = buildOptions();
 	printLogo();
+	printVersion();
 
 	if (args.length == 0)
 	{
@@ -186,6 +187,11 @@ public class heybot
 		+ NEWLINE + "         |___|             "
 		+ "";
 	System.out.println(logo);
+    }
+
+    private static void printVersion()
+    {
+	System.out.println(NEWLINE + " " + VERSION + NEWLINE);
     }
 
     private static class MyOptionComparator<T extends Option> implements Comparator<T>
