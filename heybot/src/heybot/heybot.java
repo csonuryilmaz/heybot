@@ -2,7 +2,6 @@ package heybot;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Comparator;
 import java.util.Locale;
@@ -38,8 +37,8 @@ public class heybot
      */
     public static void main(String[] args)
     {
-	// build programming interface
 	Options options = buildOptions();
+	printLogo();
 
 	if (args.length == 0)
 	{
@@ -49,7 +48,6 @@ public class heybot
 	{
 	    // parse command line arguments
 	    CommandLine line = getParser(options, args);
-
 	    if (line.hasOption("help"))
 	    {
 		printHelp(options);
@@ -64,20 +62,26 @@ public class heybot
     private static void start(CommandLine line)
     {
 	String hbFile = line.getOptionValue("do");
-
-	hbFile = getFullPath(hbFile);
-
-	try
+	if (hbFile != null && hbFile.length() > 0)
 	{
-	    tryReadHbFile(hbFile);
+	    try
+	    {
+		hbFile = getFullPath(hbFile);
+		tryExecute(hbFile);
+	    }
+	    catch (Exception ex)
+	    {
+		System.err.println("Ooops! An error occurred while executing [" + line.getOptionValue("do") + "]"
+			+ NEWLINE + " " + ex.getMessage() + " ");
+	    }
 	}
-	catch (IOException ex)
+	else
 	{
-	    System.err.println("Ooops! Hb file not found or format incompatible. (" + ex.getMessage() + ")");
+	    printHelp(buildOptions());
 	}
     }
 
-    private static void tryReadHbFile(String hbFile) throws IOException
+    private static void tryExecute(String hbFile) throws Exception
     {
 	Properties prop = new Properties();
 	prop.load(new FileInputStream(hbFile));
@@ -94,7 +98,7 @@ public class heybot
 	}
     }
 
-    private static void tryDoOperation(Properties prop, String operation)
+    private static void tryDoOperation(Properties prop, String operation) throws Exception
     {
 	operation = operation.toLowerCase(new Locale("tr-TR"));
 
@@ -171,6 +175,17 @@ public class heybot
 	options.addOption("h", "help", false, "Prints this help message.");
 
 	return options;
+    }
+
+    private static void printLogo()
+    {
+	String logo = "  _           _       _    "
+		+ NEWLINE + " | |_ ___ _ _| |_ ___| |_  "
+		+ NEWLINE + " |   | -_| | | . | . |  _| "
+		+ NEWLINE + " |_|_|___|_  |___|___|_|   "
+		+ NEWLINE + "         |___|             "
+		+ "";
+	System.out.println(logo);
     }
 
     private static class MyOptionComparator<T extends Option> implements Comparator<T>
