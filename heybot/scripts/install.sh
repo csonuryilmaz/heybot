@@ -40,11 +40,36 @@ tryRemoveOldInstallation()
     sudo rm -Rf $HEYBOT_OLD_FOLDER
 }
 
+install()
+{
+    echo "-- Installing new version ... "
+    sudo ln -s $PWD/heybot.run /usr/local/bin/heybot && sudo chmod +x /usr/local/bin/heybot && echo "Installed successfully."
+    exit 0
+}
+
 tryGetHeybotOldPath
 [[ !  -z  $HEYBOT_OLD_PATH  ]] && tryGetHeybotOldWorkspace && tryCopyOldWorkpaceIntoNewOne && tryRemoveOldInstallation
 
-echo "-- Installing new version ... "
-sudo ln -s $PWD/heybot.run /usr/local/bin/heybot
-sudo chmod +x /usr/local/bin/heybot
-echo "Done. :)"
-exit 0
+echo "-- Checking whether java is installed ? ..."
+if type -p java; then
+    echo "Found java executable in PATH."
+    JAVA_EXECUTABLE=java
+elif [[ -n "$JAVA_HOME" ]] && [[ -x "$JAVA_HOME/bin/java" ]];  then
+    echo "Found java executable in JAVA_HOME."     
+    JAVA_EXECUTABLE="$JAVA_HOME/bin/java"
+else
+    echo "You will need Java installed on your system!"
+    exit -1
+fi
+
+echo "-- Checking whether java version is 1.8+ ? ..."
+if [[ "$JAVA_EXECUTABLE" ]]; then
+    version=$("$JAVA_EXECUTABLE" -version 2>&1 | awk -F '"' '/version/ {print $2}')
+    echo version "$version"
+    if [[ "$version" > "1.8" ]]; then
+        install
+    else         
+        echo "Java version 1.8 or later required!"
+        exit -1
+    fi
+fi
