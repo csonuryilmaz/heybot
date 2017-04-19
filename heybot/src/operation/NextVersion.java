@@ -174,7 +174,7 @@ public class NextVersion extends Operation
     {
 	for (Issue issue : issues)
 	{
-	    System.out.println("#" + issue.getId() + " " + issue.getSubject());
+	    System.out.println("#" + issue.getId() + " [" + issue.getTracker().getName() + "]" + " " + issue.getSubject());
 
 	    issue.setTargetVersion(version);
 	    try
