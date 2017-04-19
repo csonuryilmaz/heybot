@@ -8,6 +8,7 @@ import com.taskadapter.redmineapi.bean.Version;
 import com.taskadapter.redmineapi.bean.VersionFactory;
 import java.util.Properties;
 import model.VersionTag;
+import static org.apache.http.util.TextUtils.isEmpty;
 
 /**
  *
@@ -29,6 +30,10 @@ public class NextVersion extends Operation
     // optional
     private final static String PARAMETER_CLOSE_PREVIOUS = "CLOSE_PREVIOUS";
     private final static String PARAMETER_APPEND_CURRENT = "APPEND_CURRENT";
+    private final static String PARAMETER_CREATE_SVN_TAG = "CREATE_SVN_TAG";
+    private final static String PARAMETER_REPOSITORY_PATH = "REPOSITORY_PATH";
+    private final static String PARAMETER_TRUNK_PATH = "TRUNK_PATH";
+    private final static String PARAMETER_TAGS_PATH = "TAGS_PATH";
     // internal
     private final static String PARAMETER_VERSION_TAG = "VERSION_TAG";
     private final static String PARAMETER_PREVIOUS_VERSION_TAG = "PREVIOUS_VERSION_TAG";
@@ -89,6 +94,8 @@ public class NextVersion extends Operation
 
 		    assignTargetVersion(redmineManager, issues, version);
 		}
+
+		createSubversionTag(prop, redmineManager, versionId);
 	    }
 	    else
 	    {
@@ -240,6 +247,96 @@ public class NextVersion extends Operation
 	}
 
 	return version;
+    }
+
+    private void createSubversionTag(Properties prop, RedmineManager redmineManager, int versionId)
+    {
+	boolean isCreateSubversionTagEnabled = getParameterBoolean(prop, PARAMETER_CREATE_SVN_TAG);
+	if (isCreateSubversionTagEnabled)
+	{
+	    String repositoryPath = trimRight(getParameterString(prop, PARAMETER_REPOSITORY_PATH, false), "/");
+	    String trunkPath = trimLeft(trimRight(getParameterString(prop, PARAMETER_TRUNK_PATH, false), "/"), "/");
+	    String tagsPath = trimLeft(trimRight(getParameterString(prop, PARAMETER_TAGS_PATH, false), "/"), "/");
+
+	    if (!isEmpty(repositoryPath) && !isEmpty(trunkPath) && !isEmpty(tagsPath))
+	    {
+		createSubversionTag(getVersion(redmineManager, versionId), repositoryPath, trunkPath, tagsPath);
+	    }
+	    else
+	    {
+		System.err.println("Ooops! Create SVN tag is enabled but other helper parameters are empty. Plase check them.");
+	    }
+	}
+    }
+
+    private void createSubversionTag(Version version, String repositoryPath, String trunkPath, String tagsPath)
+    {
+	if (version != null)
+	{
+	    createSubversionTag(version.getName(), repositoryPath, trunkPath, tagsPath);
+	}
+	else
+	{
+	    System.err.println("Ooops! Create SVN tag is enabled but couldn't get version from redmine.");
+	}
+    }
+
+    private void createSubversionTag(String versionName, String repositoryPath, String trunkPath, String tagsPath)
+    {
+	String svnCommand = tryExecute("which svn");
+	if (svnCommand.length() > 0)
+	{
+	    String tagPath = repositoryPath + "/" + tagsPath + "/" + versionName;
+	    String srcPath = repositoryPath + "/" + trunkPath;
+	    if (!isSvnPathExists(svnCommand, tagPath))
+	    {
+		if (isSvnPathExists(svnCommand, srcPath))
+		{
+		    if (createSvnTag(svnCommand, srcPath, tagPath, versionName))
+		    {
+			System.out.println("[✓] ^/" + tagsPath + "/" + versionName + " created successfully.");
+		    }
+		}
+		else
+		{
+		    System.err.println("Ooops! Create SVN tag is enabled but couldn't find TRUNK in repository. (" + srcPath + ")");
+		}
+	    }
+	    else
+	    {
+		System.out.println("Tag already exists in ^/" + tagsPath + " folder for current version [" + versionName + "].");
+	    }
+	}
+	else
+	{
+	    System.err.println("Ooops! Create SVN tag is enabled but couldn't find SVN command.");
+	}
+    }
+
+    private boolean isSvnPathExists(String svnCommand, String tagPath)
+    {
+	String[] output = execute(svnCommand + " ls " + tagPath + " --depth empty");
+	return output == null || (output[1].length() == 0 && output[0].length() == 0);
+    }
+
+    private boolean createSvnTag(String svnCommand, String srcPath, String tagPath, String comment)
+    {
+	String[] output = execute(svnCommand + " copy " + srcPath + " " + tagPath + " -m " + comment);
+
+	if (output != null)
+	{
+	    if (output[1].length() == 0)
+	    {
+		System.out.println(output[0]);
+		return true;
+	    }
+	    else
+	    {
+		System.err.println(output[1]);
+	    }
+	}
+
+	return false;
     }
 
 }

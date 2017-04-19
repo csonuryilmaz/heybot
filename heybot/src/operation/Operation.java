@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.TimeZone;
+import static org.apache.http.util.TextUtils.isEmpty;
 
 /**
  * Base class for all operations in operation package.
@@ -120,7 +121,7 @@ public abstract class Operation
 	return null;
     }
 
-    private String[] execute(String command)
+    protected String[] execute(String command)
     {
 	Process process;
 	try
@@ -631,5 +632,33 @@ public abstract class Operation
 	}
 
 	return null;
+    }
+
+    protected String trimRight(String text, String trimChar)
+    {
+	if (!isEmpty(text))
+	{
+	    text = text.trim();
+	    if (text.endsWith(trimChar))
+	    {
+		return text.substring(0, text.length() - trimChar.length());
+	    }
+	}
+
+	return text;
+    }
+
+    protected String trimLeft(String text, String trimChar)
+    {
+	if (!isEmpty(text))
+	{
+	    text = text.trim();
+	    if (text.startsWith(trimChar))
+	    {
+		return text.substring(trimChar.length());
+	    }
+	}
+
+	return text;
     }
 }
