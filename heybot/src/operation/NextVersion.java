@@ -34,6 +34,7 @@ public class NextVersion extends Operation
     private final static String PARAMETER_REPOSITORY_PATH = "REPOSITORY_PATH";
     private final static String PARAMETER_TRUNK_PATH = "TRUNK_PATH";
     private final static String PARAMETER_TAGS_PATH = "TAGS_PATH";
+    private final static String PARAMETER_APP_VERSION_FILE_PATH = "APP_VERSION_FILE_PATH";
     // internal
     private final static String PARAMETER_VERSION_TAG = "VERSION_TAG";
     private final static String PARAMETER_PREVIOUS_VERSION_TAG = "PREVIOUS_VERSION_TAG";
@@ -260,7 +261,8 @@ public class NextVersion extends Operation
 
 	    if (!isEmpty(repositoryPath) && !isEmpty(trunkPath) && !isEmpty(tagsPath))
 	    {
-		createSubversionTag(getVersion(redmineManager, versionId), repositoryPath, trunkPath, tagsPath);
+		createSubversionTag(getVersion(redmineManager, versionId), repositoryPath, trunkPath, tagsPath,
+			getParameterStringArray(prop, PARAMETER_APP_VERSION_FILE_PATH, false));
 	    }
 	    else
 	    {
@@ -269,11 +271,18 @@ public class NextVersion extends Operation
 	}
     }
 
-    private void createSubversionTag(Version version, String repositoryPath, String trunkPath, String tagsPath)
+    private void createSubversionTag(Version version, String repositoryPath, String trunkPath, String tagsPath, String[] appVersionFilePaths)
     {
 	if (version != null)
 	{
-	    createSubversionTag(version.getName(), repositoryPath, trunkPath, tagsPath);
+	    if (appVersionFilePaths.length == 0 || updateAppVersionFile(version.getName(), appVersionFilePaths))
+	    {
+		createSubversionTag(version.getName(), repositoryPath, trunkPath, tagsPath);
+	    }
+	    else
+	    {
+		System.err.println("Ooops! Couldn't update app version files successfully, so no version tag is created.");
+	    }
 	}
 	else
 	{
@@ -337,6 +346,19 @@ public class NextVersion extends Operation
 	}
 
 	return false;
+    }
+
+    private boolean updateAppVersionFile(String versionName, String[] appVersionFilePaths)
+    {
+	appVersionFilePaths = trimLeft(appVersionFilePaths, "/");
+
+	// todo: (onur)
+	// checkout trunk into *tmp* --depth empty
+	// foreach app version file path checkout *file*
+	// replace version info
+	// if there are local changes to send, commit filepaths all in once (atomic)
+	// return true if commit is successfull, else false
+	return true;
     }
 
 }

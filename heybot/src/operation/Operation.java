@@ -519,7 +519,12 @@ public abstract class Operation
 
     protected String[] getParameterStringArray(Properties props, String parameter, boolean isLowerCased)
     {
-	return getParameterString(props, parameter, isLowerCased).split(",");
+	String sValue = getParameterString(props, parameter, isLowerCased);
+	if (!isEmpty(sValue))
+	{
+	    return getParameterString(props, parameter, isLowerCased).split(",");
+	}
+	return new String[0];
     }
 
     protected HashSet<String> getParameterStringHash(Properties props, String parameter, boolean isLowerCased)
@@ -660,5 +665,15 @@ public abstract class Operation
 	}
 
 	return text;
+    }
+
+    protected String[] trimLeft(String[] texts, String trimChar)
+    {
+	for (int i = 0; i < texts.length; i++)
+	{
+	    texts[i] = trimLeft(texts[i], trimChar);
+	}
+
+	return texts;
     }
 }
