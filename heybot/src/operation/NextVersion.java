@@ -6,6 +6,7 @@ import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.Issue;
 import com.taskadapter.redmineapi.bean.Version;
 import com.taskadapter.redmineapi.bean.VersionFactory;
+import java.io.File;
 import java.util.Properties;
 import model.VersionTag;
 import static org.apache.http.util.TextUtils.isEmpty;
@@ -261,8 +262,16 @@ public class NextVersion extends Operation
 
 	    if (!isEmpty(repositoryPath) && !isEmpty(trunkPath) && !isEmpty(tagsPath))
 	    {
-		createSubversionTag(getVersion(redmineManager, versionId), repositoryPath, trunkPath, tagsPath,
-			getParameterStringArray(prop, PARAMETER_APP_VERSION_FILE_PATH, false));
+		String svnCommand = tryExecute("which svn");
+		if (svnCommand.length() > 0)
+		{
+		    createSubversionTag(svnCommand, getVersion(redmineManager, versionId), repositoryPath, trunkPath, tagsPath,
+			    getParameterStringArray(prop, PARAMETER_APP_VERSION_FILE_PATH, false));
+		}
+		else
+		{
+		    System.err.println("Ooops! Create SVN tag is enabled but couldn't find SVN command.");
+		}
 	    }
 	    else
 	    {
@@ -271,13 +280,13 @@ public class NextVersion extends Operation
 	}
     }
 
-    private void createSubversionTag(Version version, String repositoryPath, String trunkPath, String tagsPath, String[] appVersionFilePaths)
+    private void createSubversionTag(String svnCommand, Version version, String repositoryPath, String trunkPath, String tagsPath, String[] appVersionFilePaths)
     {
 	if (version != null)
 	{
-	    if (appVersionFilePaths.length == 0 || updateAppVersionFile(version.getName(), appVersionFilePaths))
+	    if (appVersionFilePaths.length == 0 || updateAppVersionFile(svnCommand, version.getName(), repositoryPath, trunkPath, appVersionFilePaths))
 	    {
-		createSubversionTag(version.getName(), repositoryPath, trunkPath, tagsPath);
+		createSubversionTag(svnCommand, version.getName(), repositoryPath, trunkPath, tagsPath);
 	    }
 	    else
 	    {
@@ -290,35 +299,27 @@ public class NextVersion extends Operation
 	}
     }
 
-    private void createSubversionTag(String versionName, String repositoryPath, String trunkPath, String tagsPath)
+    private void createSubversionTag(String svnCommand, String versionName, String repositoryPath, String trunkPath, String tagsPath)
     {
-	String svnCommand = tryExecute("which svn");
-	if (svnCommand.length() > 0)
+	String tagPath = repositoryPath + "/" + tagsPath + "/" + versionName;
+	String srcPath = repositoryPath + "/" + trunkPath;
+	if (!isSvnPathExists(svnCommand, tagPath))
 	{
-	    String tagPath = repositoryPath + "/" + tagsPath + "/" + versionName;
-	    String srcPath = repositoryPath + "/" + trunkPath;
-	    if (!isSvnPathExists(svnCommand, tagPath))
+	    if (isSvnPathExists(svnCommand, srcPath))
 	    {
-		if (isSvnPathExists(svnCommand, srcPath))
+		if (createSvnTag(svnCommand, srcPath, tagPath, versionName))
 		{
-		    if (createSvnTag(svnCommand, srcPath, tagPath, versionName))
-		    {
-			System.out.println("[✓] ^/" + tagsPath + "/" + versionName + " created successfully.");
-		    }
-		}
-		else
-		{
-		    System.err.println("Ooops! Create SVN tag is enabled but couldn't find TRUNK in repository. (" + srcPath + ")");
+		    System.out.println("[✓] ^/" + tagsPath + "/" + versionName + " created successfully.");
 		}
 	    }
 	    else
 	    {
-		System.out.println("Tag already exists in ^/" + tagsPath + " folder for current version [" + versionName + "].");
+		System.err.println("Ooops! Create SVN tag is enabled but couldn't find TRUNK in repository. (" + srcPath + ")");
 	    }
 	}
 	else
 	{
-	    System.err.println("Ooops! Create SVN tag is enabled but couldn't find SVN command.");
+	    System.out.println("Tag already exists in ^/" + tagsPath + " folder for current version [" + versionName + "].");
 	}
     }
 
@@ -348,16 +349,71 @@ public class NextVersion extends Operation
 	return false;
     }
 
-    private boolean updateAppVersionFile(String versionName, String[] appVersionFilePaths)
+    private boolean updateAppVersionFile(String svnCommand, String versionName, String repositoryPath, String trunkPath, String[] appVersionFilePaths)
     {
 	appVersionFilePaths = trimLeft(appVersionFilePaths, "/");
 
+	String localPath = getWorkingDirectory() + "/" + "tmp";
+	createFolder(localPath);
+	if (checkoutEmpty(svnCommand, repositoryPath + "/" + trunkPath, localPath + "/" + trunkPath))
+	{
+	    for (String appVersionFilePath : appVersionFilePaths)
+	    {
+		checkoutFile(svnCommand, localPath + "/" + trunkPath + "/" + appVersionFilePath);
+	    }
+
+	    System.out.println();
+	}
+	else
+	{
+	    System.err.println("Ooops! Checkout " + trunkPath + " could not be done!");
+	}
+
 	// todo: (onur)
-	// checkout trunk into *tmp* --depth empty
 	// foreach app version file path checkout *file*
-	// replace version info
+	//  svn up admin --depth empty
+	// svn up admin/index.php
+	// make --depth=empty optional
+	// replace version info (http://www.cs.wustl.edu/~kjg/cse132/examples/Replace.java)
 	// if there are local changes to send, commit filepaths all in once (atomic)
 	// return true if commit is successfull, else false
+	return true;
+    }
+
+    private boolean checkoutEmpty(String svnCommand, String trunkPath, String localPath)
+    {
+	System.out.println("Checking out " + trunkPath + " ...");
+	String[] output = execute(svnCommand + " co " + trunkPath + " " + localPath + " --depth empty ");
+	if (output == null || output[1].length() > 0)
+	{
+	    System.err.println(output[1]);
+	    return false;
+	}
+
+	System.out.println(output[0]);
+	return true;
+    }
+
+    private void createFolder(String folderName)
+    {
+	File folder = new File(folderName);
+	if (!folder.exists())
+	{
+	    folder.mkdir();
+	}
+    }
+
+    private boolean checkoutFile(String svnCommand, String filePath)
+    {
+	System.out.println("Checking out " + filePath + " ...");
+	String[] output = execute(svnCommand + " up " + filePath);
+	if (output == null || output[1].length() > 0)
+	{
+	    System.err.println(output[1]);
+	    return false;
+	}
+
+	System.out.println(output[0]);
 	return true;
     }
 

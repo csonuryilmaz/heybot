@@ -10,10 +10,12 @@ import com.taskadapter.redmineapi.bean.IssueStatus;
 import com.taskadapter.redmineapi.bean.Project;
 import com.taskadapter.redmineapi.bean.SavedQuery;
 import com.taskadapter.redmineapi.bean.Version;
+import heybot.heybot;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URISyntaxException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -26,6 +28,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.TimeZone;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import static org.apache.http.util.TextUtils.isEmpty;
 
 /**
@@ -675,5 +679,17 @@ public abstract class Operation
 	}
 
 	return texts;
+    }
+
+    protected String getWorkingDirectory()
+    {
+	try
+	{
+	    return new java.io.File(heybot.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath()).getParent();
+	}
+	catch (URISyntaxException ex)
+	{
+	    return "";
+	}
     }
 }
