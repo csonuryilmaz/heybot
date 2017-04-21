@@ -361,6 +361,9 @@ public class NextVersion extends Operation
 	{
 	    svnCheckout(svnCommand, localPath, trunkPath, appVersionFilePaths);
 
+	    // todo: replace version info (http://www.cs.wustl.edu/~kjg/cse132/examples/Replace.java)
+	    svnCommit(svnCommand, localPath + "/" + trunkPath, versionName);
+
 	    System.out.println();
 	}
 	else
@@ -369,7 +372,7 @@ public class NextVersion extends Operation
 	}
 
 	// todo: (onur)
-	// replace version info (http://www.cs.wustl.edu/~kjg/cse132/examples/Replace.java)
+	//
 	// if there are local changes to send, commit filepaths all in once (atomic)
 	// return true if commit is successfull, else false
 	return true;
@@ -433,6 +436,21 @@ public class NextVersion extends Operation
 	{
 	    command += " --depth empty";
 	}
+	System.out.println(command);
+	String[] output = execute(command);
+	if (output == null || output[1].length() > 0)
+	{
+	    System.err.println(output[1]);
+	    return false;
+	}
+
+	System.out.println(output[0]);
+	return true;
+    }
+
+    private boolean svnCommit(String svnCommand, String workingDirPath, String comment)
+    {
+	String command = svnCommand + " commit " + workingDirPath + " -m " + comment;
 	System.out.println(command);
 	String[] output = execute(command);
 	if (output == null || output[1].length() > 0)
