@@ -355,12 +355,11 @@ public class NextVersion extends Operation
 
 	String localPath = getWorkingDirectory() + "/" + "tmp";
 	createFolder(localPath);
-	if (checkoutEmpty(svnCommand, repositoryPath + "/" + trunkPath, localPath + "/" + trunkPath))
+
+	System.out.println("=== " + "Getting app version files into " + localPath + "/" + trunkPath);
+	if (svnCheckout(svnCommand, repositoryPath + "/" + trunkPath, localPath + "/" + trunkPath, true))
 	{
-	    for (String appVersionFilePath : appVersionFilePaths)
-	    {
-		checkoutFile(svnCommand, localPath + "/" + trunkPath + "/" + appVersionFilePath);
-	    }
+	    svnCheckout(svnCommand, localPath, trunkPath, appVersionFilePaths);
 
 	    System.out.println();
 	}
@@ -370,20 +369,21 @@ public class NextVersion extends Operation
 	}
 
 	// todo: (onur)
-	// foreach app version file path checkout *file*
-	//  svn up admin --depth empty
-	// svn up admin/index.php
-	// make --depth=empty optional
 	// replace version info (http://www.cs.wustl.edu/~kjg/cse132/examples/Replace.java)
 	// if there are local changes to send, commit filepaths all in once (atomic)
 	// return true if commit is successfull, else false
 	return true;
     }
 
-    private boolean checkoutEmpty(String svnCommand, String trunkPath, String localPath)
+    private boolean svnCheckout(String svnCommand, String trunkPath, String localPath, boolean isDepthEmpty)
     {
-	System.out.println("Checking out " + trunkPath + " ...");
-	String[] output = execute(svnCommand + " co " + trunkPath + " " + localPath + " --depth empty ");
+	String command = svnCommand + " co " + trunkPath + " " + localPath;
+	if (isDepthEmpty)
+	{
+	    command += " --depth empty ";
+	}
+	System.out.println(command);
+	String[] output = execute(command);
 	if (output == null || output[1].length() > 0)
 	{
 	    System.err.println(output[1]);
@@ -403,10 +403,38 @@ public class NextVersion extends Operation
 	}
     }
 
-    private boolean checkoutFile(String svnCommand, String filePath)
+    private void svnCheckout(String svnCommand, String localPath, String trunkPath, String[] filePaths)
     {
-	System.out.println("Checking out " + filePath + " ...");
-	String[] output = execute(svnCommand + " up " + filePath);
+	for (String filePath : filePaths)
+	{
+	    String[] tokens = filePath.split("/");
+	    if (tokens.length == 1)
+	    {
+		svnUpdate(svnCommand, localPath + "/" + trunkPath + "/" + tokens[0], false);
+	    }
+	    else
+	    {
+		int i = 0;
+		String buffer = "";
+		for (; i < tokens.length - 1; i++)
+		{
+		    svnUpdate(svnCommand, localPath + "/" + trunkPath + "/" + tokens[i], true);
+		    buffer += tokens[i] + "/";
+		}
+		svnUpdate(svnCommand, localPath + "/" + trunkPath + "/" + buffer + tokens[i], false);
+	    }
+	}
+    }
+
+    private boolean svnUpdate(String svnCommand, String filePath, boolean isDepthEmpty)
+    {
+	String command = svnCommand + " up " + filePath;
+	if (isDepthEmpty)
+	{
+	    command += " --depth empty";
+	}
+	System.out.println(command);
+	String[] output = execute(command);
 	if (output == null || output[1].length() > 0)
 	{
 	    System.err.println(output[1]);
