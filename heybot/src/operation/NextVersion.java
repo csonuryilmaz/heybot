@@ -6,8 +6,16 @@ import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.Issue;
 import com.taskadapter.redmineapi.bean.Version;
 import com.taskadapter.redmineapi.bean.VersionFactory;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import model.VersionTag;
 import static org.apache.http.util.TextUtils.isEmpty;
 
@@ -36,6 +44,7 @@ public class NextVersion extends Operation
     private final static String PARAMETER_TRUNK_PATH = "TRUNK_PATH";
     private final static String PARAMETER_TAGS_PATH = "TAGS_PATH";
     private final static String PARAMETER_APP_VERSION_FILE_PATH = "APP_VERSION_FILE_PATH";
+    private final static String PARAMETER_APP_VERSION_FILE_PATTERN = "APP_VERSION_FILE_PATTERN";
     // internal
     private final static String PARAMETER_VERSION_TAG = "VERSION_TAG";
     private final static String PARAMETER_PREVIOUS_VERSION_TAG = "PREVIOUS_VERSION_TAG";
@@ -266,7 +275,8 @@ public class NextVersion extends Operation
 		if (svnCommand.length() > 0)
 		{
 		    createSubversionTag(svnCommand, getVersion(redmineManager, versionId), repositoryPath, trunkPath, tagsPath,
-			    getParameterStringArray(prop, PARAMETER_APP_VERSION_FILE_PATH, false));
+			    getParameterStringArray(prop, PARAMETER_APP_VERSION_FILE_PATH, false),
+			    getParameterString(prop, PARAMETER_APP_VERSION_FILE_PATTERN, false));
 		}
 		else
 		{
@@ -280,11 +290,11 @@ public class NextVersion extends Operation
 	}
     }
 
-    private void createSubversionTag(String svnCommand, Version version, String repositoryPath, String trunkPath, String tagsPath, String[] appVersionFilePaths)
+    private void createSubversionTag(String svnCommand, Version version, String repositoryPath, String trunkPath, String tagsPath, String[] appVersionFilePaths, String appVersionFilePattern)
     {
 	if (version != null)
 	{
-	    if (appVersionFilePaths.length == 0 || updateAppVersionFile(svnCommand, version.getName(), repositoryPath, trunkPath, appVersionFilePaths))
+	    if (appVersionFilePaths.length == 0 || updateAppVersionFile(svnCommand, version.getName(), repositoryPath, trunkPath, appVersionFilePaths, appVersionFilePattern))
 	    {
 		createSubversionTag(svnCommand, version.getName(), repositoryPath, trunkPath, tagsPath);
 	    }
@@ -349,7 +359,7 @@ public class NextVersion extends Operation
 	return false;
     }
 
-    private boolean updateAppVersionFile(String svnCommand, String versionName, String repositoryPath, String trunkPath, String[] appVersionFilePaths)
+    private boolean updateAppVersionFile(String svnCommand, String versionName, String repositoryPath, String trunkPath, String[] appVersionFilePaths, String appVersionFilePattern)
     {
 	appVersionFilePaths = trimLeft(appVersionFilePaths, "/");
 
@@ -361,9 +371,9 @@ public class NextVersion extends Operation
 	{
 	    svnCheckout(svnCommand, localPath, trunkPath, appVersionFilePaths);
 
-	    // todo: replace version info (http://www.cs.wustl.edu/~kjg/cse132/examples/Replace.java)
-	    svnCommit(svnCommand, localPath + "/" + trunkPath, versionName);
+	    updateAppVersionFile(localPath, trunkPath, appVersionFilePaths, appVersionFilePattern, versionName);
 
+	    //svnCommit(svnCommand, localPath + "/" + trunkPath, versionName);
 	    System.out.println();
 	}
 	else
@@ -461,6 +471,90 @@ public class NextVersion extends Operation
 
 	System.out.println(output[0]);
 	return true;
+    }
+
+    private void updateAppVersionFile(String localPath, String trunkPath, String[] appVersionFilePaths, String appVersionFilePattern, String versionName)
+    {
+	String version = versionName.split("-")[1];
+	String[] pattern = appVersionFilePattern.split("<>");
+	String headPattern = pattern[0];
+	String tailPattern = pattern[2]; // todo: (onur) make extra checks for invalid input!
+	for (String appVersionFilePath : appVersionFilePaths)
+	{
+	    replaceInFile(localPath + "/" + trunkPath + "/" + appVersionFilePath, headPattern, version, tailPattern);
+	}
+    }
+
+    private boolean replaceInFile(String filePath, String headPattern, String version, String tailPattern)
+    {
+	File in = new File(filePath);
+	if (!in.exists())
+	{
+	    System.err.println("The input file " + in + " does not exist!");
+	    return false;
+	}
+	File out = new File(filePath + "_tmp");
+	if (out.exists())
+	{
+	    System.err.println("The output file " + out + " already exists!");
+	    return false;
+	}
+
+	try
+	{
+	    BufferedReader reader = new BufferedReader(new FileReader(in));
+	    PrintWriter writer = new PrintWriter(new FileWriter(out));
+
+	    String line;
+	    while ((line = reader.readLine()) != null)
+	    {
+		writer.println(replaceInLine(line, headPattern, version, tailPattern));
+	    }
+
+	    reader.close();
+	    writer.close();
+
+	    in.delete();
+	    out.renameTo(in);
+
+	    return true;
+	}
+	catch (FileNotFoundException ex)
+	{
+	    // todo
+	}
+	catch (IOException ex)
+	{
+	    // todo
+	}
+
+	return false;
+    }
+
+    private String replaceInLine(String line, String headPattern, String version, String tailPattern)
+    {
+	int index = line.indexOf(headPattern);
+	if (index >= 0)
+	{
+	    index += headPattern.length();
+
+	    String temp = line.substring(0, index);
+	    temp += version;
+
+	    index = line.indexOf(tailPattern);
+	    if (index >= 0)
+	    {
+		temp += line.substring(index);
+
+		System.out.println("line (->):" + line);
+		System.out.println("\t is replaced with ");
+		System.out.println("line (<-):" + temp);
+
+		return temp;
+	    }
+	}
+
+	return line;
     }
 
 }
