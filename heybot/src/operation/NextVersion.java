@@ -366,26 +366,25 @@ public class NextVersion extends Operation
 	String localPath = getWorkingDirectory() + "/" + "tmp";
 	createFolder(localPath);
 
-	System.out.println("=== " + "Getting app version files into " + localPath + "/" + trunkPath);
-	if (svnCheckout(svnCommand, repositoryPath + "/" + trunkPath, localPath + "/" + trunkPath, true))
+	localPath += "/" + trunkPath;
+	repositoryPath += "/" + trunkPath;
+
+	System.out.println("=== " + "Getting app version files into " + localPath);
+	if (delete(new File(localPath)) && svnCheckout(svnCommand, repositoryPath, localPath, true))
 	{
-	    svnCheckout(svnCommand, localPath, trunkPath, appVersionFilePaths);
-
-	    updateAppVersionFile(localPath, trunkPath, appVersionFilePaths, appVersionFilePattern, versionName);
-
-	    //svnCommit(svnCommand, localPath + "/" + trunkPath, versionName);
-	    System.out.println();
+	    svnCheckout(svnCommand, localPath, appVersionFilePaths);
+	    if (updateAppVersionFile(localPath, appVersionFilePaths, appVersionFilePattern, versionName)
+		    && svnCommit(svnCommand, localPath, "Version tag is modified for release: " + versionName))
+	    {
+		return true;
+	    }
 	}
 	else
 	{
 	    System.err.println("Ooops! Checkout " + trunkPath + " could not be done!");
 	}
 
-	// todo: (onur)
-	//
-	// if there are local changes to send, commit filepaths all in once (atomic)
-	// return true if commit is successfull, else false
-	return true;
+	return false;
     }
 
     private boolean svnCheckout(String svnCommand, String trunkPath, String localPath, boolean isDepthEmpty)
@@ -416,14 +415,14 @@ public class NextVersion extends Operation
 	}
     }
 
-    private void svnCheckout(String svnCommand, String localPath, String trunkPath, String[] filePaths)
+    private void svnCheckout(String svnCommand, String localPath, String[] filePaths)
     {
 	for (String filePath : filePaths)
 	{
 	    String[] tokens = filePath.split("/");
 	    if (tokens.length == 1)
 	    {
-		svnUpdate(svnCommand, localPath + "/" + trunkPath + "/" + tokens[0], false);
+		svnUpdate(svnCommand, localPath + "/" + tokens[0], false);
 	    }
 	    else
 	    {
@@ -431,10 +430,10 @@ public class NextVersion extends Operation
 		String buffer = "";
 		for (; i < tokens.length - 1; i++)
 		{
-		    svnUpdate(svnCommand, localPath + "/" + trunkPath + "/" + tokens[i], true);
+		    svnUpdate(svnCommand, localPath + "/" + tokens[i], true);
 		    buffer += tokens[i] + "/";
 		}
-		svnUpdate(svnCommand, localPath + "/" + trunkPath + "/" + buffer + tokens[i], false);
+		svnUpdate(svnCommand, localPath + "/" + buffer + tokens[i], false);
 	    }
 	}
     }
@@ -473,30 +472,49 @@ public class NextVersion extends Operation
 	return true;
     }
 
-    private void updateAppVersionFile(String localPath, String trunkPath, String[] appVersionFilePaths, String appVersionFilePattern, String versionName)
+    private boolean updateAppVersionFile(String localPath, String[] appVersionFilePaths, String appVersionFilePattern, String versionName)
     {
-	String version = versionName.split("-")[1];
+	String versionTag = getVersionTag(versionName);
+	if (isEmpty(versionTag))
+	{
+	    System.err.println("Ooops! Version tag is not recognized from version name. (" + versionName + ")");
+	    return false;
+	}
+
 	String[] pattern = appVersionFilePattern.split("<>");
+	if (pattern.length != 3 || !pattern[1].equals("VERSION_TAG"))
+	{
+	    System.err.println("Ooops! App version file pattern is not recognized. (" + appVersionFilePattern + ")");
+	    return false;
+	}
 	String headPattern = pattern[0];
-	String tailPattern = pattern[2]; // todo: (onur) make extra checks for invalid input!
+	String tailPattern = pattern[2];
+
 	for (String appVersionFilePath : appVersionFilePaths)
 	{
-	    replaceInFile(localPath + "/" + trunkPath + "/" + appVersionFilePath, headPattern, version, tailPattern);
+	    if (!replaceInFile(localPath + "/" + appVersionFilePath, headPattern, versionTag, tailPattern))
+	    {
+		System.err.println("Ooops! Replacing version tag in app file could not be done.");
+		return false;
+	    }
 	}
+
+	return true;
     }
 
-    private boolean replaceInFile(String filePath, String headPattern, String version, String tailPattern)
+    private boolean replaceInFile(String filePath, String headPattern, String versionTag, String tailPattern)
     {
+	System.out.println("=== Replacing app version file " + filePath);
 	File in = new File(filePath);
 	if (!in.exists())
 	{
-	    System.err.println("The input file " + in + " does not exist!");
+	    System.err.println("Ooops! The input file " + in + " does not exist!");
 	    return false;
 	}
 	File out = new File(filePath + "_tmp");
 	if (out.exists())
 	{
-	    System.err.println("The output file " + out + " already exists!");
+	    System.err.println("Ooops! The output file " + out + " already exists!");
 	    return false;
 	}
 
@@ -508,7 +526,7 @@ public class NextVersion extends Operation
 	    String line;
 	    while ((line = reader.readLine()) != null)
 	    {
-		writer.println(replaceInLine(line, headPattern, version, tailPattern));
+		writer.println(replaceInLine(line, headPattern, versionTag, tailPattern));
 	    }
 
 	    reader.close();
@@ -521,17 +539,17 @@ public class NextVersion extends Operation
 	}
 	catch (FileNotFoundException ex)
 	{
-	    // todo
+	    System.err.println(ex.getMessage());
 	}
 	catch (IOException ex)
 	{
-	    // todo
+	    System.err.println(ex.getMessage());
 	}
 
 	return false;
     }
 
-    private String replaceInLine(String line, String headPattern, String version, String tailPattern)
+    private String replaceInLine(String line, String headPattern, String versionTag, String tailPattern)
     {
 	int index = line.indexOf(headPattern);
 	if (index >= 0)
@@ -539,22 +557,51 @@ public class NextVersion extends Operation
 	    index += headPattern.length();
 
 	    String temp = line.substring(0, index);
-	    temp += version;
+	    temp += versionTag;
 
 	    index = line.indexOf(tailPattern);
 	    if (index >= 0)
 	    {
 		temp += line.substring(index);
 
-		System.out.println("line (->):" + line);
-		System.out.println("\t is replaced with ");
-		System.out.println("line (<-):" + temp);
+		System.out.println("\n line (->): " + line);
+		System.out.println("\t is replaced with");
+		System.out.println(" line (<-): " + temp + "\n");
 
 		return temp;
 	    }
 	}
 
 	return line;
+    }
+
+    private boolean delete(File path)
+    {
+	if (path.isDirectory())
+	{
+	    for (File child : path.listFiles())
+	    {
+		delete(child);
+	    }
+	}
+
+	return path.delete();
+    }
+
+    private String getVersionTag(String versionName)
+    {
+	String[] tokens = versionName.trim().split("-");
+
+	if (tokens.length >= 2)
+	{
+	    return tokens[1];
+	}
+	else if (tokens.length == 1)
+	{
+	    return tokens[0];
+	}
+
+	return "";
     }
 
 }
