@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="1.9.0.4"
+VERSION="1.9.6.3-beta"
 
 RELEASE_PATH="../../release/heybot_$VERSION"
 
@@ -8,7 +8,7 @@ if [ -d "$RELEASE_PATH" ]; then
   rm -Rf "$RELEASE_PATH"
   rm -f "$RELEASE_PATH.tar.gz"
 fi
-mkdir "$RELEASE_PATH"
+mkdir -p "$RELEASE_PATH"
 cp -R ../dist/* "$RELEASE_PATH/"
 cp -R ../workspace "$RELEASE_PATH/"
 cp ./heybot.run "$RELEASE_PATH/"
