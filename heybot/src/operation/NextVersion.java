@@ -577,6 +577,11 @@ public class NextVersion extends Operation
 
     private boolean delete(File path)
     {
+	if (!path.exists())
+	{
+	    return true;
+	}
+
 	if (path.isDirectory())
 	{
 	    for (File child : path.listFiles())
