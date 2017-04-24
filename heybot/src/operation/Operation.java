@@ -104,7 +104,7 @@ public abstract class Operation
 	return true;
     }
 
-    private String[] execute(String[] command)
+    protected String[] execute(String[] command)
     {
 	Process process;
 	try

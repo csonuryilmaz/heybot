@@ -459,8 +459,11 @@ public class NextVersion extends Operation
 
     private boolean svnCommit(String svnCommand, String workingDirPath, String comment)
     {
-	String command = svnCommand + " commit " + workingDirPath + " -m " + comment;
-	System.out.println(command);
+	String[] command = new String[]
+	{
+	    svnCommand, "commit", workingDirPath, "-m", comment
+	};
+	System.out.println(svnCommand + " commit " + workingDirPath + " -m \"" + comment + "\"");
 	String[] output = execute(command);
 	if (output == null || output[1].length() > 0)
 	{
