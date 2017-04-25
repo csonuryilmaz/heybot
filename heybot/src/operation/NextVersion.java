@@ -14,8 +14,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Properties;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import model.VersionTag;
 import static org.apache.http.util.TextUtils.isEmpty;
 
@@ -76,9 +74,6 @@ public class NextVersion extends Operation
 	    boolean closePreviousVersion = getParameterBoolean(prop, PARAMETER_CLOSE_PREVIOUS);
 	    boolean appendCurrentVersion = getParameterBoolean(prop, PARAMETER_APPEND_CURRENT);
 
-	    // internal
-	    int versionId = getParameterInt(prop, PARAMETER_VERSION_ID, 0);
-
 	    redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
 
 	    int projectId = tryGetProjectId(redmineManager, filterProject);
@@ -88,6 +83,7 @@ public class NextVersion extends Operation
 		if (issues.length > 0)
 		{
 		    Version version;
+		    int versionId = getParameterInt(prop, PARAMETER_VERSION_ID, 0);
 
 		    if (appendCurrentVersion)
 		    {
@@ -106,7 +102,7 @@ public class NextVersion extends Operation
 		    assignTargetVersion(redmineManager, issues, version);
 		}
 
-		createSubversionTag(prop, redmineManager, versionId);
+		createSubversionTag(prop, redmineManager, getParameterInt(prop, PARAMETER_VERSION_ID, 0));
 	    }
 	    else
 	    {
