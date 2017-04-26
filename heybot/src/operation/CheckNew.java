@@ -111,15 +111,23 @@ public class CheckNew extends Operation
 
     private void notifySlack(String slackWebHookUrl, Issue issue, String redmineUrl, String projectName)
     {
+	Field priority = Field.builder()
+		.title(issue.getPriorityText())
+		.value("")
+		.valueShortEnough(false).build();
+
 	Attachment attachment = Attachment.builder().text(issue.getSubject())
-		.pretext("Heads up! ~" + projectName + "~" + " has a new issue.")
+		.pretext("Heads up! We have a new issue.")
+		.authorName(projectName)
 		.color("#36a64f")
-		.fallback("New issue detected by check-new operation of heybot.")
-		.title("#" + issue.getId())
+		.fallback("Heads up! We have a new issue.")
+		.title("[" + issue.getTracker().getName() + "] #" + issue.getId())
 		.titleLink(redmineUrl + "/issues/" + issue.getId())
-		.footer(issue.getAuthorName())
+		.footer(issue.getAuthorName() + " | " + dateTimeFormat.format(issue.getCreatedOn()))
 		.fields(new ArrayList<Field>())
 		.build();
+
+	attachment.getFields().add(priority);
 
 	ArrayList<Attachment> attachments = new ArrayList<Attachment>()
 	{
