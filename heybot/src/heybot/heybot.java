@@ -3,13 +3,16 @@ package heybot;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.net.URISyntaxException;
+import java.text.SimpleDateFormat;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.Locale;
 import java.util.Properties;
 import operation.CheckNew;
 import operation.Cleanup;
 import operation.CleanupSvn;
 import operation.NextVersion;
+import operation.Operation;
 import operation.Upload;
 import operation.Review;
 import operation.SyncIssue;
@@ -20,6 +23,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.http.util.TextUtils;
 
 /**
  * Main entry for the program.
@@ -31,6 +35,7 @@ public class heybot
 
     private final static String VERSION = "1.9.6.6-beta";
     private static final String NEWLINE = System.getProperty("line.separator");
+    private static final SimpleDateFormat DATE_FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     /**
      * @param args the command line arguments
@@ -87,49 +92,48 @@ public class heybot
 	Properties prop = new Properties();
 	prop.load(new FileInputStream(hbFile));
 
-	String operation = prop.getProperty("OPERATION");
-	if (operation == null)
+	Operation operation = getOperation(prop);
+	if (operation != null)
+	{
+	    System.out.println("== " + prop.getProperty("OPERATION") + " - " + DATE_FORMATTER.format(new Date()) + NEWLINE);
+	    operation.execute(prop);
+	    System.out.println(NEWLINE + "== [SUCCESS]" + " - " + DATE_FORMATTER.format(new Date()));
+	}
+	prop.store(new FileOutputStream(hbFile), "Last runtime:");
+    }
+
+    private static Operation getOperation(Properties prop)
+    {
+	String opValue = prop.getProperty("OPERATION");
+	if (TextUtils.isEmpty(opValue))
 	{
 	    System.err.println("Ooops! Parameter OPERATION not found in .hb file.");
 	}
 	else
 	{
-	    tryDoOperation(prop, operation);
-	    prop.store(new FileOutputStream(hbFile), "Last runtime:");
+	    opValue = opValue.toLowerCase(new Locale("tr-TR"));
+	    switch (opValue)
+	    {
+		case "upload":
+		    return new Upload();
+		case "cleanup":
+		    return new Cleanup();
+		case "review":
+		    return new Review();
+		case "check-new":
+		    return new CheckNew();
+		case "cleanup-svn":
+		    return new CleanupSvn();
+		case "sync-issue":
+		    return new SyncIssue();
+		case "next-version":
+		    return new NextVersion();
+		default:
+		    System.err.println("Ooops! Unsupported operation. Please check version and manual.");
+	    }
 	}
-    }
 
-    private static void tryDoOperation(Properties prop, String operation) throws Exception
-    {
-	operation = operation.toLowerCase(new Locale("tr-TR"));
-
-	switch (operation)
-	{
-	    case "upload":
-		new Upload().execute(prop);
-		break;
-	    case "cleanup":
-		new Cleanup().execute(prop);
-		break;
-	    case "review":
-		new Review().execute(prop);
-		break;
-	    case "check-new":
-		new CheckNew().execute(prop);
-		break;
-	    case "cleanup-svn":
-		new CleanupSvn().execute(prop);
-		break;
-	    case "sync-issue":
-		new SyncIssue().execute(prop);
-		break;
-	    case "next-version":
-		new NextVersion().execute(prop);
-		break;
-	    default:
-		System.err.println("Ooops! Unsupported operation. Please check version and manual.");
-		break;
-	}
+	return null;
     }
 
     private static String getFullPath(String hbFile)
