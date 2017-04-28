@@ -150,37 +150,26 @@ public class Review extends Operation
 	System.out.println(tryExecute(svnCommand + " st " + localWorkingDir));
     }
 
-    private void setIssueStatus(Issue issue, String targetStatus)
+    private void setIssueStatus(Issue issue, String status)
     {
-	Locale trLocale = new Locale("tr-TR");
-
 	try
 	{
-	    List<IssueStatus> list = redmineManager.getIssueManager().getStatuses();
-	    int targetStatusId = 0;
-	    for (IssueStatus status : list)
+	    int statusId = tryGetIssueStatusId(redmineManager, status);
+	    if (statusId > 0)
 	    {
-		if (status.getName().toLowerCase(trLocale).equals(targetStatus.toLowerCase(trLocale)))
+		if (issue.getStatusId() != statusId)
 		{
-		    targetStatusId = status.getId();
-		    break;
-		}
-	    }
+		    System.out.println("\n" + "- Trying to update #" + issue.getId() + " status to [" + status + "] ... ");
 
-	    if (issue.getStatusId() != targetStatusId)
-	    {
-		issue.setStatusId(targetStatusId);
-		redmineManager.getIssueManager().update(issue);
-		System.out.println(System.getProperty("line.separator") + "[Success]: Issue status is updated to " + targetStatus + ".");
-	    }
-	    else
-	    {
-		System.out.println(System.getProperty("line.separator") + "[Info]: Issue status is already " + targetStatus + ".");
+		    issue.setStatusId(statusId);
+		    redmineManager.getIssueManager().update(issue);
+		}
+		checkIsIssueStatusIsUpdated(issue.getId(), statusId);
 	    }
 	}
 	catch (RedmineException ex)
 	{
-	    System.err.println("Ooops! Could not update issue status to " + targetStatus + "!" + "(" + ex.getMessage() + ")");
+	    System.err.println("Ooops! Could not update issue status to " + status + "!" + "(" + ex.getMessage() + ")");
 	}
     }
 
@@ -198,6 +187,16 @@ public class Review extends Operation
 	}
 
 	return svnBranchDir + "i" + issueId + root;
+    }
+
+    private void checkIsIssueStatusIsUpdated(int issueId, int statusId) throws RedmineException
+    {
+	Issue issue = redmineManager.getIssueManager().getIssueById(issueId);
+	System.out.println("- Current status of #" + issueId + " is [" + issue.getStatusName() + "].");
+	if (issue.getStatusId() != statusId)
+	{
+	    System.out.println("- [warning] It seems issue status couldn't be updated. Please check your redmine workflow or configuration!");
+	}
     }
 
 }

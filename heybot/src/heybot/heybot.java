@@ -97,7 +97,7 @@ public class heybot
 	{
 	    System.out.println("== " + prop.getProperty("OPERATION") + " - " + DATE_FORMATTER.format(new Date()) + NEWLINE);
 	    operation.execute(prop);
-	    System.out.println(NEWLINE + "== [SUCCESS]" + " - " + DATE_FORMATTER.format(new Date()));
+	    System.out.println(NEWLINE + "== [END]" + " - " + DATE_FORMATTER.format(new Date()));
 	}
 	prop.store(new FileOutputStream(hbFile), "Last runtime:");
     }

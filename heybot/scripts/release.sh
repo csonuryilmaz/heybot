@@ -9,6 +9,9 @@ if [ -d "$RELEASE_PATH" ]; then
   rm -f "$RELEASE_PATH.tar.gz"
 fi
 mkdir -p "$RELEASE_PATH"
+echo "== Listing ../dist/ directory ... "
+ls -lh ../dist/
+echo "== Packaging ... "
 cp -R ../dist/* "$RELEASE_PATH/"
 cp -R ../workspace "$RELEASE_PATH/"
 cp ./heybot.run "$RELEASE_PATH/"
