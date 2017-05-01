@@ -4,10 +4,8 @@ import com.taskadapter.redmineapi.RedmineException;
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.Issue;
-import com.taskadapter.redmineapi.bean.IssueStatus;
-import java.util.List;
 import java.util.Locale;
-import java.util.Properties;
+import utilities.Properties;
 
 /**
  * Operaiton: Review.

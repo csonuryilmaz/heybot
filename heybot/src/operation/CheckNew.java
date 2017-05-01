@@ -11,7 +11,7 @@ import com.taskadapter.redmineapi.bean.Issue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Properties;
+import utilities.Properties;
 
 /**
  *

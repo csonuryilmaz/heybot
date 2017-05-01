@@ -13,7 +13,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Properties;
+import utilities.Properties;
 import model.VersionTag;
 import static org.apache.http.util.TextUtils.isEmpty;
 

@@ -1,13 +1,11 @@
 package heybot;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.Locale;
-import java.util.Properties;
+import utilities.Properties;
 import operation.CheckNew;
 import operation.Cleanup;
 import operation.CleanupSvn;
@@ -33,7 +31,7 @@ import org.apache.http.util.TextUtils;
 public class heybot
 {
 
-    private final static String VERSION = "1.9.6.6-beta";
+    private final static String VERSION = "1.10.1.1-beta";
     private static final String NEWLINE = System.getProperty("line.separator");
     private static final SimpleDateFormat DATE_FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
@@ -90,7 +88,7 @@ public class heybot
     private static void tryExecute(String hbFile) throws Exception
     {
 	Properties prop = new Properties();
-	prop.load(new FileInputStream(hbFile));
+	prop.load(hbFile);
 
 	Operation operation = getOperation(prop);
 	if (operation != null)
@@ -99,7 +97,7 @@ public class heybot
 	    operation.execute(prop);
 	    System.out.println(NEWLINE + "== [END]" + " - " + DATE_FORMATTER.format(new Date()));
 	}
-	prop.store(new FileOutputStream(hbFile), "Last runtime:");
+	prop.store(hbFile);
     }
 
     private static Operation getOperation(Properties prop)
