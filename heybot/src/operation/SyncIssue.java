@@ -8,7 +8,7 @@ import com.taskadapter.redmineapi.bean.IssueRelation;
 import com.taskadapter.redmineapi.bean.Project;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.Properties;
+import utilities.Properties;
 import java.util.Collection;
 import java.util.HashMap;
 import model.Diff;

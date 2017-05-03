@@ -5,10 +5,9 @@ import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.Issue;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Locale;
-import java.util.Properties;
+import utilities.Properties;
 
 /**
  * Operation: cleanup-svn
