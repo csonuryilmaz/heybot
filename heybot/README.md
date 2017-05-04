@@ -12,6 +12,7 @@
     5.4. [Review](#54-review)  
     5.5. [Check-New](#55-check-new)  
     5.6. [Sync-Issue](#56-sync-issue)  
+    5.7. [Next-Version](#57-next-version)  
   6. [Notes](#6-notes)  
     6.1 [How to obtain slack incoming webhook URL?](#61-how-to-obtain-slack-incoming-webhook-url)  
 
@@ -338,6 +339,49 @@ REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
 # internal parameters
 LAST_CHECK_TIME=Sat Nov 19 15:45:11 EET 2016
 ```
+##### 5.7. Next-Version
+
+It enables you to maintain your new release or version of software easily, with friction free. It orchestrates redmine *version*, its related *issues* and your *codebase*. Very briefly, when you're ready to release a new version of your software;
+* checks waiting issues ready to relase
+* closes old version
+* computes new version number (like [semantic versioning](http://semver.org/))
+* creates a new version
+* assigns new version to your waiting issues
+* updates your codebase with new version number
+* creates subversion tag for new release
+
+**todo:** Documentation about *next-version* will be detailed for different use cases.
+
+Required Parameters:
+
+- REDMINE_TOKEN= Redmine API access key taken from [my account page](http://www.redmine.org/projects/redmine/wiki/RedmineAccounts).
+- REDMINE_URL= Redmine API url. (most of the time this is root url of your redmine installation)
+- MAJOR_TRACKER= Redmine issue tracker which increments feature number. [1]
+- MINOR_TRACKER= Redmine issue tracker which increments revision number. [1]
+- PATCH_TRACKER= Redmine issue tracker which increments bug/refactoring number. [1]
+- FILTER_PROJECT= Redmine project which your software and version belongs to.
+- FILTER_QUERY= List of issues (a redmine saved query) which gives ready to release and version issues.
+- VERSION_TITLE= Mostly this is codename of your software and it's prefix of version title. Ex; debian-2.3.1.2. Version title is *debian*.
+
+Optional Parameters:
+
+- APPEND_CURRENT= Set true when you don't create a new version and append ready issues to current version. **true** || **false**
+- CREATE_SVN_TAG= Set true when you want to create subversion tag for version and update your codebase with new version number. **true** || **false**
+- CLOSE_PREVIOUS= Set true if you want to close previous version. It's meaningful when APPEND_CURRENT is false. Because you're creating new one, and want to close existing one. **true** || **false**
+*Note: below parameters are used when CREATE_SVN_TAG is true.*
+- REPOSITORY_PATH= Subversion repository of your codebase.
+- TRUNK_PATH= Trunk path of your project. (relative to REPOSITORY PATH) Don't write full path.
+- APP_VERSION_FILE_PATH= Files in your project that keeps version number and must be updated every new release. These files will be modified and committed.
+- APP_VERSION_FILE_PATTERN= Line which contains version information. The value of concrete version must be masked. Please look at example.
+- TAGS_PATH= Tags folder path in which you keep subversion tags.
+
+Internal Parameters:
+
+- VERSION_TAG= Current, existing version number. TITLE + TAG is the name of redmine version. Ex; debian-2.3.1.2. Tag is *2.3.1.2*.
+- VERSION_ID= Current, existing version's redmine id.
+- PREVIOUS_VERSION_TAG= Previous version number. (latest before current version) It's used to recompute version tag when APPEND_CURRENT is true.
+
+**todo:** Example and notes should be added for *next-version* .
 
 #### 6. Notes
 
@@ -350,3 +394,5 @@ Go to yourteam.slack.com/apps/build/custom-integration and click on *Incoming We
 Once done, you’ll see your incoming webhook integration’s configuration page.
 
 Scroll down and there’ll be a Webhook URL in the format https://hooks.slack.com/services/TXXXXXXXX/BXXXXXXXX/token. Save that URL somewhere, we’ll need it later. You can further change the icon and name of the integration in this page itself.
+
+[1]: [Detailed documentation about software versioning](https://github.com/csonuryilmaz/notes/blob/master/how_to/version_your_software_(en).md)
