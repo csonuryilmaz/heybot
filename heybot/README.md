@@ -368,7 +368,7 @@ Optional Parameters:
 - APPEND_CURRENT= Set true when you don't create a new version and append ready issues to current version. **true** || **false**
 - CREATE_SVN_TAG= Set true when you want to create subversion tag for version and update your codebase with new version number. **true** || **false**
 - CLOSE_PREVIOUS= Set true if you want to close previous version. It's meaningful when APPEND_CURRENT is false. Because you're creating new one, and want to close existing one. **true** || **false**
-*Note: below parameters are used when CREATE_SVN_TAG is true.*
+- *Note: below parameters are used when CREATE_SVN_TAG is true.*
 - REPOSITORY_PATH= Subversion repository of your codebase.
 - TRUNK_PATH= Trunk path of your project. (relative to REPOSITORY PATH) Don't write full path.
 - APP_VERSION_FILE_PATH= Files in your project that keeps version number and must be updated every new release. These files will be modified and committed.
