@@ -11,6 +11,7 @@ import operation.Cleanup;
 import operation.CleanupSvn;
 import operation.NextVersion;
 import operation.Operation;
+import operation.Release;
 import operation.Upload;
 import operation.Review;
 import operation.SyncIssue;
@@ -126,6 +127,8 @@ public class heybot
 		    return new SyncIssue();
 		case "next-version":
 		    return new NextVersion();
+		case "release":
+		    return new Release();
 		default:
 		    System.err.println("Ooops! Unsupported operation. Please check version and manual.");
 	    }

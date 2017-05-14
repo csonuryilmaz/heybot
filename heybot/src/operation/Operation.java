@@ -690,4 +690,30 @@ public abstract class Operation
 	    return "";
 	}
     }
+
+    protected Issue[] getVersionIssues(RedmineManager redmineManager, Version version)
+    {
+
+	HashMap<String, String> params = new HashMap<>();
+	params.put("project_id", Integer.toString(version.getProjectId()));
+	params.put("fixed_version_id", Integer.toString(version.getId()));
+
+	// default
+	params.put("offset", Integer.toString(0));
+	params.put("limit", Integer.toString(Integer.MAX_VALUE));
+	params.put("sort", "id:desc");
+
+	try
+	{
+	    List<Issue> issues = redmineManager.getIssueManager().getIssues(params).getResults();
+
+	    return issues.toArray(new Issue[issues.size()]);
+	}
+	catch (RedmineException ex)
+	{
+	    System.err.println("Ooops! Couldn't get issues.(" + ex.getMessage() + ")");
+	}
+
+	return new Issue[0];
+    }
 }
