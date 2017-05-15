@@ -592,20 +592,4 @@ public class NextVersion extends Operation
 	return path.delete();
     }
 
-    private String getVersionTag(String versionName)
-    {
-	String[] tokens = versionName.trim().split("-");
-
-	if (tokens.length >= 2)
-	{
-	    return tokens[1];
-	}
-	else if (tokens.length == 1)
-	{
-	    return tokens[0];
-	}
-
-	return "";
-    }
-
 }

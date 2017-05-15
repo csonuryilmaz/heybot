@@ -4,6 +4,7 @@ import com.taskadapter.redmineapi.Include;
 import com.taskadapter.redmineapi.Params;
 import com.taskadapter.redmineapi.RedmineException;
 import com.taskadapter.redmineapi.RedmineManager;
+import com.taskadapter.redmineapi.bean.CustomField;
 import com.taskadapter.redmineapi.bean.Issue;
 import com.taskadapter.redmineapi.bean.IssueRelation;
 import com.taskadapter.redmineapi.bean.IssueStatus;
@@ -715,5 +716,34 @@ public abstract class Operation
 	}
 
 	return new Issue[0];
+    }
+
+    protected String getVersionTag(String versionName)
+    {
+	String[] tokens = versionName.trim().split("-");
+
+	if (tokens.length >= 2)
+	{
+	    return tokens[1];
+	}
+	else if (tokens.length == 1)
+	{
+	    return tokens[0];
+	}
+
+	return "";
+    }
+
+    protected CustomField tryGetCustomField(Version version, String fieldName)
+    {
+	for (CustomField customField : version.getCustomFields())
+	{
+	    if (customField.getName().toLowerCase(trLocale).equals(fieldName))
+	    {
+		return customField;
+	    }
+	}
+
+	return null;
     }
 }
