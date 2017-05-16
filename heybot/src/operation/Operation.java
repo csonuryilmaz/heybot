@@ -4,6 +4,7 @@ import com.taskadapter.redmineapi.Include;
 import com.taskadapter.redmineapi.Params;
 import com.taskadapter.redmineapi.RedmineException;
 import com.taskadapter.redmineapi.RedmineManager;
+import com.taskadapter.redmineapi.bean.CustomField;
 import com.taskadapter.redmineapi.bean.Issue;
 import com.taskadapter.redmineapi.bean.IssueRelation;
 import com.taskadapter.redmineapi.bean.IssueStatus;
@@ -689,5 +690,60 @@ public abstract class Operation
 	{
 	    return "";
 	}
+    }
+
+    protected Issue[] getVersionIssues(RedmineManager redmineManager, Version version)
+    {
+
+	HashMap<String, String> params = new HashMap<>();
+	params.put("project_id", Integer.toString(version.getProjectId()));
+	params.put("fixed_version_id", Integer.toString(version.getId()));
+
+	// default
+	params.put("offset", Integer.toString(0));
+	params.put("limit", Integer.toString(Integer.MAX_VALUE));
+	params.put("sort", "id:desc");
+
+	try
+	{
+	    List<Issue> issues = redmineManager.getIssueManager().getIssues(params).getResults();
+
+	    return issues.toArray(new Issue[issues.size()]);
+	}
+	catch (RedmineException ex)
+	{
+	    System.err.println("Ooops! Couldn't get issues.(" + ex.getMessage() + ")");
+	}
+
+	return new Issue[0];
+    }
+
+    protected String getVersionTag(String versionName)
+    {
+	String[] tokens = versionName.trim().split("-");
+
+	if (tokens.length >= 2)
+	{
+	    return tokens[1];
+	}
+	else if (tokens.length == 1)
+	{
+	    return tokens[0];
+	}
+
+	return "";
+    }
+
+    protected CustomField tryGetCustomField(Version version, String fieldName)
+    {
+	for (CustomField customField : version.getCustomFields())
+	{
+	    if (customField.getName().toLowerCase(trLocale).equals(fieldName))
+	    {
+		return customField;
+	    }
+	}
+
+	return null;
     }
 }
