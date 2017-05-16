@@ -85,16 +85,12 @@ public class Release extends Operation
 	if (!isVersionDeployed(version))
 	{
 	    deployVersion(version, issues);// inside managed exception on any error
+	    notifySlack(version, issues, redmineUrl);
 	}
 	else
 	{
 	    System.out.println("- [info] Version is already deployed!");
 	}
-
-	// todo
-//	String changeLog = getChangeLog(version, issues);
-//	notifyEmail(version, changeLog);
-	notifySlack(version, issues, redmineUrl);
     }
 
     private boolean isVersionDeployed(Version version)
@@ -173,13 +169,6 @@ public class Release extends Operation
 	System.out.println("  Version is updated as deployed.");
     }
 
-    private String getChangeLog(Version version, Issue[] issues)
-    {
-	System.out.println("* Generating changelog ... ");
-
-	return null;
-    }
-
     private void notifySlack(Version version, Issue[] issues, String redmineUrl)
     {
 	System.out.println("* Sending slack notification ... ");
@@ -223,11 +212,6 @@ public class Release extends Operation
 	{
 	    System.err.println("Ooops! Slack notification problem! (" + ex.getMessage() + ")");
 	}
-    }
-
-    private void notifyEmail(Version version, String changeLog)
-    {
-	System.out.println("* Sending email notification ... ");
     }
 
     private int getIssueDeployedStatusId() throws Exception
