@@ -1,11 +1,18 @@
 package operation;
 
+import com.github.seratch.jslack.Slack;
+import com.github.seratch.jslack.api.model.Attachment;
+import com.github.seratch.jslack.api.model.Field;
+import com.github.seratch.jslack.api.webhook.Payload;
+import com.github.seratch.jslack.api.webhook.WebhookResponse;
 import com.taskadapter.redmineapi.RedmineException;
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.CustomField;
 import com.taskadapter.redmineapi.bean.Issue;
 import com.taskadapter.redmineapi.bean.Version;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
 import org.apache.commons.lang3.StringUtils;
 import utilities.Properties;
@@ -65,12 +72,12 @@ public class Release extends Operation
 	    Version version = getVersion(redmineManager, versionId);
 	    if (version != null)
 	    {
-		release(version);
+		release(version, redmineUrl);
 	    }
 	}
     }
 
-    private void release(Version version) throws Exception
+    private void release(Version version, String redmineUrl) throws Exception
     {
 	System.out.println("  [" + version.getName() + "]");
 	Issue[] issues = getVersionIssues(redmineManager, version);
@@ -87,7 +94,7 @@ public class Release extends Operation
 	// todo
 //	String changeLog = getChangeLog(version, issues);
 //	notifyEmail(version, changeLog);
-//	notifySlack(version, changeLog);
+	notifySlack(version, issues, redmineUrl);
     }
 
     private boolean isVersionDeployed(Version version)
@@ -173,9 +180,49 @@ public class Release extends Operation
 	return null;
     }
 
-    private void notifySlack(Version version, String changeLog)
+    private void notifySlack(Version version, Issue[] issues, String redmineUrl)
     {
 	System.out.println("* Sending slack notification ... ");
+	String slackWebHookUrl = getParameterString(prop, PARAMETER_NOTIFY_SLACK, false);
+
+	Attachment attachment = Attachment.builder().text(version.getDescription())
+		.pretext("Cheers! A new version is released.")
+		.authorName(version.getProjectName())
+		.color("#FF8000")
+		.fallback("Cheers! A new version is released.")
+		.title("[" + version.getName() + "]" + " " + issues.length + " issues(s) fixed.")
+		.titleLink(redmineUrl + "/versions/" + version.getId())
+		.footer("onur.yilmaz@kitapyurdu.com" + " | " + dateTimeFormat.format(new Date()))
+		.fields(new ArrayList<Field>())
+		.build();
+
+	for (Issue issue : issues)
+	{
+	    attachment.getFields().add(Field.builder()
+		    .title("#" + issue.getId() + " - " + issue.getTracker().getName() + " (" + issue.getPriorityText() + ")")
+		    .value(issue.getSubject())
+		    .valueShortEnough(false).build());
+	}
+
+	ArrayList<Attachment> attachments = new ArrayList<Attachment>()
+	{
+	};
+	attachments.add(attachment);
+
+	Payload payload = Payload.builder()
+		.attachments(attachments)
+		.build();
+
+	WebhookResponse response;
+	try
+	{
+	    response = Slack.getInstance().send(slackWebHookUrl, payload);
+	    System.out.println(response.toString());
+	}
+	catch (IOException ex)
+	{
+	    System.err.println("Ooops! Slack notification problem! (" + ex.getMessage() + ")");
+	}
     }
 
     private void notifyEmail(Version version, String changeLog)
