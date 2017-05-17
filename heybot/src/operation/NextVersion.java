@@ -426,7 +426,7 @@ public class NextVersion extends Operation
 		String buffer = "";
 		for (; i < tokens.length - 1; i++)
 		{
-		    svnUpdate(svnCommand, localPath + "/" + tokens[i], true);
+		    svnUpdate(svnCommand, localPath + "/" + buffer + tokens[i], true);
 		    buffer += tokens[i] + "/";
 		}
 		svnUpdate(svnCommand, localPath + "/" + buffer + tokens[i], false);
