@@ -13,6 +13,7 @@
     5.5. [Check-New](#55-check-new)  
     5.6. [Sync-Issue](#56-sync-issue)  
     5.7. [Next-Version](#57-next-version)  
+    5.8. [Release](#58-release)  
   6. [Notes](#6-notes)  
     6.1 [How to obtain slack incoming webhook URL?](#61-how-to-obtain-slack-incoming-webhook-url)  
 
@@ -382,6 +383,10 @@ Internal Parameters:
 - PREVIOUS_VERSION_TAG= Previous version number. (latest before current version) It's used to recompute version tag when APPEND_CURRENT is true.
 
 **todo:** Example and notes should be added for *next-version* .
+
+##### 5.8. Release
+
+**todo:** Description, example and notes should be added for *release*.
 
 #### 6. Notes
 
