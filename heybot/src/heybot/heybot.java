@@ -41,21 +41,19 @@ public class heybot
      */
     public static void main(String[] args)
     {
-	Options options = buildOptions();
 	printLogo();
 	printVersion();
 
 	if (args.length == 0)
 	{
-	    printHelp(options);
+	    printHelp();
 	}
 	else
 	{
-	    // parse command line arguments
-	    CommandLine line = getParser(options, args);
+	    CommandLine line = getParser(buildOptions(), args);
 	    if (line.hasOption("help"))
 	    {
-		printHelp(options);
+		printHelp();
 	    }
 	    else
 	    {
@@ -66,23 +64,14 @@ public class heybot
 
     private static void start(CommandLine line)
     {
-	String hbFile = line.getOptionValue("do");
-	if (hbFile != null && hbFile.length() > 0)
+	try
 	{
-	    try
-	    {
-		hbFile = getFullPath(hbFile);
-		tryExecute(hbFile);
-	    }
-	    catch (Exception ex)
-	    {
-		System.err.println("Ooops! An error occurred while executing [" + line.getOptionValue("do") + "]"
-			+ NEWLINE + " " + ex.getMessage() + " ");
-	    }
+	    tryExecute(getFullPath(line.getOptionValue("do")));
 	}
-	else
+	catch (Exception ex)
 	{
-	    printHelp(buildOptions());
+	    System.err.println("Ooops! An error occurred while executing [" + line.getOptionValue("do") + "]"
+		    + NEWLINE + " " + ex.getMessage() + " ");
 	}
     }
 
@@ -160,13 +149,17 @@ public class heybot
     //<editor-fold defaultstate="collapsed" desc="help">
     private static final String HEADER = NEWLINE + "Designed to help developers on their day-to-day development activities. Works in subversion and redmine ecosystem." + NEWLINE + NEWLINE;
 
-    private static final String FOOTER = NEWLINE + " * For more information and latest versions:" + NEWLINE + "https://github.com/csonuryilmaz/heybot/releases/latest" + NEWLINE + NEWLINE + NEWLINE;
+    private static final String FOOTER = NEWLINE
+	    + "Report bugs to: csonuryilmaz@gmail.com" + NEWLINE
+	    + "Home page (releases): https://goo.gl/fkSGrp" + NEWLINE
+	    + "General help using heybot: https://goo.gl/NDqZuC" + NEWLINE
+	    + NEWLINE + "Happy coding!" + NEWLINE;
 
-    private static void printHelp(Options options)
+    private static void printHelp()
     {
 	HelpFormatter formatter = new HelpFormatter();
 	formatter.setOptionComparator(new MyOptionComparator());
-	formatter.printHelp("heybot", HEADER, options, FOOTER, true);
+	formatter.printHelp("heybot", HEADER, buildOptions(), FOOTER, true);
     }
 
 //</editor-fold>
