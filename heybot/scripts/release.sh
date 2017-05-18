@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="1.10.1.1-beta"
+VERSION="1.10.1.1"
 
 RELEASE_PATH="../../release/heybot_$VERSION"
 

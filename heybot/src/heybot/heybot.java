@@ -32,7 +32,7 @@ import org.apache.http.util.TextUtils;
 public class heybot
 {
 
-    private final static String VERSION = "1.10.1.1-beta";
+    private final static String VERSION = "1.10.1.1";
     private static final String NEWLINE = System.getProperty("line.separator");
     private static final SimpleDateFormat DATE_FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
