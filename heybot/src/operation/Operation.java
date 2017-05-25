@@ -746,4 +746,29 @@ public abstract class Operation
 
 	return null;
     }
+
+    protected void updateIssueStatus(RedmineManager redmineManager, Issue issue, int statusId) throws Exception
+    {
+	if (issue.getStatusId() != statusId)
+	{
+	    issue.setStatusId(statusId);
+	    redmineManager.getIssueManager().update(issue);
+	    if (!isIssueStatusUpdated(redmineManager, issue.getId(), statusId))
+	    {
+		throw new Exception("Could not update issue status! Please check your redmine workflow or configuration!");
+	    }
+	}
+    }
+
+    private boolean isIssueStatusUpdated(RedmineManager redmineManager, int issueId, int statusId) throws RedmineException
+    {
+	Issue issue = redmineManager.getIssueManager().getIssueById(issueId);
+	return issue.getStatusId() == statusId;
+    }
+
+    protected boolean isSvnPathExists(String svnCommand, String tagPath)
+    {
+	String[] output = execute(svnCommand + " ls " + tagPath + " --depth empty");
+	return output == null || (output[1].length() == 0 && output[0].length() == 0);
+    }
 }

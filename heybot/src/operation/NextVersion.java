@@ -329,12 +329,6 @@ public class NextVersion extends Operation
 	}
     }
 
-    private boolean isSvnPathExists(String svnCommand, String tagPath)
-    {
-	String[] output = execute(svnCommand + " ls " + tagPath + " --depth empty");
-	return output == null || (output[1].length() == 0 && output[0].length() == 0);
-    }
-
     private boolean createSvnTag(String svnCommand, String srcPath, String tagPath, String comment)
     {
 	String[] output = execute(svnCommand + " copy " + srcPath + " " + tagPath + " -m " + comment);
