@@ -3,6 +3,7 @@ package operation;
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.Issue;
+import java.io.File;
 import utilities.Properties;
 import static org.apache.http.util.TextUtils.isEmpty;
 
@@ -57,6 +58,7 @@ public class BeginIssue extends Operation
 		if (createBranch(prop, issue))
 		{
 		    updateIssueAsBegan(prop, issue);
+		    checkoutBranch(prop, issue);
 		}
 	    }
 	}
@@ -162,6 +164,56 @@ public class BeginIssue extends Operation
 
 	System.out.println(output[0]);
 	return true;
+    }
+
+    private void checkoutBranch(Properties prop, Issue issue)
+    {
+	String workspacePath = trimRight(getParameterString(prop, PARAMETER_WORKSPACE_PATH, false), "/");
+	if (!isEmpty(workspacePath))
+	{
+	    String branchesPath = trimLeft(trimRight(getParameterString(prop, PARAMETER_BRANCHES_PATH, false), "/"), "/");
+	    String repositoryPath = trimRight(getParameterString(prop, PARAMETER_REPOSITORY_PATH, false), "/");
+
+	    System.out.println("=== Downloading branch into local workspace ");
+
+	    String localPath = workspacePath + "/" + "i" + issue.getId();
+	    String branchPath = repositoryPath + "/" + branchesPath + "/" + "i" + issue.getId();
+
+	    deleteIfExists(localPath);
+
+	    svnCheckout(tryExecute("which svn"), branchPath, localPath);
+	}
+    }
+
+    private boolean svnCheckout(String svnCommand, String source, String target)
+    {
+	String[] command = new String[]
+	{
+	    svnCommand, "checkout", source, target
+	};
+	System.out.println(svnCommand + " checkout " + source + " " + target);
+	String[] output = execute(command);
+	if (output == null || output[1].length() > 0)
+	{
+	    System.err.println(output[1]);
+	    return false;
+	}
+
+	System.out.println(output[0]);
+	return true;
+    }
+
+    private void deleteIfExists(String localPath)
+    {
+	File file = new File(localPath);
+	if (file.exists())
+	{
+	    System.out.println("[info] Branch path is found in local workspace. It'll be deleted!");
+	    execute(new String[]
+	    {
+		"rm", "-Rf", localPath
+	    });
+	}
     }
 
 }
