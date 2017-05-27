@@ -13,6 +13,7 @@ import com.taskadapter.redmineapi.bean.SavedQuery;
 import com.taskadapter.redmineapi.bean.Version;
 import heybot.heybot;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -770,5 +771,99 @@ public abstract class Operation
     {
 	String[] output = execute(svnCommand + " ls " + tagPath + " --depth empty");
 	return output == null || (output[1].length() == 0 && output[0].length() == 0);
+    }
+
+    protected void createFolder(String folderName)
+    {
+	File folder = new File(folderName);
+	if (!folder.exists())
+	{
+	    folder.mkdir();
+	}
+    }
+
+    protected void sleep(int miliSeconds)
+    {
+	try
+	{
+	    Thread.sleep(miliSeconds);
+	}
+	catch (InterruptedException ex)
+	{
+	    // ignore interrupted exception, it's ok
+	}
+    }
+
+    protected Thread startFolderSizeProgress(final String folderPath)
+    {
+	Thread thread = new Thread(new Runnable()
+	{
+	    public void run()
+	    {
+		while (true)
+		{
+		    File folder = new File(folderPath);
+		    if (folder.exists() && folder.isDirectory())
+		    {
+			System.out.print(formatSize(getFolderSize(folder)) + " ... \r");
+		    }
+		    sleep(1000);
+		}
+	    }
+	});
+
+	thread.start();
+	return thread;
+    }
+
+    protected long getFolderSize(File dir)
+    {
+	long size = 0;
+
+	if (dir != null)
+	{
+	    for (File file : dir.listFiles())
+	    {
+		if (file.isFile())
+		{
+		    size += file.length();
+		}
+		else
+		{
+		    size += getFolderSize(file);
+		}
+	    }
+	}
+	return size;
+    }
+
+    protected long getFileCount(File dir)
+    {
+	long count = 0;
+
+	for (File file : dir.listFiles())
+	{
+	    if (file.isFile())
+	    {
+		count++;
+	    }
+	    else
+	    {
+		count += getFileCount(file);
+	    }
+	}
+
+	return count;
+    }
+
+    protected static String formatSize(long size)
+    {
+	if (size < 1024)
+	{
+	    return size + " B";
+	}
+
+	int z = (63 - Long.numberOfLeadingZeros(size)) / 10;
+	return String.format("%.1f %sB", (double) size / (1L << (z * 10)), " KMGTPE".charAt(z));
     }
 }

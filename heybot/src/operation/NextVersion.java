@@ -396,15 +396,6 @@ public class NextVersion extends Operation
 	return true;
     }
 
-    private void createFolder(String folderName)
-    {
-	File folder = new File(folderName);
-	if (!folder.exists())
-	{
-	    folder.mkdir();
-	}
-    }
-
     private void svnCheckout(String svnCommand, String localPath, String[] filePaths)
     {
 	for (String filePath : filePaths)

@@ -4,6 +4,8 @@ import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.Issue;
 import java.io.File;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import utilities.Properties;
 import static org.apache.http.util.TextUtils.isEmpty;
 
@@ -192,7 +194,9 @@ public class BeginIssue extends Operation
 	    svnCommand, "checkout", source, target
 	};
 	System.out.println(svnCommand + " checkout " + source + " " + target);
+	Thread svnCheckoutProgress = startFolderSizeProgress(target);
 	String[] output = execute(command);
+	svnCheckoutProgress.stop();
 	if (output == null || output[1].length() > 0)
 	{
 	    System.err.println(output[1]);
