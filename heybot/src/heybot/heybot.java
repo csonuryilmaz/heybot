@@ -5,6 +5,7 @@ import java.text.SimpleDateFormat;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.Locale;
+import operation.BeginIssue;
 import utilities.Properties;
 import operation.CheckNew;
 import operation.Cleanup;
@@ -118,6 +119,8 @@ public class heybot
 		    return new NextVersion();
 		case "release":
 		    return new Release();
+		case "begin-issue":
+		    return new BeginIssue();
 		default:
 		    System.err.println("Ooops! Unsupported operation. Please check version and manual.");
 	    }

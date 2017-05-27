@@ -13,6 +13,7 @@ import com.taskadapter.redmineapi.bean.SavedQuery;
 import com.taskadapter.redmineapi.bean.Version;
 import heybot.heybot;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -43,6 +44,12 @@ public abstract class Operation
     protected final SimpleDateFormat dateTimeFormatInUTC = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     protected final SimpleDateFormat dateTimeFormatOnlyDate = new SimpleDateFormat("yyyy-MM-dd");
     private final Locale trLocale = new Locale("tr-TR");
+    private final HashSet<String> ignoreFolders = new HashSet<String>()
+    {
+	{
+	    add(".svn");
+	}
+    };
 
     protected Operation(String[] mandatoryParameters)
     {
@@ -745,5 +752,155 @@ public abstract class Operation
 	}
 
 	return null;
+    }
+
+    protected void updateIssueStatus(RedmineManager redmineManager, Issue issue, int statusId) throws Exception
+    {
+	if (issue.getStatusId() != statusId)
+	{
+	    issue.setStatusId(statusId);
+	    redmineManager.getIssueManager().update(issue);
+	    if (!isIssueStatusUpdated(redmineManager, issue.getId(), statusId))
+	    {
+		throw new Exception("Could not update issue status! Please check your redmine workflow or configuration!");
+	    }
+	}
+    }
+
+    private boolean isIssueStatusUpdated(RedmineManager redmineManager, int issueId, int statusId) throws RedmineException
+    {
+	Issue issue = redmineManager.getIssueManager().getIssueById(issueId);
+	return issue.getStatusId() == statusId;
+    }
+
+    protected boolean isSvnPathExists(String svnCommand, String tagPath)
+    {
+	String[] output = execute(svnCommand + " ls " + tagPath + " --depth empty");
+	return output == null || (output[1].length() == 0 && output[0].length() == 0);
+    }
+
+    protected void createFolder(String folderName)
+    {
+	File folder = new File(folderName);
+	if (!folder.exists())
+	{
+	    folder.mkdir();
+	}
+    }
+
+    protected void sleep(int miliSeconds)
+    {
+	try
+	{
+	    Thread.sleep(miliSeconds);
+	}
+	catch (InterruptedException ex)
+	{
+	    // ignore interrupted exception, it's ok
+	}
+    }
+
+    protected Thread startFolderSizeProgress(final String folderPath)
+    {
+	Thread thread = new Thread(new Runnable()
+	{
+	    public void run()
+	    {
+		while (true)
+		{
+		    File folder = new File(folderPath);
+		    if (folder.exists() && folder.isDirectory())
+		    {
+			System.out.print(formatSize(getFolderSize(folder, ignoreFolders)) + " ... \r");
+		    }
+		    sleep(1000);
+		}
+	    }
+	});
+
+	thread.start();
+	return thread;
+    }
+
+    protected void stopFolderSizeProgress(Thread thread, String folderPath)
+    {
+	thread.stop();
+
+	File folder = new File(folderPath);
+
+	System.out.print(formatSize(getFolderSize(folder, ignoreFolders)));
+	System.out.print("  (" + formatSize(getFolderSize(folder, null)) + " total disk usage)");
+	System.out.print(System.getProperty("line.separator"));
+
+	System.out.print(getFileCount(folder, ignoreFolders) + " files");
+	System.out.print("  (" + getFileCount(folder, null) + " total disk files)");
+	System.out.print(System.getProperty("line.separator"));
+    }
+
+    protected long getFolderSize(File dir, HashSet<String> ignoreFolders)
+    {
+	if (ignoreFolders != null && ignoreFolders.contains(dir.getName()))
+	{
+	    return 0;
+	}
+
+	long size = 0;
+
+	File[] files = dir.listFiles();
+	if (files != null)
+	{
+	    for (File file : files)
+	    {
+		if (file.isFile())
+		{
+		    size += file.length();
+		}
+		else
+		{
+		    size += getFolderSize(file, ignoreFolders);
+		}
+	    }
+	}
+
+	return size;
+    }
+
+    protected long getFileCount(File dir, HashSet<String> ignoreFolders)
+    {
+	if (ignoreFolders != null && ignoreFolders.contains(dir.getName()))
+	{
+	    return 0;
+	}
+
+	long count = 0;
+
+	File[] files = dir.listFiles();
+	if (files != null)
+	{
+	    for (File file : files)
+	    {
+		if (file.isFile())
+		{
+		    count++;
+		}
+		else
+		{
+		    count += getFileCount(file, ignoreFolders);
+		}
+	    }
+	}
+
+	return count;
+    }
+
+    protected static String formatSize(long size)
+    {
+	if (size < 1024)
+	{
+	    return size + " B";
+	}
+
+	int z = (63 - Long.numberOfLeadingZeros(size)) / 10;
+	return String.format("%.1f %sB", (double) size / (1L << (z * 10)), " KMGTPE".charAt(z));
     }
 }
