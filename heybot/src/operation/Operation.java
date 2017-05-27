@@ -44,6 +44,12 @@ public abstract class Operation
     protected final SimpleDateFormat dateTimeFormatInUTC = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     protected final SimpleDateFormat dateTimeFormatOnlyDate = new SimpleDateFormat("yyyy-MM-dd");
     private final Locale trLocale = new Locale("tr-TR");
+    private final HashSet<String> ignoreFolders = new HashSet<String>()
+    {
+	{
+	    add(".svn");
+	}
+    };
 
     protected Operation(String[] mandatoryParameters)
     {
@@ -805,7 +811,7 @@ public abstract class Operation
 		    File folder = new File(folderPath);
 		    if (folder.exists() && folder.isDirectory())
 		    {
-			System.out.print(formatSize(getFolderSize(folder)) + " ... \r");
+			System.out.print(formatSize(getFolderSize(folder, ignoreFolders)) + " ... \r");
 		    }
 		    sleep(1000);
 		}
@@ -816,13 +822,34 @@ public abstract class Operation
 	return thread;
     }
 
-    protected long getFolderSize(File dir)
+    protected void stopFolderSizeProgress(Thread thread, String folderPath)
     {
+	thread.stop();
+
+	File folder = new File(folderPath);
+
+	System.out.print(formatSize(getFolderSize(folder, ignoreFolders)));
+	System.out.print("  (" + formatSize(getFolderSize(folder, null)) + " total disk usage)");
+	System.out.print(System.getProperty("line.separator"));
+
+	System.out.print(getFileCount(folder, ignoreFolders) + " files");
+	System.out.print("  (" + getFileCount(folder, null) + " total disk files)");
+	System.out.print(System.getProperty("line.separator"));
+    }
+
+    protected long getFolderSize(File dir, HashSet<String> ignoreFolders)
+    {
+	if (ignoreFolders != null && ignoreFolders.contains(dir.getName()))
+	{
+	    return 0;
+	}
+
 	long size = 0;
 
-	if (dir != null)
+	File[] files = dir.listFiles();
+	if (files != null)
 	{
-	    for (File file : dir.listFiles())
+	    for (File file : files)
 	    {
 		if (file.isFile())
 		{
@@ -830,26 +857,36 @@ public abstract class Operation
 		}
 		else
 		{
-		    size += getFolderSize(file);
+		    size += getFolderSize(file, ignoreFolders);
 		}
 	    }
 	}
+
 	return size;
     }
 
-    protected long getFileCount(File dir)
+    protected long getFileCount(File dir, HashSet<String> ignoreFolders)
     {
+	if (ignoreFolders != null && ignoreFolders.contains(dir.getName()))
+	{
+	    return 0;
+	}
+
 	long count = 0;
 
-	for (File file : dir.listFiles())
+	File[] files = dir.listFiles();
+	if (files != null)
 	{
-	    if (file.isFile())
+	    for (File file : files)
 	    {
-		count++;
-	    }
-	    else
-	    {
-		count += getFileCount(file);
+		if (file.isFile())
+		{
+		    count++;
+		}
+		else
+		{
+		    count += getFileCount(file, ignoreFolders);
+		}
 	    }
 	}
 

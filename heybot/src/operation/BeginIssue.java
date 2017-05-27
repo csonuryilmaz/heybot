@@ -182,7 +182,6 @@ public class BeginIssue extends Operation
 	    String branchPath = repositoryPath + "/" + branchesPath + "/" + "i" + issue.getId();
 
 	    deleteIfExists(localPath);
-
 	    svnCheckout(tryExecute("which svn"), branchPath, localPath);
 	}
     }
@@ -191,12 +190,12 @@ public class BeginIssue extends Operation
     {
 	String[] command = new String[]
 	{
-	    svnCommand, "checkout", source, target
+	    svnCommand, "checkout", "--quiet", source, target
 	};
 	System.out.println(svnCommand + " checkout " + source + " " + target);
-	Thread svnCheckoutProgress = startFolderSizeProgress(target);
+	Thread thread = startFolderSizeProgress(target);
 	String[] output = execute(command);
-	svnCheckoutProgress.stop();
+	stopFolderSizeProgress(thread, target);
 	if (output == null || output[1].length() > 0)
 	{
 	    System.err.println(output[1]);
