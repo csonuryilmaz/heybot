@@ -4,8 +4,6 @@ import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.Issue;
 import java.io.File;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import utilities.Properties;
 import static org.apache.http.util.TextUtils.isEmpty;
 
