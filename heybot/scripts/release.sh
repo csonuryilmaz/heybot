@@ -13,7 +13,7 @@ echo "== Listing ../dist/ directory ... "
 ls -lh ../dist/
 echo "== Packaging ... "
 cp -R ../dist/* "$RELEASE_PATH/"
-cp -R ../workspace "$RELEASE_PATH/"
+mkdir "$RELEASE_PATH/workspace"
 cp -R ../templates "$RELEASE_PATH/"
 cp ./heybot.run "$RELEASE_PATH/"
 cat "$RELEASE_PATH/heybot.run" "$RELEASE_PATH/heybot.jar" > "$RELEASE_PATH/heybot.final" && chmod +x "$RELEASE_PATH/heybot.final"
