@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="1.11.0.0"
+VERSION="1.11.0.1"
 
 RELEASE_PATH="../../release/heybot_$VERSION"
 
@@ -14,6 +14,7 @@ ls -lh ../dist/
 echo "== Packaging ... "
 cp -R ../dist/* "$RELEASE_PATH/"
 cp -R ../workspace "$RELEASE_PATH/"
+cp -R ../templates "$RELEASE_PATH/"
 cp ./heybot.run "$RELEASE_PATH/"
 cat "$RELEASE_PATH/heybot.run" "$RELEASE_PATH/heybot.jar" > "$RELEASE_PATH/heybot.final" && chmod +x "$RELEASE_PATH/heybot.final"
 rm -f "$RELEASE_PATH/heybot.run"
