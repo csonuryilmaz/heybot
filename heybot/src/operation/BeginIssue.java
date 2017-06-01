@@ -135,7 +135,7 @@ public class BeginIssue extends Operation
 
     private boolean copyTrunkToBranchFolder(String svnCommand, String repositoryPath, String trunkPath, String branchesPath, Integer issueId)
     {
-	String target = repositoryPath + "/" + branchesPath + "/" + "i" + issueId + "/" + trunkPath;
+	String target = repositoryPath + "/" + branchesPath + "/" + "i" + issueId + "/" + getTrunkProjectName(trunkPath);
 	String source = repositoryPath + "/" + trunkPath;
 
 	if (!isSvnPathExists(svnCommand, target))
@@ -215,6 +215,17 @@ public class BeginIssue extends Operation
 		"rm", "-Rf", localPath
 	    });
 	}
+    }
+
+    private String getTrunkProjectName(String trunkPath)
+    {
+	int lastIndexOfSlash = trunkPath.lastIndexOf('/');
+	if (lastIndexOfSlash >= 0)
+	{
+	    return trunkPath.substring(lastIndexOfSlash + 1);
+	}
+
+	return trunkPath;
     }
 
 }
