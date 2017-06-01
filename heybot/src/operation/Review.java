@@ -138,11 +138,7 @@ public class Review extends Operation
 	System.out.println(tryExecute(svnCommand + " up " + localWorkingDir));
 	System.out.println();
 	System.out.println("[ Merging Changes From Branch ]");
-	if (mergeRoot == null || mergeRoot.length() == 0)
-	{
-	    mergeRoot = tryGetRepoRootDir(svnCommand, localWorkingDir);
-	}
-	System.out.println(tryExecute(svnCommand + " merge --accept postpone " + getMergeSourceDir(svnBranchDir, issueId, mergeRoot) + " " + localWorkingDir));
+	System.out.println(tryExecute(svnCommand + " merge --accept postpone " + getMergeSourceDir(svnCommand, localWorkingDir, svnBranchDir, issueId) + " " + localWorkingDir));
 	System.out.println();
 	System.out.println("[ Latest Status in Local Working Copy ]");
 	System.out.println(tryExecute(svnCommand + " st " + localWorkingDir));
@@ -171,20 +167,16 @@ public class Review extends Operation
 	}
     }
 
-    private String getMergeSourceDir(String svnBranchDir, String issueId, String root)
+    private String getMergeSourceDir(String svnCommand, String localWorkingDir, String svnBranchDir, String issueId)
     {
 	if (svnBranchDir.charAt(svnBranchDir.length() - 1) != '/')
 	{
 	    svnBranchDir += "/";
 	}
 
-	root = root.replace("^", "");
-	if (root.charAt(0) != '/')
-	{
-	    root = "/" + root;
-	}
+	String repoRoot = tryGetRepoRootDir(svnCommand, localWorkingDir);
 
-	return svnBranchDir + "i" + issueId + root;
+	return svnBranchDir + "i" + issueId + "/" + getProjectName(repoRoot);
     }
 
     private void checkIsIssueStatusIsUpdated(int issueId, int statusId) throws RedmineException

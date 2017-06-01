@@ -903,4 +903,15 @@ public abstract class Operation
 	int z = (63 - Long.numberOfLeadingZeros(size)) / 10;
 	return String.format("%.1f %sB", (double) size / (1L << (z * 10)), " KMGTPE".charAt(z));
     }
+
+    protected String getProjectName(String path)
+    {
+	int lastIndexOfSlash = path.lastIndexOf('/');
+	if (lastIndexOfSlash >= 0)
+	{
+	    return path.substring(lastIndexOfSlash + 1);
+	}
+
+	return path;
+    }
 }
