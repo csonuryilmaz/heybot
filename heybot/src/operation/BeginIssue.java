@@ -26,6 +26,8 @@ public class BeginIssue extends Operation
     // optional
     private final static String PARAMETER_BEGAN_STATUS = "BEGAN_STATUS";
     private final static String PARAMETER_WORKSPACE_PATH = "WORKSPACE_PATH";
+    private final static String PARAMETER_SWITCH_FROM_ISSUE = "SWITCH_FROM_ISSUE";
+    private final static String PARAMETER_CHECKOUT_IF_SWITCH_FAILS = "CHECKOUT_IF_SWITCH_FAILS";
 
     //</editor-fold>
     private RedmineManager redmineManager;
@@ -58,7 +60,7 @@ public class BeginIssue extends Operation
 		if (createBranch(prop, issue))
 		{
 		    updateIssueAsBegan(prop, issue);
-		    checkoutBranch(prop, issue);
+		    createLocalWorkingCopy(prop, issue);
 		}
 	    }
 	}
@@ -215,6 +217,71 @@ public class BeginIssue extends Operation
 		"rm", "-Rf", localPath
 	    });
 	}
+    }
+
+    private void createLocalWorkingCopy(Properties prop, Issue issue)
+    {
+	int switchFromIssueId = getParameterInt(prop, PARAMETER_SWITCH_FROM_ISSUE, 0);
+	if (switchFromIssueId > 0)
+	{
+	    switchBranch(prop, issue, switchFromIssueId);
+	}
+	else
+	{
+	    checkoutBranch(prop, issue);
+	}
+    }
+
+    private void switchBranch(Properties prop, Issue issue, int switchFromIssueId)
+    {
+	boolean checkoutIfSwitchFails = getParameterBoolean(prop, PARAMETER_CHECKOUT_IF_SWITCH_FAILS);
+	String workspacePath = trimRight(getParameterString(prop, PARAMETER_WORKSPACE_PATH, false), "/");
+	if (!isEmpty(workspacePath))
+	{
+	    String branchesPath = trimLeft(trimRight(getParameterString(prop, PARAMETER_BRANCHES_PATH, false), "/"), "/");
+	    String repositoryPath = trimRight(getParameterString(prop, PARAMETER_REPOSITORY_PATH, false), "/");
+
+	    System.out.println("=== Switching from old branch to new branch (#" + switchFromIssueId + " -> " + "#" + issue.getId() + ")");
+
+	    String localPath = workspacePath + "/" + "i" + switchFromIssueId;
+	    String branchPath = repositoryPath + "/" + branchesPath + "/" + "i" + issue.getId();
+
+	    if (svnSwitch(tryExecute("which svn"), branchPath, localPath)
+		    && renamePath(localPath, workspacePath + "/" + "i" + issue.getId()))
+	    {
+		System.out.println("[✓]");
+	    }
+	    else if (checkoutIfSwitchFails)
+	    {
+		checkoutBranch(prop, issue);
+	    }
+	}
+    }
+
+    private boolean svnSwitch(String svnCommand, String source, String target)
+    {
+	String[] command = new String[]
+	{
+	    svnCommand, "switch", "--quiet", "--ignore-ancestry", source, target
+	};
+	System.out.println(svnCommand + " switch " + source + " " + target);
+	String[] output = execute(command);
+	if (output == null || output[1].length() > 0)
+	{
+	    System.err.println(output[1]);
+	    return false;
+	}
+
+	System.out.println(output[0]);
+	return true;
+    }
+
+    private boolean renamePath(String srcPath, String trgPath)
+    {
+	File src = new File(srcPath);
+	File trg = new File(trgPath);
+
+	return src.renameTo(trg);
     }
 
 }
