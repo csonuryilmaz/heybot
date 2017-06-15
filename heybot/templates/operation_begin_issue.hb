@@ -25,6 +25,7 @@ BRANCHES_PATH=
 
 # issue
 BEGAN_STATUS=
+ASSIGNEE_ID=
 
 # workspace
 WORKSPACE_PATH=

@@ -28,6 +28,7 @@ public class BeginIssue extends Operation
     private final static String PARAMETER_WORKSPACE_PATH = "WORKSPACE_PATH";
     private final static String PARAMETER_SWITCH_FROM_ISSUE = "SWITCH_FROM_ISSUE";
     private final static String PARAMETER_CHECKOUT_IF_SWITCH_FAILS = "CHECKOUT_IF_SWITCH_FAILS";
+    private final static String PARAMETER_ASSIGNEE_ID = "ASSIGNEE_ID";
 
     //</editor-fold>
     private RedmineManager redmineManager;
@@ -54,7 +55,7 @@ public class BeginIssue extends Operation
 	    redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
 
 	    Issue issue = getIssue(redmineManager, issueId);
-	    if (issue != null)
+	    if (issue != null && isIssueAssignedTo(issue, prop))
 	    {
 		System.out.println("#" + issue.getId() + " - " + issue.getSubject());
 		if (createBranch(prop, issue))
@@ -282,6 +283,18 @@ public class BeginIssue extends Operation
 	File trg = new File(trgPath);
 
 	return src.renameTo(trg);
+    }
+
+    private boolean isIssueAssignedTo(Issue issue, Properties prop)
+    {
+	int assigneeId = getParameterInt(prop, PARAMETER_ASSIGNEE_ID, 0);
+	if (assigneeId > 0 && issue.getAssigneeId() != assigneeId)
+	{
+	    System.out.println("Ooops! " + "#" + issue.getId() + " - " + issue.getSubject() + " is assigned to " + issue.getAssigneeName() + ".");
+	    return false;
+	}
+
+	return true;
     }
 
 }
