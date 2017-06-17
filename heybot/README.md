@@ -1,5 +1,12 @@
 # heybot
 
+[![Twitter Follow](https://img.shields.io/twitter/follow/csonuryilmaz.svg?style=social)](https://twitter.com/csonuryilmaz)
+[![GitHub stars](https://img.shields.io/github/stars/csonuryilmaz/projects.svg?style=social&label=Star)](https://github.com/csonuryilmaz/projects)
+![License](https://cdn.rawgit.com/csonuryilmaz/heybot/dd77565a/heybot/scripts/svg/license.svg)
+![Build](https://cdn.rawgit.com/csonuryilmaz/heybot/dd77565a/heybot/scripts/svg/build.svg)
+![Docs](https://cdn.rawgit.com/csonuryilmaz/heybot/dd77565a/heybot/scripts/svg/docs.svg)
+![Version](https://cdn.rawgit.com/csonuryilmaz/heybot/dd77565a/heybot/scripts/svg/version.svg)
+
 ### Table of Contents
   1. [Introduction](#1-introduction)  
   2. [Requirements](#2-requirements)  
@@ -23,9 +30,11 @@
 
 **heybot** is my best friend on my daily development activities. It's designed to help developers on their day-to-day development activities. It eases *some* chore development activities and improves your productivity. *It's worth trying it.*
 
+Happy coding! :coffee:
+
 #### 2. Requirements
 
-**heybot** is mainly designed to work in **subversion**, **redmine** and **slack** environment. If you use [redmine](http://www.redmine.org/) as project management/issue tracking application, [subversion](https://subversion.apache.org/) as version control system and [slack](https://slack.com/) as communication environment then **heybot** can help you. For other ecosystems, you can fork the project or contribute directly to this project. All useful contributions are wellcome.
+**heybot** is mainly designed to work in **subversion**, **redmine** and **slack** environment. If you use [redmine](http://www.redmine.org/) as project management/issue tracking application, [subversion](https://subversion.apache.org/) as version control system and [slack](https://slack.com/) as communication environment then **heybot** can help you. For other ecosystems, you can fork the project or contribute directly to this project. All feedbacks and [contributions](https://github.com/csonuryilmaz/heybot/blob/master/CONTRIBUTING.md) are welcome. Source code is a java project which is developed in Netbeans IDE.
 
 #### 3. Installation
 
