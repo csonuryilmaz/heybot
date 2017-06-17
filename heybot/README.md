@@ -5,7 +5,7 @@
 ![License](https://cdn.rawgit.com/csonuryilmaz/heybot/dd77565a/heybot/scripts/svg/license.svg)
 ![Build](https://cdn.rawgit.com/csonuryilmaz/heybot/dd77565a/heybot/scripts/svg/build.svg)
 ![Docs](https://cdn.rawgit.com/csonuryilmaz/heybot/dd77565a/heybot/scripts/svg/docs.svg)
-![Version](https://cdn.rawgit.com/csonuryilmaz/heybot/dd77565a/heybot/scripts/svg/version.svg)
+![Version](https://cdn.rawgit.com/csonuryilmaz/heybot/ad1f93e2/heybot/scripts/svg/version.svg)
 
 ### Table of Contents
   1. [Introduction](#1-introduction)  
