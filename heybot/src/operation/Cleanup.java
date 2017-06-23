@@ -30,6 +30,7 @@ public class Cleanup extends Operation
     private final static String PARAMETER_REDMINE_URL = "REDMINE_URL";
     // optional
     private final static String PARAMETER_LIMIT = "LIMIT";
+    private final static String PARAMETER_IS_DELETE_ENABLED_WHEN_NOT_FOUND = "IS_DELETE_ENABLED_WHEN_NOT_FOUND";
 
 //</editor-fold>
     public Cleanup()
@@ -54,28 +55,39 @@ public class Cleanup extends Operation
 
 	    int max = getParameterInt(prop, PARAMETER_LIMIT, Integer.MAX_VALUE);
 
-	    start(localWorkingDirectory, redmineAccessToken, redmineUrl, max, statuses);
+	    start(localWorkingDirectory, redmineAccessToken, redmineUrl, max, statuses, prop);
 	}
     }
 
-    private void start(String localWorkingDirectory, String redmineAccessToken, String redmineUrl, int max, HashSet<String> statuses)
+    private void start(String localWorkingDirectory, String redmineAccessToken, String redmineUrl, int max, HashSet<String> statuses, Properties prop)
     {
+	boolean isDeleteEnabledWhenNotFound = getParameterBoolean(prop, PARAMETER_IS_DELETE_ENABLED_WHEN_NOT_FOUND);
 	redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
 
 	Branch[] branches = getBranches(localWorkingDirectory);
 	for (Branch branch : branches)
 	{
-	    String issueStatus = getIssueStatus(branch.getIssueId());
-	    if (statuses.contains(issueStatus))
+	    Issue issue = getIssue(redmineManager, branch.getIssueId());
+	    if (issue == null)
 	    {
-		System.out.println("ISSUE: " + branch.getIssueId() + " is *" + issueStatus + "*");
-
-		deleteBranch(localWorkingDirectory, branch);
-
-		if (--max <= 0)
+		System.out.println("#" + branch.getIssueId() + " Not found!");
+		if (isDeleteEnabledWhenNotFound)
 		{
-		    break; // limit is reached!
+		    deleteBranch(localWorkingDirectory, branch);
 		}
+	    }
+	    else
+	    {
+		System.out.println("#" + issue.getId() + " - " + issue.getSubject());
+		if (statuses.contains(issue.getStatusName().toLowerCase(trLocale)))
+		{
+		    deleteBranch(localWorkingDirectory, branch);
+		}
+	    }
+
+	    if (--max <= 0)
+	    {
+		break; // limit is reached!
 	    }
 	}
     }
