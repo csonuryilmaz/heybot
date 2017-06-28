@@ -45,14 +45,14 @@ java version "1.8.0_65"
 Java(TM) SE Runtime Environment (build 1.8.0_65-b17)
 Java HotSpot(TM) 64-Bit Server VM (build 25.65-b01, mixed mode)
 ```
-Download latest version of **heybot** from [releases](https://github.com/csonuryilmaz/heybot/releases) or:
+Download latest version of **heybot** from [latest release](https://github.com/csonuryilmaz/heybot/releases/latest) or:
 ```
-$ wget https://github.com/csonuryilmaz/projects/releases/download/1.9.0.4/heybot_1.9.0.4.tar.gz
+$ wget https://github.com/csonuryilmaz/projects/releases/download/1.11.0.0/heybot_1.11.0.0.tar.gz
 ```
 Extract archive and change directory:
 ```
-$ tar -zxvf heybot_1.9.0.4.tar.gz
-$ cd heybot_1.9.0.4
+$ tar -zxvf heybot_1.11.0.0.tar.gz
+$ cd heybot_1.11.0.0
 ```
 Run installation script:
 ```
@@ -208,7 +208,6 @@ Optional parameters:
 
 - SOURCE_PATH= Existing working copy to make changes. (merge to) If not given or empty, *current working directory* is assumed. (pwd)
 - ISSUE_STATUS_SHOULD_BE= The status of issue that can be reviewed and eligible to test. If issue status is not equals to this parameter, operation won't begin.
-- MERGE_ROOT= Normally branch is created with the same name (or hierarchy) of trunk project. If a custom method is applied and you need to state the root project (path) to merge, fill this parameter with an eligible value.
 
 Example:
 
@@ -228,7 +227,6 @@ REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
 # optional parameters
 SOURCE_PATH=/Users/smith/NetBeansProjects/myproject/
 ISSUE_STATUS_SHOULD_BE=Resolved
-MERGE_ROOT=/myproject
 
 ```
 
