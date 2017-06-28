@@ -27,7 +27,6 @@ public class Review extends Operation
     // optional
     private final static String PARAMETER_ISSUE_STATUS_SHOULD_BE = "ISSUE_STATUS_SHOULD_BE";
     private final static String PARAMETER_SOURCE_PATH = "SOURCE_PATH";
-    private final static String PARAMETER_MERGE_ROOT = "MERGE_ROOT";
 
 //</editor-fold>
     public Review()
@@ -51,7 +50,6 @@ public class Review extends Operation
 	    String svnBranchDir = getParameterString(prop, PARAMETER_SUBVERSION_PATH, false);
 	    String redmineAccessToken = getParameterString(prop, PARAMETER_REDMINE_TOKEN, false);
 	    String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
-	    String mergeRoot = getParameterString(prop, PARAMETER_MERGE_ROOT, false);
 
 	    if (localWorkingDir == null || localWorkingDir.length() == 0)
 	    {// try to assign default argument
@@ -68,7 +66,7 @@ public class Review extends Operation
 	    {
 		if (isIssueStatusEligible(issue, sourceStatus, targetStatus))
 		{
-		    merge(localWorkingDir, svnBranchDir, issueId, mergeRoot);
+		    merge(localWorkingDir, svnBranchDir, issueId);
 		    setIssueStatus(issue, targetStatus);
 		}
 		else
@@ -117,7 +115,7 @@ public class Review extends Operation
 	return currentStatus.equals(statusWillBe.toLowerCase(trLocale));
     }
 
-    private void merge(String localWorkingDir, String svnBranchDir, String issueId, String mergeRoot)
+    private void merge(String localWorkingDir, String svnBranchDir, String issueId)
     {
 	String svnCommand = tryExecute("which svn");
 
