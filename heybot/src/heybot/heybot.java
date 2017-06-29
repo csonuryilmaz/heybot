@@ -5,17 +5,8 @@ import java.text.SimpleDateFormat;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.Locale;
-import operation.BeginIssue;
 import utilities.Properties;
-import operation.CheckNew;
-import operation.Cleanup;
-import operation.CleanupSvn;
-import operation.NextVersion;
-import operation.Operation;
-import operation.Release;
-import operation.Upload;
-import operation.Review;
-import operation.SyncIssue;
+import operation.*;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -121,6 +112,8 @@ public class heybot
 		    return new Release();
 		case "begin-issue":
 		    return new BeginIssue();
+		case "snapshot":
+		    return new Snapshot();
 		default:
 		    System.err.println("Ooops! Unsupported operation. Please check version and manual.");
 	    }

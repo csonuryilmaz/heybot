@@ -10,6 +10,7 @@ import com.taskadapter.redmineapi.bean.IssueRelation;
 import com.taskadapter.redmineapi.bean.IssueStatus;
 import com.taskadapter.redmineapi.bean.Project;
 import com.taskadapter.redmineapi.bean.SavedQuery;
+import com.taskadapter.redmineapi.bean.Tracker;
 import com.taskadapter.redmineapi.bean.Version;
 import heybot.heybot;
 import java.io.BufferedReader;
@@ -390,6 +391,8 @@ public abstract class Operation
     protected Project[] getProjects(RedmineManager redmineManager, String[] projectNames)
     {
 	List<Project> projects = new ArrayList<>();
+	System.out.println("Getting projects ...");
+
 	for (String projectName : projectNames)
 	{
 	    int projectId = tryGetProjectId(redmineManager, projectName);
@@ -406,6 +409,7 @@ public abstract class Operation
 	    }
 	}
 
+	System.out.println(projects.size() + " project");
 	return projects.toArray(new Project[projects.size()]);
     }
 
@@ -913,5 +917,107 @@ public abstract class Operation
 	}
 
 	return path;
+    }
+
+    protected Issue[] getProjectIssues(RedmineManager redmineManager, Project filterProject, IssueStatus[] filterStatuses, Tracker[] filterTrackers, boolean filterhasAnyAssignee, String sort)
+    {
+	System.out.print("...");
+	com.taskadapter.redmineapi.Params params = new Params().add("set_filter", "1");
+
+	params.add("f[]", "project_id");
+	params.add("op[project_id]", "=");
+	params.add("v[project_id][]", Integer.toString(filterProject.getId()));
+
+	for (IssueStatus filterStatus : filterStatuses)
+	{
+	    params.add("f[]", "status_id");
+	    params.add("op[status_id]", "=");
+	    params.add("v[status_id][]", Integer.toString(filterStatus.getId()));
+	}
+
+	for (Tracker filterTracker : filterTrackers)
+	{
+	    params.add("f[]", "tracker_id");
+	    params.add("op[tracker_id]", "=");
+	    params.add("v[tracker_id][]", Integer.toString(filterTracker.getId()));
+	}
+
+	if (filterhasAnyAssignee)
+	{
+	    params.add("f[]", "assigned_to_id");
+	    params.add("op[assigned_to_id]", "*");
+	}
+
+	params.add("sort", sort);
+
+	try
+	{
+	    List<Issue> issues = redmineManager.getIssueManager().getIssues(params).getResults();
+
+	    System.out.println(issues.size() + " issue(s) found.");
+	    return issues.toArray(new Issue[issues.size()]);
+	}
+	catch (RedmineException ex)
+	{
+	    System.err.println("Ooops! Couldn't get issues.(" + ex.getMessage() + ")");
+	}
+
+	return new Issue[0];
+    }
+
+    protected IssueStatus[] getStatuses(RedmineManager redmineManager, String[] statusNames)
+    {
+	List<IssueStatus> filteredStatuses = new ArrayList<>();
+	System.out.println("Getting statuses ...");
+
+	try
+	{
+	    List<IssueStatus> statuses = redmineManager.getIssueManager().getStatuses();
+	    for (String statusName : statusNames)
+	    {
+		for (IssueStatus status : statuses)
+		{
+		    if (status.getName().toLowerCase(trLocale).equals(statusName))
+		    {
+			filteredStatuses.add(status);
+		    }
+		}
+	    }
+	}
+	catch (RedmineException ex)
+	{
+	    System.err.println("Ooops! Couldn't get issue statuses.(" + ex.getMessage() + ")");
+	}
+
+	System.out.println(filteredStatuses.size() + " status");
+	return filteredStatuses.toArray(new IssueStatus[filteredStatuses.size()]);
+    }
+
+    protected Tracker[] getTrackers(RedmineManager redmineManager, String[] trackerNames)
+    {
+	List<Tracker> filteredTrackers = new ArrayList<>();
+	System.out.println("Getting trackers ...");
+
+	try
+	{
+	    List<Tracker> trackers = redmineManager.getIssueManager().getTrackers();
+	    for (String trackerName : trackerNames)
+	    {
+		for (Tracker tracker : trackers)
+		{
+		    if (tracker.getName().toLowerCase(trLocale).equals(trackerName))
+		    {
+			filteredTrackers.add(tracker);
+		    }
+		}
+	    }
+	}
+	catch (RedmineException ex)
+	{
+	    System.err.println("Ooops! Couldn't get trackers.(" + ex.getMessage() + ")");
+	}
+
+	System.out.println(filteredTrackers.size() + " tracker");
+	return filteredTrackers.toArray(new Tracker[filteredTrackers.size()]);
     }
 }
