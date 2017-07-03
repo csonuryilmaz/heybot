@@ -1,15 +1,21 @@
 package operation;
 
+import com.taskadapter.redmineapi.RedmineException;
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
+import com.taskadapter.redmineapi.bean.CustomField;
 import com.taskadapter.redmineapi.bean.Issue;
 import com.taskadapter.redmineapi.bean.IssueStatus;
 import com.taskadapter.redmineapi.bean.Project;
 import com.taskadapter.redmineapi.bean.Tracker;
+import com.taskadapter.redmineapi.bean.User;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import model.MapUtil;
 import org.apache.commons.lang3.ArrayUtils;
+import static org.apache.http.util.TextUtils.isEmpty;
 import utilities.Properties;
 
 /**
@@ -27,7 +33,7 @@ public class Snapshot extends Operation
     private final static String PARAMETER_STATUS = "STATUS";
 
     // optional
-    private final static String PARAMETER_OTHER_USER_CUSTOM_FIELD = "OTHER_USER_CUSTOM_FIELD";
+    private final static String PARAMETER_USER_CUSTOM_FIELD = "USER_CUSTOM_FIELD";
     private final static String PARAMETER_TRACKER = "TRACKER";
 
     //</editor-fold>
@@ -57,9 +63,12 @@ public class Snapshot extends Operation
 	    Issue[] issues = getIssues(prop);
 
 	    System.out.println("Total " + issues.length + " issue(s).");
-	    groupIssuesByAssignee(issues);
 
-	    // todo
+	    System.out.println();
+	    groupIssuesByAssignee(issues);
+	    System.out.println();
+	    groupIssuesByUserCustomFields(issues, getParameterStringArray(prop, PARAMETER_USER_CUSTOM_FIELD, false));
+	    System.out.println();
 	}
     }
 
@@ -81,7 +90,7 @@ public class Snapshot extends Operation
 
     private void groupIssuesByAssignee(Issue[] issues)
     {
-	System.out.println("Grouped by assignee:");
+	System.out.println("Grouped by Assignee:");
 	HashMap<String, Integer> statistics = new HashMap<>();
 
 	Integer count;
@@ -102,6 +111,71 @@ public class Snapshot extends Operation
 	{
 	    System.out.println(statistic.getKey() + " " + statistic.getValue());
 	}
+    }
+
+    private void groupIssuesByUserCustomFields(Issue[] issues, String[] otherUserCustomFields)
+    {
+	for (String otherUserCustomField : otherUserCustomFields)
+	{
+	    groupIssuesByUserCustomField(issues, otherUserCustomField);
+	}
+    }
+
+    private void groupIssuesByUserCustomField(Issue[] issues, String customField)
+    {
+	System.out.println("Grouped by " + customField + ":");
+	HashMap<String, Integer> statistics = new HashMap<>();
+
+	Integer count;
+	for (Issue issue : issues)
+	{
+	    String customFieldValue = getIssueCustomFieldValue(issue, customField);
+
+	    if ((count = statistics.get(customFieldValue)) != null)
+	    {
+		statistics.put(customFieldValue, count + 1);
+	    }
+	    else
+	    {
+		statistics.put(customFieldValue, 1);
+	    }
+	}
+
+	statistics = (HashMap<String, Integer>) MapUtil.sortByValueDesc(statistics);
+	for (Map.Entry<String, Integer> statistic : statistics.entrySet())
+	{
+	    System.out.println((statistic.getKey().equals("none") ? "none" : getUserFullName(statistic.getKey())) + " " + statistic.getValue());
+	}
+    }
+
+    private String getIssueCustomFieldValue(Issue issue, String name)
+    {
+	CustomField customField = issue.getCustomFieldByName(name);
+
+	if (customField != null && !isEmpty(customField.getValue()))
+	{
+	    return customField.getValue();
+	}
+
+	return "none";
+    }
+
+    private String getUserFullName(String userId)
+    {
+	try
+	{
+	    User user = redmineManager.getUserManager().getUserById(Integer.parseInt(userId));
+	    if (user != null)
+	    {
+		return user.getFullName();
+	    }
+	}
+	catch (RedmineException ex)
+	{
+	    // intentionally left blank
+	}
+
+	return "unknown";
     }
 
 }
