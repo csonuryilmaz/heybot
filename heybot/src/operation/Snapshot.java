@@ -1,5 +1,10 @@
 package operation;
 
+import com.diogonunes.jcdp.color.ColoredPrinter;
+import com.diogonunes.jcdp.color.api.Ansi;
+import com.diogonunes.jcdp.color.api.Ansi.Attribute;
+import com.diogonunes.jcdp.color.api.Ansi.BColor;
+import com.diogonunes.jcdp.color.api.Ansi.FColor;
 import com.taskadapter.redmineapi.RedmineException;
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
@@ -9,6 +14,7 @@ import com.taskadapter.redmineapi.bean.IssueStatus;
 import com.taskadapter.redmineapi.bean.Project;
 import com.taskadapter.redmineapi.bean.Tracker;
 import com.taskadapter.redmineapi.bean.User;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import model.MapUtil;
@@ -179,11 +185,22 @@ public class Snapshot extends Operation
 
     private void listIssues(Issue[] issues)
     {
+	ColoredPrinter cp = new ColoredPrinter.Builder(0, false).build();
+	Date today = new Date();
+
 	System.out.println("List of Issues:");
 	for (Issue issue : issues)
 	{
 	    System.out.print(format("#" + issue.getId(), 6, true));
-	    System.out.print(format(dateTimeFormatOnlyDate.format(issue.getDueDate()), 12, true));
+	    if (issue.getDueDate().compareTo(today) < 0)
+	    {
+		cp.print(format(dateTimeFormatOnlyDate.format(issue.getDueDate()), 12, true), Attribute.NONE, FColor.WHITE, BColor.RED);
+		cp.clear();
+	    }
+	    else
+	    {
+		System.out.print(format(dateTimeFormatOnlyDate.format(issue.getDueDate()), 12, true));
+	    }
 	    System.out.print(format("[" + issue.getTracker().getName() + "]", 15, true));
 	    System.out.print(format((issue.getTargetVersion() != null ? issue.getTargetVersion().getName() : ""), 15, true));
 	    System.out.print(format("(" + issue.getPriorityText() + ")", 10, true));
