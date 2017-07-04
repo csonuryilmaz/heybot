@@ -11,8 +11,6 @@ import com.taskadapter.redmineapi.bean.Tracker;
 import com.taskadapter.redmineapi.bean.User;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import model.MapUtil;
 import org.apache.commons.lang3.ArrayUtils;
 import static org.apache.http.util.TextUtils.isEmpty;
@@ -69,6 +67,7 @@ public class Snapshot extends Operation
 	    System.out.println();
 	    groupIssuesByUserCustomFields(issues, getParameterStringArray(prop, PARAMETER_USER_CUSTOM_FIELD, false));
 	    System.out.println();
+	    listIssues(issues);
 	}
     }
 
@@ -176,6 +175,40 @@ public class Snapshot extends Operation
 	}
 
 	return "unknown";
+    }
+
+    private void listIssues(Issue[] issues)
+    {
+	System.out.println("List of Issues:");
+	for (Issue issue : issues)
+	{
+	    System.out.print(format("#" + issue.getId(), 6, true));
+	    System.out.print(format(dateTimeFormatOnlyDate.format(issue.getDueDate()), 12, true));
+	    System.out.print(format("[" + issue.getTracker().getName() + "]", 15, true));
+	    System.out.print(format((issue.getTargetVersion() != null ? issue.getTargetVersion().getName() : ""), 15, true));
+	    System.out.print(format("(" + issue.getPriorityText() + ")", 10, true));
+	    System.out.print(format(issue.getStatusName(), 15, true));
+	    System.out.print(format(issue.getAssigneeName(), 10, true));
+	    System.out.print(format(issue.getSubject(), 80, true));
+	    System.out.println();
+	}
+    }
+
+    private String format(String value, int length, boolean isRightPadding)
+    {
+	if (value.length() > length - 1)
+	{
+	    value = value.substring(0, length - 1) + ".";
+	}
+
+	String format = "%1$";
+	if (isRightPadding)
+	{
+	    format += "-";
+	}
+	format += length + "s";
+
+	return " " + String.format(format, value);
     }
 
 }
