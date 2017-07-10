@@ -44,7 +44,7 @@ public abstract class Operation
     protected final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     protected final SimpleDateFormat dateTimeFormatInUTC = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     protected final SimpleDateFormat dateTimeFormatOnlyDate = new SimpleDateFormat("yyyy-MM-dd");
-    private final Locale trLocale = new Locale("tr-TR");
+    protected final Locale trLocale = new Locale("tr-TR");
     private final HashSet<String> ignoreFolders = new HashSet<String>()
     {
 	{

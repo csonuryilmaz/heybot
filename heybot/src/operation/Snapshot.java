@@ -1,7 +1,6 @@
 package operation;
 
 import com.diogonunes.jcdp.color.ColoredPrinter;
-import com.diogonunes.jcdp.color.api.Ansi;
 import com.diogonunes.jcdp.color.api.Ansi.Attribute;
 import com.diogonunes.jcdp.color.api.Ansi.BColor;
 import com.diogonunes.jcdp.color.api.Ansi.FColor;
@@ -16,6 +15,7 @@ import com.taskadapter.redmineapi.bean.Tracker;
 import com.taskadapter.redmineapi.bean.User;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import model.MapUtil;
 import org.apache.commons.lang3.ArrayUtils;
@@ -39,6 +39,7 @@ public class Snapshot extends Operation
     // optional
     private final static String PARAMETER_USER_CUSTOM_FIELD = "USER_CUSTOM_FIELD";
     private final static String PARAMETER_TRACKER = "TRACKER";
+    private final static String PARAMETER_WAITING_TRUNK_MERGE = "WAITING_TRUNK_MERGE";
 
     //</editor-fold>
     private RedmineManager redmineManager;
@@ -66,14 +67,15 @@ public class Snapshot extends Operation
 
 	    Issue[] issues = getIssues(prop);
 
-	    System.out.println("Total " + issues.length + " issue(s).");
-
 	    System.out.println();
 	    groupIssuesByAssignee(issues);
 	    System.out.println();
 	    groupIssuesByUserCustomFields(issues, getParameterStringArray(prop, PARAMETER_USER_CUSTOM_FIELD, false));
 	    System.out.println();
-	    listIssues(issues);
+	    listIssues(prop, issues);
+
+	    System.out.println();
+	    System.out.println("Total " + issues.length + " issue(s).");
 	}
     }
 
@@ -183,10 +185,11 @@ public class Snapshot extends Operation
 	return "unknown";
     }
 
-    private void listIssues(Issue[] issues)
+    private void listIssues(Properties prop, Issue[] issues)
     {
 	ColoredPrinter cp = new ColoredPrinter.Builder(0, false).build();
 	Date today = new Date();
+	HashSet<String> waitingTrunkMergeStatuses = getParameterStringHash(prop, PARAMETER_WAITING_TRUNK_MERGE, true);
 
 	System.out.println("List of Issues:");
 	for (Issue issue : issues)
@@ -204,7 +207,15 @@ public class Snapshot extends Operation
 	    System.out.print(format("[" + issue.getTracker().getName() + "]", 15, true));
 	    System.out.print(format((issue.getTargetVersion() != null ? issue.getTargetVersion().getName() : ""), 15, true));
 	    System.out.print(format("(" + issue.getPriorityText() + ")", 10, true));
-	    System.out.print(format(issue.getStatusName(), 15, true));
+	    if (waitingTrunkMergeStatuses.contains(issue.getStatusName().toLowerCase(trLocale)))
+	    {
+		cp.print(format(issue.getStatusName(), 15, true), Attribute.NONE, FColor.WHITE, BColor.GREEN);
+		cp.clear();
+	    }
+	    else
+	    {
+		System.out.print(format(issue.getStatusName(), 15, true));
+	    }
 	    System.out.print(format(issue.getAssigneeName(), 10, true));
 	    System.out.print(format(issue.getSubject(), 80, true));
 	    System.out.println();
