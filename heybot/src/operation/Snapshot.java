@@ -76,6 +76,7 @@ public class Snapshot extends Operation
 	    System.out.println();
 	    groupIssuesByUserCustomFields(issues, getParameterStringArray(prop, PARAMETER_USER_CUSTOM_FIELD, false));
 	    System.out.println();
+	    java.util.Arrays.sort(issues, (o1, o2) -> o1.getDueDate().compareTo(o2.getDueDate()));
 	    listIssues(prop, issues);
 
 	    printIssuesSummary(issues);
