@@ -43,6 +43,10 @@ public class Snapshot extends Operation
 
     //</editor-fold>
     private RedmineManager redmineManager;
+    private final ColoredPrinter coloredPrinter = new ColoredPrinter.Builder(0, false).build();
+
+    private int totalDueDateExpired = 0;
+    private int totalWaitingTrunkMerge = 0;
 
     public Snapshot()
     {
@@ -74,8 +78,26 @@ public class Snapshot extends Operation
 	    System.out.println();
 	    listIssues(prop, issues);
 
-	    System.out.println();
-	    System.out.println("Total " + issues.length + " issue(s).");
+	    printIssuesSummary(issues);
+	}
+    }
+
+    private void printIssuesSummary(Issue[] issues)
+    {
+	System.out.println();
+	System.out.println("Total " + issues.length + " issue(s).");
+	System.out.println();
+	if (totalWaitingTrunkMerge > 0)
+	{
+	    coloredPrinter.print(format(String.valueOf(totalWaitingTrunkMerge), 3, true), Attribute.NONE, FColor.WHITE, BColor.GREEN);
+	    coloredPrinter.clear();
+	    System.out.println(" issue(s).");
+	}
+	if (totalDueDateExpired > 0)
+	{
+	    coloredPrinter.print(format(String.valueOf(totalDueDateExpired), 3, true), Attribute.NONE, FColor.WHITE, BColor.RED);
+	    coloredPrinter.clear();
+	    System.out.println(" issue(s).");
 	}
     }
 
@@ -187,7 +209,6 @@ public class Snapshot extends Operation
 
     private void listIssues(Properties prop, Issue[] issues)
     {
-	ColoredPrinter cp = new ColoredPrinter.Builder(0, false).build();
 	Date today = new Date();
 	HashSet<String> waitingTrunkMergeStatuses = getParameterStringHash(prop, PARAMETER_WAITING_TRUNK_MERGE, true);
 
@@ -195,30 +216,42 @@ public class Snapshot extends Operation
 	for (Issue issue : issues)
 	{
 	    System.out.print(format("#" + issue.getId(), 6, true));
-	    if (issue.getDueDate().compareTo(today) < 0)
-	    {
-		cp.print(format(dateTimeFormatOnlyDate.format(issue.getDueDate()), 12, true), Attribute.NONE, FColor.WHITE, BColor.RED);
-		cp.clear();
-	    }
-	    else
-	    {
-		System.out.print(format(dateTimeFormatOnlyDate.format(issue.getDueDate()), 12, true));
-	    }
+	    printDueDate(issue, today);
 	    System.out.print(format("[" + issue.getTracker().getName() + "]", 15, true));
 	    System.out.print(format((issue.getTargetVersion() != null ? issue.getTargetVersion().getName() : ""), 15, true));
 	    System.out.print(format("(" + issue.getPriorityText() + ")", 10, true));
-	    if (waitingTrunkMergeStatuses.contains(issue.getStatusName().toLowerCase(trLocale)))
-	    {
-		cp.print(format(issue.getStatusName(), 15, true), Attribute.NONE, FColor.WHITE, BColor.GREEN);
-		cp.clear();
-	    }
-	    else
-	    {
-		System.out.print(format(issue.getStatusName(), 15, true));
-	    }
+	    printStatus(waitingTrunkMergeStatuses, issue);
 	    System.out.print(format(issue.getAssigneeName(), 10, true));
 	    System.out.print(format(issue.getSubject(), 80, true));
 	    System.out.println();
+	}
+    }
+
+    private void printStatus(HashSet<String> waitingTrunkMergeStatuses, Issue issue)
+    {
+	if (waitingTrunkMergeStatuses.contains(issue.getStatusName().toLowerCase(trLocale)))
+	{
+	    coloredPrinter.print(format(issue.getStatusName(), 15, true), Attribute.NONE, FColor.WHITE, BColor.GREEN);
+	    coloredPrinter.clear();
+	    totalWaitingTrunkMerge++;
+	}
+	else
+	{
+	    System.out.print(format(issue.getStatusName(), 15, true));
+	}
+    }
+
+    private void printDueDate(Issue issue, Date today)
+    {
+	if (issue.getDueDate().compareTo(today) < 0)
+	{
+	    coloredPrinter.print(format(dateTimeFormatOnlyDate.format(issue.getDueDate()), 12, true), Attribute.NONE, FColor.WHITE, BColor.RED);
+	    coloredPrinter.clear();
+	    totalDueDateExpired++;
+	}
+	else
+	{
+	    System.out.print(format(dateTimeFormatOnlyDate.format(issue.getDueDate()), 12, true));
 	}
     }
 
