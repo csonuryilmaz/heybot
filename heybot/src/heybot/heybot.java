@@ -24,7 +24,7 @@ import org.apache.http.util.TextUtils;
 public class heybot
 {
 
-    private final static String VERSION = "1.14.4.5";
+    private final static String VERSION = "1.14.5.5";
     private static final String NEWLINE = System.getProperty("line.separator");
     private static final SimpleDateFormat DATE_FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 

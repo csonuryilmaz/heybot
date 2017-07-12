@@ -13,11 +13,13 @@ import com.taskadapter.redmineapi.bean.IssueStatus;
 import com.taskadapter.redmineapi.bean.Project;
 import com.taskadapter.redmineapi.bean.Tracker;
 import com.taskadapter.redmineapi.bean.User;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import model.MapUtil;
+import model.UserQueue;
 import org.apache.commons.lang3.ArrayUtils;
 import static org.apache.http.util.TextUtils.isEmpty;
 import utilities.Properties;
@@ -41,6 +43,8 @@ public class Snapshot extends Operation
     private final static String PARAMETER_TRACKER = "TRACKER";
     private final static String PARAMETER_WAITING_TRUNK_MERGE = "WAITING_TRUNK_MERGE";
     private final static String PARAMETER_REJECTED_TRUNK_MERGE = "REJECTED_TRUNK_MERGE";
+    private final static String PARAMETER_ASSIGNEE_IN_QUEUE_STATUS = "ASSIGNEE_IN_QUEUE_STATUS";
+    private final static String PARAMETER_SECONDARY_ASSIGNEE_IN_QUEUE_STATUS = "SECONDARY_ASSIGNEE_IN_QUEUE_STATUS";
 
     //</editor-fold>
     private RedmineManager redmineManager;
@@ -83,12 +87,13 @@ public class Snapshot extends Operation
 	    System.out.println();
 	    groupIssuesByAssignee(issues);
 	    System.out.println();
-	    groupIssuesByUserCustomFields(issues, getParameterStringArray(prop, PARAMETER_SECONDARY_ASSIGNEE, false));
+	    groupIssuesBySecondaryAssignee(issues, getParameterString(prop, PARAMETER_SECONDARY_ASSIGNEE, false));
 	    System.out.println();
 	    java.util.Arrays.sort(issues, (o1, o2) -> o1.getDueDate().compareTo(o2.getDueDate()));
 	    listIssues(prop, issues);
-
 	    printIssuesSummary(issues);
+	    System.out.println();
+	    printUserQueues(prop, issues);
 	}
     }
 
@@ -160,38 +165,33 @@ public class Snapshot extends Operation
 	}
     }
 
-    private void groupIssuesByUserCustomFields(Issue[] issues, String[] otherUserCustomFields)
+    private void groupIssuesBySecondaryAssignee(Issue[] issues, String secondaryAssignee)
     {
-	for (String otherUserCustomField : otherUserCustomFields)
+	if (!isEmpty(secondaryAssignee))
 	{
-	    groupIssuesByUserCustomField(issues, otherUserCustomField);
-	}
-    }
+	    System.out.println("Grouped by " + secondaryAssignee + ":");
+	    HashMap<String, Integer> statistics = new HashMap<>();
 
-    private void groupIssuesByUserCustomField(Issue[] issues, String customField)
-    {
-	System.out.println("Grouped by " + customField + ":");
-	HashMap<String, Integer> statistics = new HashMap<>();
-
-	Integer count;
-	for (Issue issue : issues)
-	{
-	    String customFieldValue = getIssueCustomFieldValue(issue, customField);
-
-	    if ((count = statistics.get(customFieldValue)) != null)
+	    Integer count;
+	    for (Issue issue : issues)
 	    {
-		statistics.put(customFieldValue, count + 1);
-	    }
-	    else
-	    {
-		statistics.put(customFieldValue, 1);
-	    }
-	}
+		String customFieldValue = getIssueCustomFieldValue(issue, secondaryAssignee);
 
-	statistics = (HashMap<String, Integer>) MapUtil.sortByValueDesc(statistics);
-	for (Map.Entry<String, Integer> statistic : statistics.entrySet())
-	{
-	    System.out.println((statistic.getKey().equals("none") ? "none" : getUserFullName(statistic.getKey())) + " " + statistic.getValue());
+		if ((count = statistics.get(customFieldValue)) != null)
+		{
+		    statistics.put(customFieldValue, count + 1);
+		}
+		else
+		{
+		    statistics.put(customFieldValue, 1);
+		}
+	    }
+
+	    statistics = (HashMap<String, Integer>) MapUtil.sortByValueDesc(statistics);
+	    for (Map.Entry<String, Integer> statistic : statistics.entrySet())
+	    {
+		System.out.println((statistic.getKey().equals("none") ? "none" : getUserFullName(statistic.getKey())) + " " + statistic.getValue());
+	    }
 	}
     }
 
@@ -296,6 +296,87 @@ public class Snapshot extends Operation
 	format += length + "s";
 
 	return " " + String.format(format, value);
+    }
+
+    private void printUserQueues(Properties prop, Issue[] issues)
+    {
+	HashSet<String> assigneeInQueueStatuses = getParameterStringHash(prop, PARAMETER_ASSIGNEE_IN_QUEUE_STATUS, true);
+	HashSet<String> secondaryAssigneeInQueueStatuses = getParameterStringHash(prop, PARAMETER_SECONDARY_ASSIGNEE_IN_QUEUE_STATUS, true);
+	String secondaryAssignee = getParameterString(prop, PARAMETER_SECONDARY_ASSIGNEE, false);
+
+	if (assigneeInQueueStatuses.size() > 0)
+	{
+	    System.out.print("User Queues: ( user -> # or issues Assignee as " + getParameterString(prop, PARAMETER_ASSIGNEE_IN_QUEUE_STATUS, true));
+	    if (!isEmpty(secondaryAssignee))
+	    {
+		System.out.print(" / # of issues " + secondaryAssignee + " as " + getParameterString(prop, PARAMETER_SECONDARY_ASSIGNEE_IN_QUEUE_STATUS, true));
+	    }
+	    System.out.println(" )");
+
+	    HashMap<Integer, UserQueue> userQueues = getUserQueues(assigneeInQueueStatuses, secondaryAssignee, secondaryAssigneeInQueueStatuses, issues);
+	    printUserQueues(userQueues.values(), secondaryAssignee);
+	}
+    }
+
+    private HashMap<Integer, UserQueue> getUserQueues(HashSet<String> assigneeInQueueStatuses, String secondaryAssignee, HashSet<String> secondaryAssigneeInQueueStatuses, Issue[] issues)
+    {
+	HashMap<Integer, UserQueue> userQueues = new HashMap<>();
+	String status;
+
+	UserQueue userQueue;
+	for (Issue issue : issues)
+	{
+	    status = issue.getStatusName().toLowerCase(trLocale);
+	    if (assigneeInQueueStatuses.contains(status))
+	    {
+		userQueue = getUserQueue(userQueues, issue.getAssigneeId());
+		userQueue.assigneeOfIssue(issue.getId());
+	    }
+
+	    if (!isEmpty(secondaryAssignee) && secondaryAssigneeInQueueStatuses.contains(status))
+	    {
+		String value = getIssueCustomFieldValue(issue, secondaryAssignee);
+		userQueue = getUserQueue(userQueues, value.equals("none") ? 0 : Integer.parseInt(value));
+		userQueue.secondaryAssigneeOf(issue.getId());
+	    }
+	}
+
+	return userQueues;
+    }
+
+    private void printUserQueues(Collection<UserQueue> userQueues, String secondaryAssignee)
+    {
+	System.out.println();
+	for (UserQueue userQueue : userQueues)
+	{
+	    System.out.print(format(getUserFullName(String.valueOf(userQueue.getUserId())), 10, true));
+	    System.out.print(" -> ");
+	    System.out.print(" Assignee (" + format(String.valueOf(userQueue.getTotalAssignedIssues()), 3, true) + ")");
+	    if (!isEmpty(secondaryAssignee))
+	    {
+		System.out.print(" / " + secondaryAssignee + " (" + format(String.valueOf(userQueue.getTotalSecondarilyAssignedIssues()), 3, true) + ")");
+	    }
+	    System.out.print(" | ");
+	    userQueue.printAssignedIssues(" ");
+	    if (!isEmpty(secondaryAssignee))
+	    {
+		System.out.print(" / ");
+		userQueue.printSecondarilyAssignedIssues(" ");
+	    }
+	    System.out.println();
+	}
+    }
+
+    private UserQueue getUserQueue(HashMap<Integer, UserQueue> userQueues, int userId)
+    {
+	UserQueue userQueue = userQueues.get(userId);
+	if (userQueue == null)
+	{
+	    userQueue = new UserQueue(userId);
+	    userQueues.put(userId, userQueue);
+	}
+
+	return userQueue;
     }
 
 }
