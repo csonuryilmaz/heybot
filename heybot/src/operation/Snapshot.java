@@ -37,7 +37,7 @@ public class Snapshot extends Operation
     private final static String PARAMETER_STATUS = "STATUS";
 
     // optional
-    private final static String PARAMETER_USER_CUSTOM_FIELD = "USER_CUSTOM_FIELD";
+    private final static String PARAMETER_SECONDARY_ASSIGNEE = "SECONDARY_ASSIGNEE";
     private final static String PARAMETER_TRACKER = "TRACKER";
     private final static String PARAMETER_WAITING_TRUNK_MERGE = "WAITING_TRUNK_MERGE";
 
@@ -74,7 +74,7 @@ public class Snapshot extends Operation
 	    System.out.println();
 	    groupIssuesByAssignee(issues);
 	    System.out.println();
-	    groupIssuesByUserCustomFields(issues, getParameterStringArray(prop, PARAMETER_USER_CUSTOM_FIELD, false));
+	    groupIssuesByUserCustomFields(issues, getParameterStringArray(prop, PARAMETER_SECONDARY_ASSIGNEE, false));
 	    System.out.println();
 	    java.util.Arrays.sort(issues, (o1, o2) -> o1.getDueDate().compareTo(o2.getDueDate()));
 	    listIssues(prop, issues);
