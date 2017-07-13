@@ -174,22 +174,26 @@ public class Release extends Operation
 	System.out.println("* Sending slack notification ... ");
 	String slackWebHookUrl = getParameterString(prop, PARAMETER_NOTIFY_SLACK, false);
 
-	Attachment attachment = Attachment.builder().text(version.getDescription())
-		.pretext("Cheers! A new version is released.")
+	Attachment attachment = Attachment.builder().text(version.getDescription().replace("|", "\n"))
+		.pretext("Cheers! <" + redmineUrl + "/versions/" + version.getId() + "|" + version.getName() + "> is released.")
 		.authorName(version.getProjectName())
 		.color("#FF8000")
-		.fallback("Cheers! A new version is released.")
-		.title("[" + version.getName() + "]" + " " + issues.length + " issues(s) fixed.")
-		.titleLink(redmineUrl + "/versions/" + version.getId())
+		.fallback("Cheers! " + version.getName() + " is released.")
+		.title(issues.length + " issues(s) fixed.")
 		.footer("onur.yilmaz@kitapyurdu.com" + " | " + dateTimeFormat.format(new Date()))
 		.fields(new ArrayList<Field>())
 		.build();
+
+	// empty line
+	attachment.getFields().add(Field.builder()
+		.title("")
+		.valueShortEnough(false).build());
 
 	for (Issue issue : issues)
 	{
 	    attachment.getFields().add(Field.builder()
 		    .title("#" + issue.getId() + " - " + issue.getTracker().getName() + " (" + issue.getPriorityText() + ")")
-		    .value(issue.getSubject())
+		    .value("<" + redmineUrl + "/issues/" + issue.getId() + "|:link:> " + issue.getSubject())
 		    .valueShortEnough(false).build());
 	}
 
