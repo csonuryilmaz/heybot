@@ -42,7 +42,7 @@ public class Release extends Operation
     private final static String PARAMETER_NOTIFY_EMAIL = "NOTIFY_EMAIL";
     private final static String PARAMETER_NOTIFY_SLACK = "NOTIFY_SLACK";
     private final static String PARAMETER_DESCRIPTION = "DESCRIPTION";
-    private final static String PARAMETER_DB_MODIFIED = "DB_MODIFIED";
+    private final static String PARAMETER_DB_MODIFICATIONS = "DB_MODIFICATIONS";
     //</editor-fold>
     private RedmineManager redmineManager;
     private Properties prop;
@@ -174,7 +174,17 @@ public class Release extends Operation
 	System.out.println("* Sending slack notification ... ");
 	String slackWebHookUrl = getParameterString(prop, PARAMETER_NOTIFY_SLACK, false);
 
-	Attachment attachment = Attachment.builder().text(version.getDescription().replace("|", "\n"))
+	StringBuilder summary = new StringBuilder(getParameterString(prop, PARAMETER_DESCRIPTION, false).trim());
+	summary.append("\n");
+	String dbModifications = getParameterString(prop, PARAMETER_DB_MODIFICATIONS, false);
+	if (!isEmpty(dbModifications))
+	{
+	    summary.append("Has database schema <");
+	    summary.append(dbModifications);
+	    summary.append("|modifications.>");
+	}
+
+	Attachment attachment = Attachment.builder().text(summary.toString())
 		.pretext("Cheers! <" + redmineUrl + "/versions/" + version.getId() + "|" + version.getName() + "> is released.")
 		.authorName(version.getProjectName())
 		.color("#FF8000")
@@ -271,7 +281,7 @@ public class Release extends Operation
 	    sb.append("]");
 	    sb.append(" | ");
 	}
-	if (getParameterBoolean(prop, PARAMETER_DB_MODIFIED))
+	if (!isEmpty(getParameterString(prop, PARAMETER_DB_MODIFICATIONS, false)))
 	{
 	    sb.append("[Has database schema modifications]");
 	    sb.append(" | ");
