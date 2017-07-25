@@ -14,6 +14,7 @@ import com.taskadapter.redmineapi.bean.Project;
 import com.taskadapter.redmineapi.bean.Tracker;
 import com.taskadapter.redmineapi.bean.User;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -89,7 +90,7 @@ public class Snapshot extends Operation
 	    System.out.println();
 	    groupIssuesBySecondaryAssignee(issues, getParameterString(prop, PARAMETER_SECONDARY_ASSIGNEE, false));
 	    System.out.println();
-	    java.util.Arrays.sort(issues, (o1, o2) -> o1.getDueDate().compareTo(o2.getDueDate()));
+	    java.util.Arrays.sort(issues, new IssueDueDateComparator());
 	    listIssues(prop, issues);
 	    printIssuesSummary(issues);
 	    System.out.println();
@@ -269,15 +270,22 @@ public class Snapshot extends Operation
 
     private void printDueDate(Issue issue, Date today)
     {
-	if (issue.getDueDate().compareTo(today) < 0)
+	if (issue.getDueDate() != null)
 	{
-	    coloredPrinter.print(format(dateTimeFormatOnlyDate.format(issue.getDueDate()), 12, true), Attribute.NONE, fColorDueDateExpired, bColorDueDateExpired);
-	    coloredPrinter.clear();
-	    totalDueDateExpired++;
+	    if (issue.getDueDate().compareTo(today) < 0)
+	    {
+		coloredPrinter.print(format(dateTimeFormatOnlyDate.format(issue.getDueDate()), 12, true), Attribute.NONE, fColorDueDateExpired, bColorDueDateExpired);
+		coloredPrinter.clear();
+		totalDueDateExpired++;
+	    }
+	    else
+	    {
+		System.out.print(format(dateTimeFormatOnlyDate.format(issue.getDueDate()), 12, true));
+	    }
 	}
 	else
 	{
-	    System.out.print(format(dateTimeFormatOnlyDate.format(issue.getDueDate()), 12, true));
+	    System.out.print(format("", 12, true));
 	}
     }
 
@@ -377,6 +385,26 @@ public class Snapshot extends Operation
 	}
 
 	return userQueue;
+    }
+
+    class IssueDueDateComparator implements Comparator<Issue>
+    {
+
+	@Override
+	public int compare(Issue i1, Issue i2)
+	{
+	    if (i1.getDueDate() == null)
+	    {
+		return 1;
+	    }
+
+	    if (i2.getDueDate() == null)
+	    {
+		return -1;
+	    }
+
+	    return i1.getDueDate().compareTo(i2.getDueDate());
+	}
     }
 
 }
