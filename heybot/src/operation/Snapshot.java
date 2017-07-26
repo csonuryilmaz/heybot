@@ -44,6 +44,7 @@ public class Snapshot extends Operation
     private final static String PARAMETER_TRACKER = "TRACKER";
     private final static String PARAMETER_WAITING_TRUNK_MERGE = "WAITING_TRUNK_MERGE";
     private final static String PARAMETER_REJECTED_TRUNK_MERGE = "REJECTED_TRUNK_MERGE";
+    private final static String PARAMETER_WAITING_REVIEW = "WAITING_REVIEW";
     private final static String PARAMETER_ASSIGNEE_IN_QUEUE_STATUS = "ASSIGNEE_IN_QUEUE_STATUS";
     private final static String PARAMETER_SECONDARY_ASSIGNEE_IN_QUEUE_STATUS = "SECONDARY_ASSIGNEE_IN_QUEUE_STATUS";
 
@@ -54,6 +55,7 @@ public class Snapshot extends Operation
     private int totalDueDateExpired = 0;
     private int totalWaitingTrunkMerge = 0;
     private int totalRejectedTrunkMerge = 0;
+    private int totalWaitingReview = 0;
 
     private final BColor bColorDueDateExpired = BColor.YELLOW;
     private final FColor fColorDueDateExpired = FColor.BLACK;
@@ -61,6 +63,8 @@ public class Snapshot extends Operation
     private final FColor fColorWaitingTrunkMerge = FColor.WHITE;
     private final BColor bColorRejectedTrunkMerge = BColor.RED;
     private final FColor fColorRejectedTrunkMerge = FColor.WHITE;
+    private final BColor bColorWaitingReview = BColor.BLUE;
+    private final FColor fColorWaitingReview = FColor.WHITE;
 
     public Snapshot()
     {
@@ -113,6 +117,13 @@ public class Snapshot extends Operation
 	if (totalRejectedTrunkMerge > 0)
 	{
 	    coloredPrinter.print(format(String.valueOf(totalRejectedTrunkMerge), 3, true), Attribute.NONE, fColorRejectedTrunkMerge, bColorRejectedTrunkMerge);
+	    coloredPrinter.clear();
+	    System.out.println(" issue(s).");
+	}
+
+	if (totalWaitingReview > 0)
+	{
+	    coloredPrinter.print(format(String.valueOf(totalWaitingReview), 3, true), Attribute.NONE, fColorWaitingReview, bColorWaitingReview);
 	    coloredPrinter.clear();
 	    System.out.println(" issue(s).");
 	}
@@ -231,6 +242,7 @@ public class Snapshot extends Operation
 	Date today = new Date();
 	HashSet<String> waitingTrunkMergeStatuses = getParameterStringHash(prop, PARAMETER_WAITING_TRUNK_MERGE, true);
 	HashSet<String> rejectedTrunkMergeStatuses = getParameterStringHash(prop, PARAMETER_REJECTED_TRUNK_MERGE, true);
+	HashSet<String> waitingReviewStatuses = getParameterStringHash(prop, PARAMETER_WAITING_REVIEW, true);
 
 	System.out.println("List of Issues:");
 	for (Issue issue : issues)
@@ -240,14 +252,14 @@ public class Snapshot extends Operation
 	    System.out.print(format("[" + issue.getTracker().getName() + "]", 15, true));
 	    System.out.print(format((issue.getTargetVersion() != null ? issue.getTargetVersion().getName() : ""), 15, true));
 	    System.out.print(format("(" + issue.getPriorityText() + ")", 10, true));
-	    printStatus(waitingTrunkMergeStatuses, rejectedTrunkMergeStatuses, issue);
+	    printStatus(waitingTrunkMergeStatuses, rejectedTrunkMergeStatuses, waitingReviewStatuses, issue);
 	    System.out.print(format(issue.getAssigneeName(), 10, true));
 	    System.out.print(format(issue.getSubject(), 80, true));
 	    System.out.println();
 	}
     }
 
-    private void printStatus(HashSet<String> waitingTrunkMergeStatuses, HashSet<String> rejectedTrunkMergeStatuses, Issue issue)
+    private void printStatus(HashSet<String> waitingTrunkMergeStatuses, HashSet<String> rejectedTrunkMergeStatuses, HashSet<String> waitingReviewStatuses, Issue issue)
     {
 	String status = issue.getStatusName().toLowerCase(trLocale);
 	if (waitingTrunkMergeStatuses.contains(status))
@@ -261,6 +273,12 @@ public class Snapshot extends Operation
 	    coloredPrinter.print(format(issue.getStatusName(), 15, true), Attribute.NONE, fColorRejectedTrunkMerge, bColorRejectedTrunkMerge);
 	    coloredPrinter.clear();
 	    totalRejectedTrunkMerge++;
+	}
+	else if (waitingReviewStatuses.contains(status))
+	{
+	    coloredPrinter.print(format(issue.getStatusName(), 15, true), Attribute.NONE, fColorWaitingReview, bColorWaitingReview);
+	    coloredPrinter.clear();
+	    totalWaitingReview++;
 	}
 	else
 	{
