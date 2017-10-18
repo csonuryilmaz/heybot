@@ -14,6 +14,7 @@ import com.taskadapter.redmineapi.bean.Version;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
+import model.EmailSender;
 import org.apache.commons.lang3.StringUtils;
 import utilities.Properties;
 import static org.apache.http.util.TextUtils.isEmpty;
@@ -43,6 +44,13 @@ public class Release extends Operation
     private final static String PARAMETER_NOTIFY_SLACK = "NOTIFY_SLACK";
     private final static String PARAMETER_DESCRIPTION = "DESCRIPTION";
     private final static String PARAMETER_DB_MODIFICATIONS = "DB_MODIFICATIONS";
+    private final static String PARAMETER_EMAIL_SUBJECT = "EMAIL_SUBJECT";
+    private final static String PARAMETER_EMAIL_BODY_RELEASE_NOTES_TITLE = "EMAIL_BODY_RELEASE_NOTES_TITLE";
+    private final static String PARAMETER_EMAIL_BODY_RELEASE_NOTES_SPLITTER = "EMAIL_BODY_RELEASE_NOTES_SPLITTER";
+    private final static String PARAMETER_EMAIL_BODY_ISSUES_TITLE = "EMAIL_BODY_ISSUES_TITLE";
+    private final static String PARAMETER_EMAIL_DB_MODIFICATIONS_NOTE = "EMAIL_DB_MODIFICATIONS_NOTE";
+    private final static String PARAMETER_SMTP_REPLY_TO = "SMTP_REPLY_TO";
+    private final static String PARAMETER_EMAIL_FOOTER_NOTE = "EMAIL_FOOTER_NOTE";
     //</editor-fold>
     private RedmineManager redmineManager;
     private Properties prop;
@@ -84,8 +92,9 @@ public class Release extends Operation
 
 	if (!isVersionDeployed(version))
 	{
-	    deployVersion(version, issues);// inside managed exception on any error
+	    deployVersion(version, issues);
 	    notifySlack(version, issues, redmineUrl);
+	    notifyEmail(version, issues, redmineUrl);
 	}
 	else
 	{
@@ -294,4 +303,151 @@ public class Release extends Operation
 	redmineManager.getProjectManager().update(version);
     }
 
+    private void notifyEmail(Version version, Issue[] issues, String redmineUrl)
+    {
+	EmailSender emailSender;
+
+	String[] recipients = getParameterStringArray(prop, PARAMETER_NOTIFY_EMAIL, true);
+	if (recipients.length > 0)
+	{
+	    System.out.println("* Sending email notification ... ");
+	    try
+	    {
+		emailSender = new EmailSender(
+			getParameterString(prop, PARAMETER_SMTP_USERNAME, false),
+			getParameterString(prop, PARAMETER_SMTP_PASSWORD, false),
+			getParameterString(prop, PARAMETER_SMTP_HOST, false),
+			getParameterString(prop, PARAMETER_SMTP_PORT, false),
+			getParameterString(prop, PARAMETER_SMTP_TLS_ENABLED, false),
+			getParameterString(prop, PARAMETER_SMTP_REPLY_TO, false)
+		);
+
+		emailSender.send(recipients, getSubject(version, issues), getBody(version, issues, redmineUrl));
+		System.out.println("|_> Done.");
+	    }
+	    catch (Exception ex)
+	    {
+		System.err.println("Ooops! Email sending could not be completed. (" + ex.getMessage() + ")");
+	    }
+	}
+    }
+
+    private String getSubject(Version version, Issue[] issues)
+    {
+	String subject = getParameterString(prop, PARAMETER_EMAIL_SUBJECT, false);
+
+	if (!isEmpty(subject))
+	{
+	    subject = subject.replace("<VERSION>", version.getName());
+	    subject = subject.replace("<ISSUE_COUNT>", String.valueOf(issues.length));
+	}
+	else
+	{
+	    subject = "Cheers! " + version.getName() + " is released. (" + String.valueOf(issues.length) + " issues fixed)";
+	}
+
+	return subject;
+    }
+
+    private String getBody(Version version, Issue[] issues, String redmineUrl)
+    {
+	StringBuilder sb = new StringBuilder();
+
+	sb.append("<html><body>");
+	sb.append(getVersionHtml(redmineUrl, version));
+	sb.append("<br/><br/>");
+
+	sb.append("<p>");
+	String releaseNotesTitle = getParameterString(prop, PARAMETER_EMAIL_BODY_RELEASE_NOTES_TITLE, false);
+	if (isEmpty(releaseNotesTitle))
+	{
+	    releaseNotesTitle = "Release Notes:";
+	}
+	sb.append("<b>");
+	sb.append(releaseNotesTitle);
+	sb.append("</b>");
+	sb.append("<br/>--------------------------------------------<br/>");
+	String releaseNotesSplitter = getParameterString(prop, PARAMETER_EMAIL_BODY_RELEASE_NOTES_SPLITTER, false);
+	if (releaseNotesSplitter.isEmpty())
+	{
+	    sb.append(getParameterString(prop, PARAMETER_DESCRIPTION, false));
+	}
+	else
+	{
+	    sb.append(getParameterString(prop, PARAMETER_DESCRIPTION, false).replace(releaseNotesSplitter, "<br/> * "));
+	}
+	sb.append("<br/><br/>");
+	sb.append("</p>");
+
+	sb.append("<p>");
+	String issuesTitle = getParameterString(prop, PARAMETER_EMAIL_BODY_ISSUES_TITLE, false);
+	if (isEmpty(issuesTitle))
+	{
+	    issuesTitle = "Issues Fixed:";
+	}
+	sb.append("<b>");
+	sb.append(issuesTitle);
+	sb.append("</b>");
+	sb.append("<br/>--------------------------------------------<br/>");
+	for (Issue issue : issues)
+	{
+	    sb.append(getIssueIdHtml(redmineUrl, issue));
+	    sb.append(getIssueDetailsHtml(issue));
+	    sb.append(" / ");
+	    sb.append(getIssueSubjectHtml(issue));
+	    sb.append("<br/>");
+	}
+	sb.append("</p>");
+
+	String dbModifications = getParameterString(prop, PARAMETER_DB_MODIFICATIONS, false);
+	if (!isEmpty(dbModifications))
+	{
+	    sb.append("<p>");
+	    sb.append("<br/>--------------------------------------------<br/>");
+	    String dbModificationsNote = getParameterString(prop, PARAMETER_EMAIL_DB_MODIFICATIONS_NOTE, false);
+	    if (isEmpty(dbModificationsNote))
+	    {
+		dbModificationsNote = "Note: Has database schema modifications.";
+	    }
+	    dbModificationsNote += " <a href=\"" + dbModifications + "\">" + dbModifications.substring(dbModifications.lastIndexOf("/") + 1) + "</a>";
+
+	    sb.append(dbModificationsNote);
+	    sb.append("</p>");
+	}
+
+	String footerNote = getParameterString(prop, PARAMETER_EMAIL_FOOTER_NOTE, false);
+	if (isEmpty(footerNote))
+	{
+	    footerNote = "You can send us any feedback by replying this email.";
+	}
+	sb.append("<p style=\"font-size: 12px; color:gray;\">");
+	sb.append(footerNote);
+	sb.append("<br>");
+	sb.append(dateTimeFormat.format(new Date()));
+	sb.append("</p>");
+
+	sb.append("</body></html>");
+
+	return sb.toString();
+    }
+
+    private String getVersionHtml(String redmineUrl, Version version)
+    {
+	return "<b><a href=\"" + redmineUrl + "/versions/" + version.getId() + "\">" + version.getName() + "</a></b>";
+    }
+
+    private String getIssueIdHtml(String redmineUrl, Issue issue)
+    {
+	return "<a href=\"" + redmineUrl + "/issues/" + issue.getId() + "\">#" + issue.getId() + "</a>";
+    }
+
+    private String getIssueDetailsHtml(Issue issue)
+    {
+	return " - (" + issue.getTracker().getName() + ")";
+    }
+
+    private String getIssueSubjectHtml(Issue issue)
+    {
+	return issue.getSubject();
+    }
 }
