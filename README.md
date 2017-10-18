@@ -22,6 +22,7 @@
     5.7. [Next-Version](#57-next-version)  
     5.8. [Release](#58-release)  
     5.9. [Begin-Issue](#59-begin-issue)
+    5.10. [Snapshot](#510-snapshot)
   6. [Notes](#6-notes)  
     6.1 [How to obtain slack incoming webhook URL?](#61-how-to-obtain-slack-incoming-webhook-url)  
 
@@ -390,15 +391,19 @@ Internal Parameters:
 - VERSION_ID= Current, existing version's redmine id.
 - PREVIOUS_VERSION_TAG= Previous version number. (latest before current version) It's used to recompute version tag when APPEND_CURRENT is true.
 
-**todo:** Example and notes should be added for *next-version* .
+**todo:** Example and notes will be added for *next-version* .
 
 ##### 5.8. Release
 
-**todo:** Description, example and notes should be added for *release*.
+**todo:** Description, example and notes will be added for *release*.
 
 ##### 5.9. Begin-Issue
 
-**todo:** Description, example and notes should be added for *begin-issue*.
+**todo:** Description, example and notes will be added for *begin-issue*.
+
+##### 5.10. Snapshot
+
+**todo:** Description, example and notes will be added for *snapshot*.
 
 #### 6. Notes
 
