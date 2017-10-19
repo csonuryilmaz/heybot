@@ -32,6 +32,7 @@ public class Release extends Operation
     private final static String PARAMETER_REDMINE_TOKEN = "REDMINE_TOKEN";
     private final static String PARAMETER_REDMINE_URL = "REDMINE_URL";
     private final static String PARAMETER_ISSUE_DEPLOYED_STATUS = "ISSUE_DEPLOYED_STATUS";
+    private final static String PARAMETER_RELEASE_TYPE = "RELEASE_TYPE";
 
     // optional
     private final static String PARAMETER_DEPLOY_CMD = "DEPLOY_CMD";
@@ -51,6 +52,11 @@ public class Release extends Operation
     private final static String PARAMETER_EMAIL_DB_MODIFICATIONS_NOTE = "EMAIL_DB_MODIFICATIONS_NOTE";
     private final static String PARAMETER_SMTP_REPLY_TO = "SMTP_REPLY_TO";
     private final static String PARAMETER_EMAIL_FOOTER_NOTE = "EMAIL_FOOTER_NOTE";
+    private final static String PARAMETER_EMAIL_BODY_VERSION_DESCRIPTION = "EMAIL_BODY_VERSION_DESCRIPTION";
+    private final static String PARAMETER_EMAIL_BODY_TEST_RELEASE_DESCRIPTION = "EMAIL_BODY_TEST_RELEASE_DESCRIPTION";
+    private final static String PARAMETER_EMAIL_BODY_TEST_USERS_DESCRIPTION = "EMAIL_BODY_TEST_USERS_DESCRIPTION";
+    private final static String PARAMETER_EMAIL_BODY_TEST_USERS = "EMAIL_BODY_TEST_USERS";
+    private final static String PARAMETER_EMAIL_BODY_TEST_USERS_TITLE = "EMAIL_BODY_TEST_USERS_TITLE";
     //</editor-fold>
     private RedmineManager redmineManager;
     private Properties prop;
@@ -59,7 +65,7 @@ public class Release extends Operation
     {
 	super(new String[]
 	{
-	    PARAMETER_REDMINE_TOKEN, PARAMETER_REDMINE_URL, PARAMETER_VERSION_ID, PARAMETER_ISSUE_DEPLOYED_STATUS
+	    PARAMETER_REDMINE_TOKEN, PARAMETER_REDMINE_URL, PARAMETER_VERSION_ID, PARAMETER_ISSUE_DEPLOYED_STATUS, PARAMETER_RELEASE_TYPE
 	}
 	);
     }
@@ -92,9 +98,13 @@ public class Release extends Operation
 
 	if (!isVersionDeployed(version))
 	{
-	    deployVersion(version, issues);
-	    notifySlack(version, issues, redmineUrl);
-	    notifyEmail(version, issues, redmineUrl);
+	    String releaseType = getParameterString(prop, PARAMETER_RELEASE_TYPE, true);
+	    if (isProductionRelease(releaseType))
+	    {
+		deployVersion(version, issues);
+		notifySlack(version, issues, redmineUrl);
+	    }
+	    notifyEmail(releaseType, version, issues, redmineUrl);
 	}
 	else
 	{
@@ -303,7 +313,7 @@ public class Release extends Operation
 	redmineManager.getProjectManager().update(version);
     }
 
-    private void notifyEmail(Version version, Issue[] issues, String redmineUrl)
+    private void notifyEmail(String releaseType, Version version, Issue[] issues, String redmineUrl)
     {
 	EmailSender emailSender;
 
@@ -322,7 +332,7 @@ public class Release extends Operation
 			getParameterString(prop, PARAMETER_SMTP_REPLY_TO, false)
 		);
 
-		emailSender.send(recipients, getSubject(version, issues), getBody(version, issues, redmineUrl));
+		emailSender.send(recipients, getSubject(releaseType, version, issues), getBody(releaseType, version, issues, redmineUrl));
 		System.out.println("|_> Done.");
 	    }
 	    catch (Exception ex)
@@ -332,36 +342,86 @@ public class Release extends Operation
 	}
     }
 
-    private String getSubject(Version version, Issue[] issues)
+    private String getSubject(String releaseType, Version version, Issue[] issues)
     {
 	String subject = getParameterString(prop, PARAMETER_EMAIL_SUBJECT, false);
+	String versionName = version.getName();
+	if (!isProductionRelease(releaseType))
+	{
+	    versionName += " [" + releaseType + "]";
+	}
 
 	if (!isEmpty(subject))
 	{
-	    subject = subject.replace("<VERSION>", version.getName());
+	    subject = subject.replace("<VERSION>", versionName);
 	    subject = subject.replace("<ISSUE_COUNT>", String.valueOf(issues.length));
 	}
 	else
 	{
-	    subject = "Cheers! " + version.getName() + " is released. (" + String.valueOf(issues.length) + " issues fixed)";
+	    subject = "Cheers! " + versionName + " is released. (" + String.valueOf(issues.length) + " issues fixed)";
 	}
 
 	return subject;
     }
 
-    private String getBody(Version version, Issue[] issues, String redmineUrl)
+    private String getBody(String releaseType, Version version, Issue[] issues, String redmineUrl)
     {
 	StringBuilder sb = new StringBuilder();
 
 	sb.append("<html><body>");
 	sb.append(getVersionHtml(redmineUrl, version));
+	String versionDescription = getParameterString(prop, PARAMETER_EMAIL_BODY_VERSION_DESCRIPTION, false);
+	if (!isEmpty(versionDescription))
+	{
+	    sb.append("<br/>( ");
+	    sb.append(versionDescription);
+	    sb.append(" )");
+	}
 	sb.append("<br/><br/>");
+
+	String testReleaseDescription = getParameterString(prop, PARAMETER_EMAIL_BODY_TEST_RELEASE_DESCRIPTION, false);
+	if (!isEmpty(testReleaseDescription))
+	{
+	    sb.append("<p>");
+	    sb.append(testReleaseDescription);
+	    sb.append("</p>");
+	}
+	String testUsersDescription = getParameterString(prop, PARAMETER_EMAIL_BODY_TEST_USERS_DESCRIPTION, false);
+	if (!isEmpty(testUsersDescription))
+	{
+	    sb.append("<p>");
+	    sb.append(testUsersDescription);
+	    sb.append("</p>");
+	}
+	String[] testUsers = getParameterStringArray(prop, PARAMETER_EMAIL_BODY_TEST_USERS, true);
+	if (testUsers.length > 0)
+	{
+	    String testUsersTitle = getParameterString(prop, PARAMETER_EMAIL_BODY_TEST_USERS_TITLE, false);
+	    if (!isEmpty(testUsersTitle))
+	    {
+		sb.append("<p>");
+		sb.append(testUsersTitle.replace("<TEST_USERS_COUNT>", String.valueOf(testUsers.length)));
+		sb.append("</p>");
+	    }
+	    sb.append("<p><ul>");
+	    for (String testUser : testUsers)
+	    {
+		sb.append("<li>");
+		sb.append(testUser);
+		sb.append("</li>");
+	    }
+	    sb.append("</ul></p>");
+	}
 
 	sb.append("<p>");
 	String releaseNotesTitle = getParameterString(prop, PARAMETER_EMAIL_BODY_RELEASE_NOTES_TITLE, false);
 	if (isEmpty(releaseNotesTitle))
 	{
-	    releaseNotesTitle = "Release Notes:";
+	    releaseNotesTitle = "Release Notes";
+	}
+	if (!isProductionRelease(releaseType))
+	{
+	    releaseNotesTitle += " [" + releaseType + "]";
 	}
 	sb.append("<b>");
 	sb.append(releaseNotesTitle);
@@ -449,5 +509,10 @@ public class Release extends Operation
     private String getIssueSubjectHtml(Issue issue)
     {
 	return issue.getSubject();
+    }
+
+    private boolean isProductionRelease(String releaseType)
+    {
+	return releaseType.equals("production");
     }
 }
