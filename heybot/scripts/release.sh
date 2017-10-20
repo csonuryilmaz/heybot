@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="1.16.0.0"
+VERSION="1.17.0.0"
 
 RELEASE_PATH="../../release/heybot_$VERSION"
 
@@ -27,4 +27,4 @@ tar -zcvf "heybot_$VERSION.tar.gz" "heybot_$VERSION"
 rm -Rf "heybot_$VERSION"
 mkdir "heybot_$VERSION"
 mv "heybot_$VERSION.tar.gz" "heybot_$VERSION/"
-cp ../heybot/README.md "heybot_$VERSION/"
+#cp ../heybot/README.md "heybot_$VERSION/"

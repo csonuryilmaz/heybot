@@ -5,15 +5,19 @@ import com.github.seratch.jslack.api.model.Attachment;
 import com.github.seratch.jslack.api.model.Field;
 import com.github.seratch.jslack.api.webhook.Payload;
 import com.github.seratch.jslack.api.webhook.WebhookResponse;
+import com.taskadapter.redmineapi.Include;
 import com.taskadapter.redmineapi.RedmineException;
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.CustomField;
 import com.taskadapter.redmineapi.bean.Issue;
+import com.taskadapter.redmineapi.bean.IssueRelation;
 import com.taskadapter.redmineapi.bean.Version;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
 import model.EmailSender;
 import org.apache.commons.lang3.StringUtils;
 import utilities.Properties;
@@ -57,9 +61,12 @@ public class Release extends Operation
     private final static String PARAMETER_EMAIL_BODY_TEST_USERS_DESCRIPTION = "EMAIL_BODY_TEST_USERS_DESCRIPTION";
     private final static String PARAMETER_EMAIL_BODY_TEST_USERS = "EMAIL_BODY_TEST_USERS";
     private final static String PARAMETER_EMAIL_BODY_TEST_USERS_TITLE = "EMAIL_BODY_TEST_USERS_TITLE";
+    private final static String PARAMETER_EMAIL_BODY_RELATED_ISSUES_FROM_PROJECTS = "EMAIL_BODY_RELATED_ISSUES_FROM_PROJECTS";
     //</editor-fold>
     private RedmineManager redmineManager;
     private Properties prop;
+
+    private HashSet<String> relateIssuesFromProjects;
 
     public Release()
     {
@@ -81,6 +88,8 @@ public class Release extends Operation
 
 	    redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
 	    this.prop = prop;
+
+	    relateIssuesFromProjects = getParameterStringHash(prop, PARAMETER_EMAIL_BODY_RELATED_ISSUES_FROM_PROJECTS, true);
 
 	    System.out.println("* Getting version from redmine: " + versionId);
 	    Version version = getVersion(redmineManager, versionId);
@@ -428,7 +437,7 @@ public class Release extends Operation
 	sb.append("</b>");
 	sb.append("<br/>--------------------------------------------<br/>");
 	String releaseNotesSplitter = getParameterString(prop, PARAMETER_EMAIL_BODY_RELEASE_NOTES_SPLITTER, false);
-	if (releaseNotesSplitter.isEmpty())
+	if (isEmpty(releaseNotesSplitter))
 	{
 	    sb.append(getParameterString(prop, PARAMETER_DESCRIPTION, false));
 	}
@@ -455,6 +464,7 @@ public class Release extends Operation
 	    sb.append(getIssueDetailsHtml(issue));
 	    sb.append(" / ");
 	    sb.append(getIssueSubjectHtml(issue));
+	    sb.append(getRelatedIssuesHtml(redmineUrl, issue));
 	    sb.append("<br/>");
 	}
 	sb.append("</p>");
@@ -514,5 +524,66 @@ public class Release extends Operation
     private boolean isProductionRelease(String releaseType)
     {
 	return releaseType.equals("production");
+    }
+
+    private String getRelatedIssuesHtml(String redmineUrl, Issue issue)
+    {
+	if (relateIssuesFromProjects.size() > 0)
+	{
+	    Collection<IssueRelation> relations = getIssueRelations(redmineManager, issue.getId());
+	    StringBuilder htmlString = new StringBuilder();
+
+	    for (IssueRelation relation : relations)
+	    {
+		Issue relatedIssue = tryGetRelatedIssue(issue, relation);
+		if (relatedIssue != null)
+		{
+		    htmlString.append("<br/>|-------> ");
+		    htmlString.append(getIssueProjectNameHtml(relatedIssue));
+		    htmlString.append(getIssueIdHtml(redmineUrl, relatedIssue));
+		    htmlString.append(getIssueDetailsHtml(relatedIssue));
+		    htmlString.append(" / ");
+		    htmlString.append(getIssueSubjectHtml(relatedIssue));
+		}
+	    }
+
+	    return htmlString.toString();
+	}
+
+	return "";
+    }
+
+    private Issue tryGetRelatedIssue(Issue issue, IssueRelation relation)
+    {
+	if (relation.getType().equals("relates"))
+	{
+	    int relatedIssueId;
+	    if ((int) relation.getIssueToId() != issue.getId())
+	    {
+		relatedIssueId = relation.getIssueToId();
+	    }
+	    else
+	    {
+		relatedIssueId = relation.getIssueId();
+	    }
+
+	    Issue relatedIssue = getIssue(redmineManager, relatedIssueId);
+	    if (isRelatedIssueFromProjects(relatedIssue))
+	    {
+		return relatedIssue;
+	    }
+	}
+
+	return null;
+    }
+
+    private boolean isRelatedIssueFromProjects(Issue relatedIssue)
+    {
+	return relatedIssue != null && relateIssuesFromProjects.contains(relatedIssue.getProjectName().toLowerCase(trLocale));
+    }
+
+    private String getIssueProjectNameHtml(Issue issue)
+    {
+	return "<i><span style=\"color:green;\"> " + issue.getProjectName() + " </span></i>";
     }
 }
