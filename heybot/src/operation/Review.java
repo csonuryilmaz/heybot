@@ -4,8 +4,10 @@ import com.taskadapter.redmineapi.RedmineException;
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.Issue;
+import java.util.Scanner;
 import model.Command;
 import utilities.Properties;
+import static org.apache.http.util.TextUtils.isEmpty;
 
 /**
  * Operaiton: Review.
@@ -27,6 +29,7 @@ public class Review extends Operation
     // optional
     private final static String PARAMETER_ISSUE_STATUS_SHOULD_BE = "ISSUE_STATUS_SHOULD_BE";
     private final static String PARAMETER_SOURCE_PATH = "SOURCE_PATH";
+    private final static String PARAMETER_IDE_PATH = "IDE_PATH";
 
 //</editor-fold>
     public Review()
@@ -75,6 +78,7 @@ public class Review extends Operation
 		    if (merge(localWorkingDir, svnBranchDir, issueId))
 		    {
 			setIssueStatus(issue, targetStatus);
+			openIDE(prop, localWorkingDir);
 		    }
 		}
 		else
@@ -213,6 +217,27 @@ public class Review extends Operation
 	if (issue.getStatusId() != statusId)
 	{
 	    System.out.println("- [warning] It seems issue status couldn't be updated. Please check your redmine workflow or configuration!");
+	}
+    }
+
+    private void openIDE(Properties prop, String localWorkingDir)
+    {
+	String idePath = getParameterString(prop, PARAMETER_IDE_PATH, false);
+	if (!isEmpty(idePath))
+	{
+	    Scanner scanner = new Scanner(System.in);
+	    System.out.print("[?] If merge has no conflicts, open IDE to review code changes. (Y/N)? ");
+	    String answer = scanner.next();
+	    if (!isEmpty(answer) && (answer.charAt(0) == 'Y' || answer.charAt(0) == 'y'))
+	    {
+		Command cmd = new Command(new String[]
+		{
+		    idePath, localWorkingDir
+		});
+		System.out.println("* Opening IDE ...");
+		System.out.println(cmd.getCommandString());
+		cmd.executeNoWait();
+	    }
 	}
     }
 

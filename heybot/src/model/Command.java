@@ -8,10 +8,15 @@ import java.io.InputStreamReader;
 public class Command
 {
 
-    private final String command;
+    private final String[] command;
     private String result = "";
 
     public Command(String command)
+    {
+	this.command = command.split(" ");
+    }
+
+    public Command(String[] command)
     {
 	this.command = command;
     }
@@ -22,12 +27,12 @@ public class Command
 
 	if (output == null)
 	{
-	    System.err.println("Ooops! Command execution (" + command + ") with no result.");
+	    System.err.println("Ooops! Command execution failed with no result.");
 	    return false;
 	}
 	else if (output[1].length() > 0)
 	{
-	    System.err.println("Ooops! Command execution (" + command + ") failed with message: ");
+	    System.err.println("Ooops! Command execution failed with message: ");
 	    System.err.println(output[1]);
 	    return false;
 	}
@@ -38,12 +43,24 @@ public class Command
 	}
     }
 
-    private String[] execute(String command)
+    public void executeNoWait()
+    {
+	try
+	{
+	    new ProcessBuilder(command).start();
+	}
+	catch (IOException ex)
+	{
+	    System.err.println(ex);
+	}
+    }
+
+    private String[] execute(String[] command)
     {
 	Process process;
 	try
 	{
-	    process = Runtime.getRuntime().exec(command);
+	    process = new ProcessBuilder(command).start();
 
 	    return execute(process);
 	}
@@ -111,5 +128,17 @@ public class Command
     public String toString()
     {
 	return result;
+    }
+
+    public String getCommandString()
+    {
+	StringBuilder buffer = new StringBuilder();
+	for (String token : command)
+	{
+	    buffer.append(" ");
+	    buffer.append(token.replace(" ", "\\ "));
+	}
+
+	return buffer.toString();
     }
 }
