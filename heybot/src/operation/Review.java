@@ -4,7 +4,7 @@ import com.taskadapter.redmineapi.RedmineException;
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.Issue;
-import java.util.Locale;
+import model.Command;
 import utilities.Properties;
 
 /**
@@ -52,10 +52,15 @@ public class Review extends Operation
 	    String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
 
 	    if (localWorkingDir == null || localWorkingDir.length() == 0)
-	    {// try to assign default argument
+	    {
+		System.out.println("* Auto detecting source path ... ");
 		localWorkingDir = tryExecute("pwd");
-		System.out.println("(auto-detect) SOURCE_PATH= " + localWorkingDir);
 	    }
+	    else if (localWorkingDir.endsWith("/"))
+	    {
+		localWorkingDir = localWorkingDir.substring(0, localWorkingDir.length() - 1);
+	    }
+	    System.out.println("[✓] SOURCE_PATH= " + localWorkingDir);
 
 	    // connect redmine
 	    redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
@@ -64,14 +69,17 @@ public class Review extends Operation
 	    Issue issue = tryGetIssue(issueId);
 	    if (issue != null)
 	    {
+		System.out.println("[✓] " + "#" + issue.getId() + " - " + issue.getSubject());
 		if (isIssueStatusEligible(issue, sourceStatus, targetStatus))
 		{
-		    merge(localWorkingDir, svnBranchDir, issueId);
-		    setIssueStatus(issue, targetStatus);
+		    if (merge(localWorkingDir, svnBranchDir, issueId))
+		    {
+			setIssueStatus(issue, targetStatus);
+		    }
 		}
 		else
 		{
-		    System.err.println("Ooops! Current issue status is not eligible.");
+		    System.err.println("Ooops! Current issue status *" + issue.getStatusName() + "* is not eligible (*" + sourceStatus + "*).");
 		}
 	    }
 	}
@@ -103,8 +111,6 @@ public class Review extends Operation
 	    return true;
 	}
 
-	Locale trLocale = new Locale("tr-TR");
-
 	String currentStatus = issue.getStatusName().toLowerCase(trLocale);
 
 	if (currentStatus.equals(statusShouldBe.toLowerCase(trLocale)))
@@ -115,7 +121,7 @@ public class Review extends Operation
 	return currentStatus.equals(statusWillBe.toLowerCase(trLocale));
     }
 
-    private void merge(String localWorkingDir, String svnBranchDir, String issueId)
+    private boolean merge(String localWorkingDir, String svnBranchDir, String issueId)
     {
 	String svnCommand = tryExecute("which svn");
 
@@ -126,20 +132,43 @@ public class Review extends Operation
 	}
 
 	System.out.println();
-	System.out.println("[ Current Status in Local Working Copy ]");
-	System.out.println(tryExecute(svnCommand + " st " + localWorkingDir));
-	System.out.println();
-	System.out.println("[ Reverting Changes in Local Working Copy ]");
-	System.out.println(tryExecute(svnCommand + " revert " + localWorkingDir + " --depth=infinity"));
-	System.out.println();
-	System.out.println("[ Updating Local Working Copy to Latest ]");
-	System.out.println(tryExecute(svnCommand + " up " + localWorkingDir));
-	System.out.println();
-	System.out.println("[ Merging Changes From Branch ]");
-	System.out.println(tryExecute(svnCommand + " merge --accept postpone " + getMergeSourceDir(svnCommand, localWorkingDir, svnBranchDir, issueId) + " " + localWorkingDir));
-	System.out.println();
-	System.out.println("[ Latest Status in Local Working Copy ]");
-	System.out.println(tryExecute(svnCommand + " st " + localWorkingDir));
+
+	return svnStatus(svnCommand, localWorkingDir) && svnRevert(svnCommand, localWorkingDir) && svnUpdate(svnCommand, localWorkingDir) && svnMerge(svnCommand, localWorkingDir, svnBranchDir, issueId) && svnStatus(svnCommand, localWorkingDir);
+    }
+
+    private boolean svnMerge(String svnCommand, String localWorkingDir, String svnBranchDir, String issueId)
+    {
+	System.out.println("* Merging changes from branch to local working copy ...");
+	return executeSvnCommand(new Command(svnCommand + " merge --accept postpone " + getMergeSourceDir(svnCommand, localWorkingDir, svnBranchDir, issueId) + " " + localWorkingDir), localWorkingDir);
+    }
+
+    private boolean svnUpdate(String svnCommand, String localWorkingDir)
+    {
+	System.out.println("* Updating to latest ...");
+	return executeSvnCommand(new Command(svnCommand + " up " + localWorkingDir), localWorkingDir);
+    }
+
+    private boolean svnRevert(String svnCommand, String localWorkingDir)
+    {
+	System.out.println("* Reverting local changes ...");
+	return executeSvnCommand(new Command(svnCommand + " revert " + localWorkingDir + " --depth=infinity"), localWorkingDir);
+    }
+
+    private boolean svnStatus(String svnCommand, String localWorkingDir)
+    {
+	System.out.println("* Status in local working copy ...");
+	return executeSvnCommand(new Command(svnCommand + " st " + localWorkingDir), localWorkingDir);
+    }
+
+    private boolean executeSvnCommand(Command command, String localWorkingDir)
+    {
+	if (command.execute())
+	{
+	    System.out.println(command.toString().replace(localWorkingDir + "/", "").replace(localWorkingDir, "."));
+	    System.out.println("[✓]");
+	    return true;
+	}
+	return false;
     }
 
     private void setIssueStatus(Issue issue, String status)
