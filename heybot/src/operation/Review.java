@@ -137,30 +137,47 @@ public class Review extends Operation
 
 	System.out.println();
 
-	return svnStatus(svnCommand, localWorkingDir) && svnRevert(svnCommand, localWorkingDir) && svnUpdate(svnCommand, localWorkingDir) && svnMerge(svnCommand, localWorkingDir, svnBranchDir, issueId) && svnStatus(svnCommand, localWorkingDir);
+	return svnStatus(svnCommand, localWorkingDir) && svnRevert(svnCommand, localWorkingDir) && svnUpdate(svnCommand, localWorkingDir) && svnShowEligibleRevisions(svnCommand, localWorkingDir, svnBranchDir, issueId) && svnMerge(svnCommand, localWorkingDir, svnBranchDir, issueId) && svnStatus(svnCommand, localWorkingDir);
     }
 
     private boolean svnMerge(String svnCommand, String localWorkingDir, String svnBranchDir, String issueId)
     {
-	System.out.println("* Merging changes from branch to local working copy ...");
+	System.out.println("[*] Merging changes from branch to local working copy.");
 	return executeSvnCommand(new Command(svnCommand + " merge --accept postpone " + getMergeSourceDir(svnCommand, localWorkingDir, svnBranchDir, issueId) + " " + localWorkingDir), localWorkingDir);
+    }
+
+    private boolean svnShowEligibleRevisions(String svnCommand, String localWorkingDir, String svnBranchDir, String issueId)
+    {
+	System.out.println("[*] List of eligible revisions that will be merged from branch.");
+	return executeSvnCommand(new Command(svnCommand + " mergeinfo --show-revs eligible " + getMergeSourceDir(svnCommand, localWorkingDir, svnBranchDir, issueId)), localWorkingDir);
     }
 
     private boolean svnUpdate(String svnCommand, String localWorkingDir)
     {
-	System.out.println("* Updating to latest ...");
+	System.out.println("[*] Updating to latest.");
 	return executeSvnCommand(new Command(svnCommand + " up " + localWorkingDir), localWorkingDir);
     }
 
     private boolean svnRevert(String svnCommand, String localWorkingDir)
     {
-	System.out.println("* Reverting local changes ...");
-	return executeSvnCommand(new Command(svnCommand + " revert " + localWorkingDir + " --depth=infinity"), localWorkingDir);
+	Command svnStatusCmd = new Command(svnCommand + " st " + localWorkingDir);
+	if (svnStatusCmd.execute() && !isEmpty(svnStatusCmd.toString()))
+	{
+	    Scanner scanner = new Scanner(System.in);
+	    System.out.print("[?] There are some local changes. (Y)es to revert local changes or (N)o to continue merging. (Y/N)? ");
+	    String answer = scanner.next();
+	    if (!isEmpty(answer) && (answer.charAt(0) == 'Y' || answer.charAt(0) == 'y'))
+	    {
+		System.out.println("[*] Reverting local changes ...");
+		return executeSvnCommand(new Command(svnCommand + " revert " + localWorkingDir + " --depth=infinity"), localWorkingDir);
+	    }
+	}
+	return true;
     }
 
     private boolean svnStatus(String svnCommand, String localWorkingDir)
     {
-	System.out.println("* Status in local working copy ...");
+	System.out.println("[*] Status in local working copy ...");
 	return executeSvnCommand(new Command(svnCommand + " st " + localWorkingDir), localWorkingDir);
     }
 
