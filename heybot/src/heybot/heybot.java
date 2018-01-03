@@ -24,9 +24,8 @@ import org.apache.http.util.TextUtils;
 public class heybot
 {
 
-    private final static String VERSION = "1.18.1.0";
+    private final static String VERSION = "1.18.1.1";
     private static final String NEWLINE = System.getProperty("line.separator");
-    private static final SimpleDateFormat DATE_FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     /**
      * @param args the command line arguments
@@ -75,9 +74,7 @@ public class heybot
 	Operation operation = getOperation(prop);
 	if (operation != null)
 	{
-	    System.out.println("== " + prop.getProperty("OPERATION") + " - " + DATE_FORMATTER.format(new Date()) + NEWLINE);
-	    operation.execute(prop);
-	    System.out.println(NEWLINE + "== [END]" + " - " + DATE_FORMATTER.format(new Date()));
+	    operation.start(prop);
 	}
 	prop.store(hbFile);
     }

@@ -202,7 +202,16 @@ public abstract class Operation
     }
     //</editor-fold>
 
-    public abstract void execute(Properties prop) throws Exception;
+    public void start(Properties prop) throws Exception
+    {
+	System.out.println("== " + prop.getProperty("OPERATION") + " - " + dateTimeFormat.format(new Date()));
+	System.out.println();
+	execute(prop);
+	System.out.println();
+	System.out.println("== [END]" + " - " + dateTimeFormat.format(new Date()));
+    }
+
+    protected abstract void execute(Properties prop) throws Exception;
 
     protected String tryGetRepoRootDir(String svnCommand, String sftpSourceDir)
     {
