@@ -928,7 +928,7 @@ public abstract class Operation
 	return path;
     }
 
-    protected Issue[] getProjectIssues(RedmineManager redmineManager, Project filterProject, IssueStatus[] filterStatuses, Tracker[] filterTrackers, boolean filterhasAnyAssignee, String sort)
+    protected Issue[] getProjectIssues(RedmineManager redmineManager, Project filterProject, IssueStatus[] filterStatuses, Tracker[] filterTrackers, boolean filterhasAnyAssignee, String sort, int limit)
     {
 	System.out.print("...");
 	com.taskadapter.redmineapi.Params params = new Params().add("set_filter", "1");
@@ -958,6 +958,8 @@ public abstract class Operation
 	}
 
 	params.add("sort", sort);
+	params.add("offset", "0");
+	params.add("limit", Integer.toString(limit));
 
 	try
 	{

@@ -1,9 +1,7 @@
 package heybot;
 
 import java.net.URISyntaxException;
-import java.text.SimpleDateFormat;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.Locale;
 import utilities.Properties;
 import operation.*;
@@ -24,7 +22,7 @@ import org.apache.http.util.TextUtils;
 public class heybot
 {
 
-    private final static String VERSION = "1.18.1.1";
+    private final static String VERSION = "1.18.2.0";
     private static final String NEWLINE = System.getProperty("line.separator");
 
     /**

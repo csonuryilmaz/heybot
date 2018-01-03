@@ -47,6 +47,7 @@ public class Snapshot extends Operation
     private final static String PARAMETER_WAITING_REVIEW = "WAITING_REVIEW";
     private final static String PARAMETER_ASSIGNEE_IN_QUEUE_STATUS = "ASSIGNEE_IN_QUEUE_STATUS";
     private final static String PARAMETER_SECONDARY_ASSIGNEE_IN_QUEUE_STATUS = "SECONDARY_ASSIGNEE_IN_QUEUE_STATUS";
+    private final static String PARAMETER_ISSUE_LIMIT = "ISSUE_LIMIT";
 
     //</editor-fold>
     private RedmineManager redmineManager;
@@ -146,7 +147,7 @@ public class Snapshot extends Operation
 	for (Project project : projects)
 	{
 	    System.out.println("=== Searching issues in project: " + project.getName());
-	    issues = ArrayUtils.addAll(issues, getProjectIssues(redmineManager, project, statuses, trackers, true, "due_date:asc"));
+	    issues = ArrayUtils.addAll(issues, getProjectIssues(redmineManager, project, statuses, trackers, true, "due_date:asc", getParameterInt(prop, PARAMETER_ISSUE_LIMIT, 25)));
 	}
 
 	return issues;
@@ -411,6 +412,11 @@ public class Snapshot extends Operation
 	@Override
 	public int compare(Issue i1, Issue i2)
 	{
+	    if (i1.getDueDate() == null && i2.getDueDate() == null)
+	    {
+		return 0;
+	    }
+
 	    if (i1.getDueDate() == null)
 	    {
 		return 1;
