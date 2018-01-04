@@ -14,41 +14,50 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.http.util.TextUtils;
 
-/**
- * Main entry for the program.
- *
- * @author onur
- */
 public class heybot
 {
 
-    private final static String VERSION = "1.18.2.1";
+    private final static String VERSION = "1.18.2.2";
     private static final String NEWLINE = System.getProperty("line.separator");
 
-    /**
-     * @param args the command line arguments
-     */
     public static void main(String[] args)
     {
 	printLogo();
 	printVersion();
 
-	if (args.length == 0)
+	if (args.length > 0)
 	{
-	    printHelp();
+	    processArgs(args);
 	}
 	else
 	{
-	    CommandLine line = getParser(buildOptions(), args);
-	    if (line.hasOption("help"))
-	    {
-		printHelp();
-	    }
-	    else
-	    {
-		start(line);
-	    }
+	    printHelp();
 	}
+    }
+
+    private static void processArgs(String[] args)
+    {
+	CommandLine line = getParser(buildOptions(), args);
+	if (line.hasOption("help"))
+	{
+	    printHelp();
+	}
+	else if (line.hasOption("version"))
+	{
+	    printVersionDetailed();
+	}
+	else
+	{
+	    start(line);
+	}
+    }
+
+    private static void printVersionDetailed()
+    {
+	System.out.println("Copyright (c) 2017 Onur Yılmaz");
+	System.out.println("MIT License: <https://github.com/csonuryilmaz/heybot/blob/master/LICENSE.txt>");
+	System.out.println("This is free software: you are free to change and redistribute it.");
+	System.out.println("There is NO WARRANTY, to the extent permitted by law.");
     }
 
     private static void start(CommandLine line)
@@ -189,6 +198,7 @@ public class heybot
 	options.getOption("do").setRequired(true);
 
 	options.addOption("h", "help", false, "Prints this help message.");
+	options.addOption("v", "version", false, "Prints detailed version information.");
 
 	return options;
     }
