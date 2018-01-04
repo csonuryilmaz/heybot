@@ -22,7 +22,7 @@ import org.apache.http.util.TextUtils;
 public class heybot
 {
 
-    private final static String VERSION = "1.18.2.0";
+    private final static String VERSION = "1.18.2.1";
     private static final String NEWLINE = System.getProperty("line.separator");
 
     /**
@@ -53,15 +53,41 @@ public class heybot
 
     private static void start(CommandLine line)
     {
+	String[] args = line.getArgs();
+	if (args.length == 1)
+	{
+	    processOperation(args[0]);
+	}
+	else
+	{
+	    String doOptionValue = line.getOptionValue("do");
+	    if (!TextUtils.isEmpty(doOptionValue))
+	    {
+		processOperation(doOptionValue);
+	    }
+	    else
+	    {
+		System.err.println("Ooops! Unrecognized argument. Please refer to documentation.");
+	    }
+	}
+    }
+
+    private static void processOperation(String operation)
+    {
 	try
 	{
-	    tryExecute(getFullPath(line.getOptionValue("do")));
+	    tryExecute(getFullPath(getFileName(operation)));
 	}
 	catch (Exception ex)
 	{
-	    System.err.println("Ooops! An error occurred while executing [" + line.getOptionValue("do") + "]"
+	    System.err.println("Ooops! An error occurred while executing [" + operation + "]"
 		    + NEWLINE + " " + ex.getMessage() + " ");
 	}
+    }
+
+    private static String getFileName(String arg)
+    {
+	return arg.endsWith(".hb") ? arg : arg + ".hb";
     }
 
     private static void tryExecute(String hbFile) throws Exception
