@@ -1,5 +1,6 @@
 package heybot;
 
+import java.io.File;
 import java.net.URISyntaxException;
 import java.util.Comparator;
 import java.util.Locale;
@@ -17,7 +18,7 @@ import org.apache.http.util.TextUtils;
 public class heybot
 {
 
-    private final static String VERSION = "1.18.2.2";
+    private final static String VERSION = "1.19.0.0";
     private static final String NEWLINE = System.getProperty("line.separator");
 
     public static void main(String[] args)
@@ -46,10 +47,51 @@ public class heybot
 	{
 	    printVersionDetailed();
 	}
+	else if (line.hasOption("list"))
+	{
+	    listAllOperations();
+	}
+	else if (line.hasOption("list-prefix"))
+	{
+	    listOperationsStartsWith(line.getOptionValue("list-prefix"));
+	}
 	else
 	{
 	    start(line);
 	}
+    }
+
+    private static void listAllOperations()
+    {
+	listFiles(new File(getWorkspacePath()).listFiles((File dir, String name) -> name.toLowerCase().endsWith(".hb")));
+    }
+
+    private static void listOperationsStartsWith(String prefix)
+    {
+	listFiles(new File(getWorkspacePath()).listFiles((File dir, String name) -> name.toLowerCase().startsWith(prefix.toLowerCase()) && name.toLowerCase().endsWith(".hb")));
+    }
+
+    private static void listFiles(File[] files)
+    {
+	if (files != null)
+	{
+	    for (File file : files)
+	    {
+		System.out.println(file.getName());
+	    }
+
+	    printTotalOperationsFound(files.length);
+	}
+	else
+	{
+	    printTotalOperationsFound(0);
+	}
+    }
+
+    private static void printTotalOperationsFound(int count)
+    {
+	System.out.println();
+	System.out.println("Total " + count + " operation(s) found.");
     }
 
     private static void printVersionDetailed()
@@ -160,16 +202,22 @@ public class heybot
 	}
 	else
 	{
-	    try
-	    {
-		return new java.io.File(heybot.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath()).getParent() + "/workspace/" + hbFile;
-	    }
-	    catch (URISyntaxException ex)
-	    {
-		System.err.println("Ooops! URISyntaxException caught." + ex.getMessage());
-		return "";
-	    }
+	    return getWorkspacePath() + "/" + hbFile;
 	}
+    }
+
+    private static String getWorkspacePath()
+    {
+	try
+	{
+	    return new java.io.File(heybot.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath()).getParent() + "/workspace";
+	}
+	catch (URISyntaxException ex)
+	{
+	    System.err.println("Ooops! URISyntaxException caught." + ex.getMessage());
+	}
+
+	return "";
     }
 
     //<editor-fold defaultstate="collapsed" desc="help">
@@ -199,6 +247,8 @@ public class heybot
 
 	options.addOption("h", "help", false, "Prints this help message.");
 	options.addOption("v", "version", false, "Prints detailed version information.");
+	options.addOption("l", "list", false, "Lists all operation files in workspace.");
+	options.addOption("lp", "list-prefix", true, "Lists operation files in workspace which starts with given value.");
 
 	return options;
     }
