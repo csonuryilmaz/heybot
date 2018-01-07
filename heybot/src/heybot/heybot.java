@@ -1,6 +1,7 @@
 package heybot;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.net.URISyntaxException;
 import java.util.Comparator;
 import java.util.Locale;
@@ -13,12 +14,13 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.http.util.TextUtils;
 
 public class heybot
 {
 
-    private final static String VERSION = "1.19.0.0";
+    private final static String VERSION = "1.20.0.0";
     private static final String NEWLINE = System.getProperty("line.separator");
 
     public static void main(String[] args)
@@ -54,6 +56,17 @@ public class heybot
 	else if (line.hasOption("list-prefix"))
 	{
 	    listOperationsStartsWith(line.getOptionValue("list-prefix"));
+	}
+	else if (line.hasOption("insert"))
+	{
+	    if (line.getArgs().length > 0)
+	    {
+		insertOperationParameters(line.getOptionValue("insert"), line.getArgs());
+	    }
+	    else
+	    {
+		System.err.println("Ooops! Please add parameters after operation.");
+	    }
 	}
 	else
 	{
@@ -151,7 +164,6 @@ public class heybot
 	{
 	    operation.start(prop);
 	}
-	prop.store(hbFile);
     }
 
     private static Operation getOperation(Properties prop)
@@ -249,6 +261,7 @@ public class heybot
 	options.addOption("v", "version", false, "Prints detailed version information.");
 	options.addOption("l", "list", false, "Lists all operation files in workspace.");
 	options.addOption("lp", "list-prefix", true, "Lists operation files in workspace which starts with given value.");
+	options.addOption("i", "insert", true, "Inserts (by replacing if exists) given parameter values of an operation.");
 
 	return options;
     }
@@ -307,4 +320,76 @@ public class heybot
 	return null;
     }
     //</editor-fold>
+
+    private static void insertOperationParameters(String operation, String[] parameters)
+    {
+	try
+	{
+	    String hbFile = getWorkspacePath() + "/" + getFileName(operation);
+
+	    Properties prop = new Properties();
+	    prop.load(hbFile);
+
+	    for (String parameter : parameters)
+	    {
+		insertParameter(parameter, prop);
+	    }
+	}
+	catch (ConfigurationException | FileNotFoundException ex)
+	{
+	    System.err.println("Ooops! Error occurred while handling operation file: " + ex.getMessage());
+	}
+    }
+
+    private static void insertParameter(String parameter, Properties prop)
+    {
+	String[] tokens = parseParameter(parameter);
+	if (tokens.length > 0)
+	{
+	    System.out.println("[*] " + tokens[0]);
+	    insertParameter(tokens, prop);
+	}
+	else
+	{
+	    System.out.println("[x] " + "Unparsable operation parameter: ");
+	    System.out.println(parameter);
+	}
+    }
+
+    private static void insertParameter(String[] tokens, Properties prop)
+    {
+	String value = prop.getProperty(tokens[0]);
+	if (value != null)
+	{
+	    System.out.println(" - " + value);
+	    setParameter(tokens, prop);
+	}
+	else
+	{
+	    setParameter(tokens, prop);
+	}
+    }
+
+    private static void setParameter(String[] tokens, Properties prop)
+    {
+	System.out.println(" + " + tokens[1]);
+	prop.setProperty(tokens[0], tokens[1]);
+	System.out.println("[✓] Inserted.");
+    }
+
+    private static String[] parseParameter(String parameter)
+    {
+	int i = parameter.indexOf("=");
+	if (i > 0)
+	{
+	    String[] tokens = new String[2];
+	    tokens[0] = parameter.substring(0, i);
+	    tokens[1] = parameter.substring(i + 1);
+
+	    return tokens;
+	}
+
+	return new String[0];
+    }
+
 }
