@@ -20,7 +20,7 @@ import org.apache.http.util.TextUtils;
 public class heybot
 {
 
-    private final static String VERSION = "1.20.0.0";
+    private final static String VERSION = "1.21.0.0";
     private static final String NEWLINE = System.getProperty("line.separator");
 
     public static void main(String[] args)
@@ -67,6 +67,10 @@ public class heybot
 	    {
 		System.err.println("Ooops! Please add parameters after operation.");
 	    }
+	}
+	else if (line.hasOption("select"))
+	{
+	    selectOperationParameters(line.getOptionValue("select"));
 	}
 	else
 	{
@@ -262,6 +266,7 @@ public class heybot
 	options.addOption("l", "list", false, "Lists all operation files in workspace.");
 	options.addOption("lp", "list-prefix", true, "Lists operation files in workspace which starts with given value.");
 	options.addOption("i", "insert", true, "Inserts (by replacing if exists) given parameter values of an operation.");
+	options.addOption("s", "select", true, "Selects all parameters with values of an operation");
 
 	return options;
     }
@@ -390,6 +395,27 @@ public class heybot
 	}
 
 	return new String[0];
+    }
+
+    private static void selectOperationParameters(String operation)
+    {
+	try
+	{
+	    String hbFile = getWorkspacePath() + "/" + getFileName(operation);
+
+	    Properties prop = new Properties();
+	    prop.load(hbFile);
+
+	    String[][] parameters = prop.getAllParameters();
+	    for (String[] parameter : parameters)
+	    {
+		System.out.println(parameter[0] + "=" + parameter[1]);
+	    }
+	}
+	catch (ConfigurationException | FileNotFoundException ex)
+	{
+	    System.err.println("Ooops! Error occurred while handling operation file: " + ex.getMessage());
+	}
     }
 
 }
