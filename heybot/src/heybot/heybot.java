@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.net.URISyntaxException;
 import java.util.Comparator;
 import java.util.Locale;
+import model.Command;
 import utilities.Properties;
 import operation.*;
 import org.apache.commons.cli.CommandLine;
@@ -20,7 +21,7 @@ import org.apache.http.util.TextUtils;
 public class heybot
 {
 
-    private final static String VERSION = "1.21.0.1";
+    private final static String VERSION = "1.22.0.0";
     private static final String NEWLINE = System.getProperty("line.separator");
 
     public static void main(String[] args)
@@ -71,6 +72,10 @@ public class heybot
 	else if (line.hasOption("select"))
 	{
 	    selectOperationParameters(line.getOptionValue("select"));
+	}
+	else if (line.hasOption("open"))
+	{
+	    openOperation(line.getOptionValue("open"));
 	}
 	else
 	{
@@ -267,6 +272,7 @@ public class heybot
 	options.addOption("lp", "list-prefix", true, "Lists operation files in workspace which starts with given value.");
 	options.addOption("i", "insert", true, "Inserts (by replacing if exists) given parameter values of an operation.");
 	options.addOption("s", "select", true, "Selects all parameters with values of an operation");
+	options.addOption("o", "open", true, "Opens operation file in editor defined in HEYBOT_EDITOR environment variable.");
 
 	return options;
     }
@@ -415,6 +421,45 @@ public class heybot
 	catch (ConfigurationException | FileNotFoundException ex)
 	{
 	    System.err.println("Ooops! Error occurred while handling operation file: " + ex.getMessage());
+	}
+    }
+
+    private static void openOperation(String operation)
+    {
+	String editor = System.getenv("HEYBOT_EDITOR");
+	String hbFile = getFileName(operation);
+
+	if (TextUtils.isEmpty(editor))
+	{
+	    System.err.println("Ooops! Could not use external editor to open *" + hbFile + "* operation; consider setting the HEYBOT_EDITOR environment variable!");
+	}
+	else
+	{
+	    String hbFilePath = getWorkspacePath() + "/" + hbFile;
+	    if (new File(hbFilePath).exists())
+	    {
+		Command editorCmd = new Command(new String[]
+		{
+		    "which", editor
+		});
+		if (editorCmd.execute() && !TextUtils.isEmpty(editorCmd.toString()))
+		{
+		    System.out.println("[*] Opening " + hbFile + " with editor ");
+		    System.out.println(editorCmd.toString());
+		    new Command(new String[]
+		    {
+			editor, hbFilePath
+		    }).executeNoWait();
+		}
+		else
+		{
+		    System.err.println("Ooops! Could not find editor *" + editor + "* in global path!");
+		}
+	    }
+	    else
+	    {
+		System.err.println("Ooops! Could not find *" + hbFile + "* in workspace!");
+	    }
 	}
     }
 
