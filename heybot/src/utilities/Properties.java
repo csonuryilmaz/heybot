@@ -36,6 +36,7 @@ public class Properties
 			.setFile(propertiesFile));
 
 	builder.setAutoSave(true);
+	FileBasedConfigurationBuilder.setDefaultEncoding(PropertiesConfiguration.class, "UTF-8");
 	content = builder.getConfiguration();
     }
 
