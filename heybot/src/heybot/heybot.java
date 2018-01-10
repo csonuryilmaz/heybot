@@ -21,7 +21,7 @@ import org.apache.http.util.TextUtils;
 public class heybot
 {
 
-    private final static String VERSION = "1.22.0.0";
+    private final static String VERSION = "1.23.0.0";
     private static final String NEWLINE = System.getProperty("line.separator");
 
     public static void main(String[] args)
@@ -76,6 +76,10 @@ public class heybot
 	else if (line.hasOption("open"))
 	{
 	    openOperation(line.getOptionValue("open"));
+	}
+	else if (line.hasOption("remove"))
+	{
+	    removeOperation(line.getOptionValue("remove"));
 	}
 	else
 	{
@@ -273,6 +277,7 @@ public class heybot
 	options.addOption("i", "insert", true, "Inserts (by replacing if exists) given parameter values of an operation.");
 	options.addOption("s", "select", true, "Selects all parameters with values of an operation");
 	options.addOption("o", "open", true, "Opens operation file in editor defined in HEYBOT_EDITOR environment variable.");
+	options.addOption("r", "remove", true, "Removes operation file from workspace.");
 
 	return options;
     }
@@ -460,6 +465,26 @@ public class heybot
 	    {
 		System.err.println("Ooops! Could not find *" + hbFile + "* in workspace!");
 	    }
+	}
+    }
+
+    private static void removeOperation(String operation)
+    {
+	File hbFile = new File(getWorkspacePath() + "/" + getFileName(operation));
+	if (hbFile.exists())
+	{
+	    if (hbFile.isFile() && hbFile.delete())
+	    {
+		System.out.println("[✓] Removed.");
+	    }
+	    else
+	    {
+		System.out.println("[x] Could not be removed. Please check that's an operation file.");
+	    }
+	}
+	else
+	{
+	    System.out.println("[!] Operation file could not be found in workspace.");
 	}
     }
 
