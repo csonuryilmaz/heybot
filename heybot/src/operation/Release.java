@@ -206,9 +206,8 @@ public class Release extends Operation
 	String dbModifications = getParameterString(prop, PARAMETER_DB_MODIFICATIONS, false);
 	if (!isEmpty(dbModifications))
 	{
-	    summary.append("Has database schema <");
-	    summary.append(dbModifications);
-	    summary.append("|modifications.>");
+	    summary.append("Has database schema migrations: \n");
+	    appendSlackSummaryMigrations(summary, getMigrations(dbModifications));
 	}
 
 	Attachment attachment = Attachment.builder().text(summary.toString())
@@ -478,9 +477,9 @@ public class Release extends Operation
 	    {
 		dbModificationsNote = "Note: Has database schema modifications.";
 	    }
-	    dbModificationsNote += " <a href=\"" + dbModifications + "\">" + dbModifications.substring(dbModifications.lastIndexOf("/") + 1) + "</a>";
-
 	    sb.append(dbModificationsNote);
+	    sb.append("<br>");
+	    appendHtmlSummaryMigrations(sb, getMigrations(dbModifications));
 	    sb.append("</p>");
 	}
 
@@ -584,5 +583,61 @@ public class Release extends Operation
     private String getIssueProjectNameHtml(Issue issue)
     {
 	return "<i><span style=\"color:green;\"> " + issue.getProjectName() + " </span></i>";
+    }
+
+    private String[] getMigrations(String dbModifications)
+    {
+	String[] migrations;
+	if (!dbModifications.contains("*"))
+	{
+	    migrations = new String[]
+	    {
+		dbModifications
+	    };
+	}
+	else
+	{
+	    migrations = dbModifications.split("\\*");
+	}
+
+	return migrations;
+    }
+
+    private void appendSlackSummaryMigrations(StringBuilder summary, String[] migrations)
+    {
+	for (String migration : migrations)
+	{
+	    migration = migration.trim();
+	    if (!isEmpty(migration))
+	    {
+		summary.append("<");
+		summary.append(migration);
+		summary.append("|");
+		summary.append(getMigrationText(migration));
+		summary.append("> \n");
+	    }
+	}
+    }
+
+    private String getMigrationText(String migration)
+    {
+	int lastIndexOfSlash = migration.lastIndexOf("/");
+	return lastIndexOfSlash >= 0 ? migration.substring(lastIndexOfSlash + 1) : migration;
+    }
+
+    private void appendHtmlSummaryMigrations(StringBuilder summary, String[] migrations)
+    {
+	for (String migration : migrations)
+	{
+	    migration = migration.trim();
+	    if (!isEmpty(migration))
+	    {
+		summary.append("<a href=\"");
+		summary.append(migration);
+		summary.append("\">");
+		summary.append(getMigrationText(migration));
+		summary.append("</a> <br/>");
+	    }
+	}
     }
 }
