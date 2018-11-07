@@ -1,17 +1,16 @@
 #!/bin/bash
 
 VERSION="1.23.1.0"
-
-RELEASE_PATH="../../release/heybot_$VERSION"
+RELEASE_PATH="../release/heybot-$VERSION"
 
 if [ -d "$RELEASE_PATH" ]; then
   rm -Rf "$RELEASE_PATH"
   rm -f "$RELEASE_PATH.tar.gz"
 fi
 mkdir -p "$RELEASE_PATH"
-echo "== Listing ../dist/ directory ... "
+echo "[*] Listing ../dist/ directory ... "
 ls -lh ../dist/
-echo "== Packaging ... "
+echo "[*] Packaging ... "
 cp -R ../dist/* "$RELEASE_PATH/"
 mkdir "$RELEASE_PATH/workspace"
 cp -R ../templates "$RELEASE_PATH/"
@@ -23,8 +22,9 @@ mv "$RELEASE_PATH/heybot.final" "$RELEASE_PATH/heybot.run"
 cp ./install.sh "$RELEASE_PATH/"
 cp ./uninstall.sh "$RELEASE_PATH/"
 cd "$RELEASE_PATH/../"
-tar -zcvf "heybot_$VERSION.tar.gz" "heybot_$VERSION"
-rm -Rf "heybot_$VERSION"
-mkdir "heybot_$VERSION"
-mv "heybot_$VERSION.tar.gz" "heybot_$VERSION/"
-#cp ../heybot/README.md "heybot_$VERSION/"
+tar -zcvf "heybot-$VERSION.tar.gz" "heybot-$VERSION"
+rm -Rf "heybot-$VERSION"
+mkdir "heybot-$VERSION"
+mv "heybot-$VERSION.tar.gz" "heybot-$VERSION/"
+printf "[\xE2\x9C\x94] Release ready for distribution. \o/"
+echo ""
