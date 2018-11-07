@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="1.23.1.0"
+VERSION="1.23.2.0"
 RELEASE_PATH="../release/heybot-$VERSION"
 
 if [ -d "$RELEASE_PATH" ]; then

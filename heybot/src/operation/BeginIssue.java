@@ -29,6 +29,7 @@ public class BeginIssue extends Operation
     private final static String PARAMETER_SWITCH_FROM_ISSUE = "SWITCH_FROM_ISSUE";
     private final static String PARAMETER_CHECKOUT_IF_SWITCH_FAILS = "CHECKOUT_IF_SWITCH_FAILS";
     private final static String PARAMETER_ASSIGNEE_ID = "ASSIGNEE_ID";
+    private final static String PARAMETER_REFRESH_IF_EXISTS = "REFRESH_IF_EXISTS";
 
     //</editor-fold>
     private RedmineManager redmineManager;
@@ -69,10 +70,10 @@ public class BeginIssue extends Operation
 
     private void updateIssueAsBegan(Properties prop, Issue issue) throws Exception
     {
-	System.out.println("=== Updating issue as began ");
 	String beganStatus = getParameterString(prop, PARAMETER_BEGAN_STATUS, true);
 	if (!isEmpty(beganStatus))
 	{
+	    System.out.println("=== Updating issue as began ");
 	    int statusId = tryGetIssueStatusId(redmineManager, beganStatus);
 	    if (statusId > 0)
 	    {
@@ -92,7 +93,7 @@ public class BeginIssue extends Operation
 	String svnCommand = tryExecute("which svn");
 	if (svnCommand.length() > 0)
 	{
-	    if (createBranchFolder(svnCommand, repositoryPath, branchesPath, issue.getId()))
+	    if (createBranchFolder(svnCommand, repositoryPath, branchesPath, issue.getId(), getParameterBoolean(prop, PARAMETER_REFRESH_IF_EXISTS)))
 	    {
 		return copyTrunkToBranchFolder(svnCommand, repositoryPath, trunkPath, branchesPath, issue.getId());
 	    }
@@ -105,9 +106,14 @@ public class BeginIssue extends Operation
 	return false;
     }
 
-    private boolean createBranchFolder(String svnCommand, String repositoryPath, String branchesPath, Integer issueId)
+    private boolean createBranchFolder(String svnCommand, String repositoryPath, String branchesPath, Integer issueId, boolean refreshIfExists)
     {
 	String branchPath = repositoryPath + "/" + branchesPath + "/" + "i" + issueId;
+	if (isSvnPathExists(svnCommand, branchPath) && refreshIfExists)
+	{
+	    svnDelete(svnCommand, branchPath, issueId);
+	}
+
 	if (!isSvnPathExists(svnCommand, branchPath))
 	{
 	    return svnMkdir(svnCommand, branchPath, issueId);
@@ -125,6 +131,25 @@ public class BeginIssue extends Operation
 	    svnCommand, "mkdir", branchPath, "-m", comment
 	};
 	System.out.println(svnCommand + " mkdir " + branchPath + " -m \"" + comment + "\"");
+	String[] output = execute(command);
+	if (output == null || output[1].length() > 0)
+	{
+	    System.err.println(output[1]);
+	    return false;
+	}
+
+	System.out.println(output[0]);
+	return true;
+    }
+
+    private boolean svnDelete(String svnCommand, String branchPath, int issueId)
+    {
+	String comment = "#" + issueId + " Branch folder is deleted. It'll be refreshed.";
+	String[] command = new String[]
+	{
+	    svnCommand, "delete", branchPath, "-m", comment
+	};
+	System.out.println(svnCommand + " delete " + branchPath + " -m \"" + comment + "\"");
 	String[] output = execute(command);
 	if (output == null || output[1].length() > 0)
 	{
