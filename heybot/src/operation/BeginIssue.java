@@ -211,8 +211,10 @@ public class BeginIssue extends Operation
 	    String localPath = workspacePath + "/" + "i" + issue.getId();
 	    String branchPath = repositoryPath + "/" + branchesPath + "/" + "i" + issue.getId();
 
-	    deleteIfExists(localPath);
-	    svnCheckout(tryExecute("which svn"), branchPath, localPath);
+	    if (deleteIfExists(localPath))
+	    {
+		svnCheckout(tryExecute("which svn"), branchPath, localPath);
+	    }
 	}
     }
 
@@ -236,17 +238,31 @@ public class BeginIssue extends Operation
 	return true;
     }
 
-    private void deleteIfExists(String localPath)
+    private boolean deleteIfExists(String localPath)
     {
 	File file = new File(localPath);
 	if (file.exists())
 	{
-	    System.out.println("[info] Branch path is found in local workspace. It'll be deleted!");
-	    execute(new String[]
+	    System.out.println("[info] Branch path is found in local workspace.");
+	    Scanner scanner = new Scanner(System.in);
+	    System.out.print("[?] Would you like to delete existing working copy for fresh checkout? (Y/N) ");
+	    String answer = scanner.next();
+	    if (!isEmpty(answer) && (answer.charAt(0) == 'Y' || answer.charAt(0) == 'y'))
 	    {
-		"rm", "-Rf", localPath
-	    });
+		execute(new String[]
+		{
+		    "rm", "-Rf", localPath
+		});
+		System.out.println("[info] Local working copy is deleted.");
+		return true;
+	    }
+	    else
+	    {
+		System.out.println("[info] Ok, using existing local working copy.");
+		return false;
+	    }
 	}
+	return true;
     }
 
     private void createLocalWorkingCopy(Properties prop, Issue issue)
