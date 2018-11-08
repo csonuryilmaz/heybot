@@ -21,7 +21,7 @@ import org.apache.http.util.TextUtils;
 public class heybot
 {
 
-    private final static String VERSION = "1.23.2.0";
+    private final static String VERSION = "1.23.3.0";
     private static final String NEWLINE = System.getProperty("line.separator");
 
     public static void main(String[] args)

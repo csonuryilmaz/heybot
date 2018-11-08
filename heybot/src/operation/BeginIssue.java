@@ -4,8 +4,10 @@ import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.Issue;
 import java.io.File;
-import utilities.Properties;
+import java.util.Scanner;
+import model.Command;
 import static org.apache.http.util.TextUtils.isEmpty;
+import utilities.Properties;
 
 /**
  *
@@ -30,6 +32,7 @@ public class BeginIssue extends Operation
     private final static String PARAMETER_CHECKOUT_IF_SWITCH_FAILS = "CHECKOUT_IF_SWITCH_FAILS";
     private final static String PARAMETER_ASSIGNEE_ID = "ASSIGNEE_ID";
     private final static String PARAMETER_REFRESH_IF_EXISTS = "REFRESH_IF_EXISTS";
+    private final static String PARAMETER_IDE_PATH = "IDE_PATH";
 
     //</editor-fold>
     private RedmineManager redmineManager;
@@ -63,6 +66,7 @@ public class BeginIssue extends Operation
 		{
 		    updateIssueAsBegan(prop, issue);
 		    createLocalWorkingCopy(prop, issue);
+		    openIDE(prop, issue);
 		}
 	    }
 	}
@@ -320,6 +324,37 @@ public class BeginIssue extends Operation
 	}
 
 	return true;
+    }
+
+    private void openIDE(Properties prop, Issue issue)
+    {
+	String idePath = getParameterString(prop, PARAMETER_IDE_PATH, false);
+	String workspacePath = trimRight(getParameterString(prop, PARAMETER_WORKSPACE_PATH, false), "/");
+	if (!isEmpty(idePath) && !isEmpty(workspacePath))
+	{
+	    Scanner scanner = new Scanner(System.in);
+	    System.out.print("[?] Would you like open to IDE for development? (Y/N) ");
+	    String answer = scanner.next();
+	    if (!isEmpty(answer) && (answer.charAt(0) == 'Y' || answer.charAt(0) == 'y'))
+	    {
+		File projectPath = new File(workspacePath + "/" + "i" + issue.getId()
+			+ "/" + trimLeft(trimRight(getParameterString(prop, PARAMETER_TRUNK_PATH, false), "/"), "/"));
+		if (projectPath.exists())
+		{
+		    Command cmd = new Command(new String[]
+		    {
+			idePath, projectPath.getAbsolutePath()
+		    });
+		    System.out.println("[*] Opening IDE ...");
+		    System.out.println(cmd.getCommandString());
+		    cmd.executeNoWait();
+		}
+		else
+		{
+		    System.out.print("Ooops! " + "Project not found in path:" + projectPath.getAbsolutePath());
+		}
+	    }
+	}
     }
 
 }
