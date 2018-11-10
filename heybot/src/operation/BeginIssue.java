@@ -33,6 +33,7 @@ public class BeginIssue extends Operation
     private final static String PARAMETER_ASSIGNEE_ID = "ASSIGNEE_ID";
     private final static String PARAMETER_REFRESH_IF_EXISTS = "REFRESH_IF_EXISTS";
     private final static String PARAMETER_IDE_PATH = "IDE_PATH";
+    private final static String PARAMETER_CACHE_ENABLED = "CACHE_ENABLED";
 
     //</editor-fold>
     private RedmineManager redmineManager;
@@ -267,14 +268,21 @@ public class BeginIssue extends Operation
 
     private void createLocalWorkingCopy(Properties prop, Issue issue)
     {
-	int switchFromIssueId = getParameterInt(prop, PARAMETER_SWITCH_FROM_ISSUE, 0);
-	if (switchFromIssueId > 0)
+	if (!getParameterBoolean(prop, PARAMETER_CACHE_ENABLED))
 	{
-	    switchBranch(prop, issue, switchFromIssueId);
+	    int switchFromIssueId = getParameterInt(prop, PARAMETER_SWITCH_FROM_ISSUE, 0);
+	    if (switchFromIssueId > 0)
+	    {
+		switchBranch(prop, issue, switchFromIssueId);
+	    }
+	    else
+	    {
+		checkoutBranch(prop, issue);
+	    }
 	}
 	else
 	{
-	    checkoutBranch(prop, issue);
+	    switchCache(prop, issue);
 	}
     }
 
@@ -368,6 +376,73 @@ public class BeginIssue extends Operation
 		else
 		{
 		    System.out.print("Ooops! " + "Project not found in path:" + projectPath.getAbsolutePath());
+		}
+	    }
+	}
+    }
+
+    private boolean svnUpdate(String svnCommand, String localPath)
+    {
+	String command = svnCommand + " up " + localPath;
+	System.out.println(command);
+	String[] output = execute(command);
+	if (output == null || output[1].length() > 0)
+	{
+	    System.err.println(output[1]);
+	    return false;
+	}
+
+	System.out.println(output[0]);
+	return true;
+    }
+
+    private boolean copy(String sourcePath, String targetPath)
+    {
+	String command = "cp -r " + sourcePath + " " + targetPath;
+	System.out.println(command);
+	String[] output = execute(command);
+	if (output == null || output[1].length() > 0)
+	{
+	    System.err.println(output[1]);
+	    return false;
+	}
+
+	System.out.println(output[0]);
+	return true;
+    }
+
+    private void switchCache(Properties prop, Issue issue)
+    {
+	String cachePath = getWorkingDirectory() + "/" + "cache";
+	createFolder(cachePath);
+
+	String repositoryPath = trimRight(getParameterString(prop, PARAMETER_REPOSITORY_PATH, false), "/");
+	cachePath += "/" + new File(repositoryPath).getName();
+	createFolder(cachePath);
+
+	String trunk = "/" + trimLeft(trimRight(getParameterString(prop, PARAMETER_TRUNK_PATH, false), "/"), "/");
+	File cache = new File(cachePath + trunk);
+	if (!cache.exists())
+	{
+	    svnCheckout(tryExecute("which svn"), repositoryPath + trunk, cache.getAbsolutePath());
+	}
+	if (svnUpdate(tryExecute("which svn"), cache.getAbsolutePath()))
+	{
+	    String workspacePath = trimRight(getParameterString(prop, PARAMETER_WORKSPACE_PATH, false), "/");
+	    if (!isEmpty(workspacePath))
+	    {
+		String branchPath = workspacePath + "/" + "i" + issue.getId();
+		if (deleteIfExists(branchPath))
+		{
+		    createFolder(branchPath);
+		    branchPath += "/" + cache.getName();
+		    copy(cache.getAbsolutePath(), branchPath);
+		    repositoryPath += "/" + trimLeft(trimRight(getParameterString(prop, PARAMETER_BRANCHES_PATH, false), "/"), "/");
+		    repositoryPath += "/" + "i" + issue.getId() + "/" + cache.getName();
+		    if (svnSwitch(tryExecute("which svn"), repositoryPath, branchPath))
+		    {
+			System.out.println("[✓] Local working copy is ready. \\o/");
+		    }
 		}
 	    }
 	}
