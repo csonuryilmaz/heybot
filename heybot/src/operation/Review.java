@@ -4,10 +4,11 @@ import com.taskadapter.redmineapi.RedmineException;
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.Issue;
+import java.io.File;
 import java.util.Scanner;
 import model.Command;
-import utilities.Properties;
 import static org.apache.http.util.TextUtils.isEmpty;
+import utilities.Properties;
 
 /**
  * Operaiton: Review.
@@ -23,12 +24,14 @@ public class Review extends Operation
     // mandatory
     private final static String PARAMETER_ISSUE = "ISSUE";
     private final static String PARAMETER_ISSUE_STATUS_TO_UPDATE = "ISSUE_STATUS_TO_UPDATE";
-    private final static String PARAMETER_SUBVERSION_PATH = "SUBVERSION_PATH";
+    private final static String PARAMETER_REPOSITORY_PATH = "REPOSITORY_PATH";
     private final static String PARAMETER_REDMINE_TOKEN = "REDMINE_TOKEN";
     private final static String PARAMETER_REDMINE_URL = "REDMINE_URL";
+    private final static String PARAMETER_TRUNK_PATH = "TRUNK_PATH";
+    private final static String PARAMETER_BRANCHES_PATH = "BRANCHES_PATH";
+    private final static String PARAMETER_WORKSPACE_PATH = "WORKSPACE_PATH";
     // optional
     private final static String PARAMETER_ISSUE_STATUS_SHOULD_BE = "ISSUE_STATUS_SHOULD_BE";
-    private final static String PARAMETER_SOURCE_PATH = "SOURCE_PATH";
     private final static String PARAMETER_IDE_PATH = "IDE_PATH";
 
 //</editor-fold>
@@ -36,7 +39,7 @@ public class Review extends Operation
     {
 	super(new String[]
 	{
-	    PARAMETER_ISSUE, PARAMETER_ISSUE_STATUS_TO_UPDATE, PARAMETER_SUBVERSION_PATH, PARAMETER_REDMINE_TOKEN, PARAMETER_REDMINE_URL
+	    PARAMETER_ISSUE, PARAMETER_ISSUE_STATUS_TO_UPDATE, PARAMETER_REPOSITORY_PATH, PARAMETER_REDMINE_TOKEN, PARAMETER_REDMINE_URL, PARAMETER_TRUNK_PATH, PARAMETER_BRANCHES_PATH, PARAMETER_WORKSPACE_PATH
 	}
 	);
     }
@@ -49,36 +52,24 @@ public class Review extends Operation
 	    String issueId = getParameterString(prop, PARAMETER_ISSUE, false);
 	    String targetStatus = getParameterString(prop, PARAMETER_ISSUE_STATUS_TO_UPDATE, false);
 	    String sourceStatus = getParameterString(prop, PARAMETER_ISSUE_STATUS_SHOULD_BE, false);
-	    String localWorkingDir = getParameterString(prop, PARAMETER_SOURCE_PATH, false);
-	    String svnBranchDir = getParameterString(prop, PARAMETER_SUBVERSION_PATH, false);
 	    String redmineAccessToken = getParameterString(prop, PARAMETER_REDMINE_TOKEN, false);
 	    String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
 
-	    if (localWorkingDir == null || localWorkingDir.length() == 0)
-	    {
-		System.out.println("* Auto detecting source path ... ");
-		localWorkingDir = tryExecute("pwd");
-	    }
-	    else if (localWorkingDir.endsWith("/"))
-	    {
-		localWorkingDir = localWorkingDir.substring(0, localWorkingDir.length() - 1);
-	    }
-	    System.out.println("[✓] SOURCE_PATH= " + localWorkingDir);
-
-	    // connect redmine
 	    redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
 
-	    // get issue
 	    Issue issue = tryGetIssue(issueId);
 	    if (issue != null)
 	    {
 		System.out.println("[✓] " + "#" + issue.getId() + " - " + issue.getSubject());
 		if (isIssueStatusEligible(issue, sourceStatus, targetStatus))
 		{
-		    if (merge(localWorkingDir, svnBranchDir, issueId))
+		    if (createLocalWorkingCopyOfTrunk(prop, issue))
 		    {
-			setIssueStatus(issue, targetStatus);
-			openIDE(prop, localWorkingDir);
+			if (merge(prop, issue))
+			{
+			    setIssueStatus(issue, targetStatus);
+			    openIDE(prop, issue);
+			}
 		    }
 		}
 		else
@@ -110,13 +101,12 @@ public class Review extends Operation
 
     private boolean isIssueStatusEligible(Issue issue, String statusShouldBe, String statusWillBe)
     {
-	if (statusShouldBe == null || statusShouldBe.length() == 0)
+	if (isEmpty(statusShouldBe))
 	{
 	    return true;
 	}
 
 	String currentStatus = issue.getStatusName().toLowerCase(trLocale);
-
 	if (currentStatus.equals(statusShouldBe.toLowerCase(trLocale)))
 	{
 	    return true;
@@ -125,19 +115,22 @@ public class Review extends Operation
 	return currentStatus.equals(statusWillBe.toLowerCase(trLocale));
     }
 
-    private boolean merge(String localWorkingDir, String svnBranchDir, String issueId)
+    private boolean merge(Properties prop, Issue issue)
     {
 	String svnCommand = tryExecute("which svn");
+	String localWorkingCopy = trimRight(getParameterString(prop, PARAMETER_WORKSPACE_PATH, false), "/")
+		+ "/" + "i" + issue.getId() + "r"
+		+ "/" + trimLeft(trimRight(getParameterString(prop, PARAMETER_TRUNK_PATH, false), "/"), "/");
+	String branchPath = trimRight(getParameterString(prop, PARAMETER_REPOSITORY_PATH, false), "/")
+		+ "/" + trimLeft(trimRight(getParameterString(prop, PARAMETER_BRANCHES_PATH, false), "/"), "/");
+	String issueId = getParameterString(prop, PARAMETER_ISSUE, false);
 
-	if (svnCommand.length() == 0)// check svn command
-	{
-	    System.err.println("Ooops! Couldn't find SVN command.");
-	    System.exit(0);
-	}
-
-	System.out.println();
-
-	return svnStatus(svnCommand, localWorkingDir) && svnRevert(svnCommand, localWorkingDir) && svnUpdate(svnCommand, localWorkingDir) && svnShowEligibleRevisions(svnCommand, localWorkingDir, svnBranchDir, issueId) && svnMerge(svnCommand, localWorkingDir, svnBranchDir, issueId) && svnStatus(svnCommand, localWorkingDir);
+	return svnStatus(svnCommand, localWorkingCopy)
+		&& svnRevert(svnCommand, localWorkingCopy)
+		&& svnUpdate(svnCommand, localWorkingCopy)
+		&& svnShowEligibleRevisions(svnCommand, localWorkingCopy, branchPath, issueId)
+		&& svnMerge(svnCommand, localWorkingCopy, branchPath, issueId)
+		&& svnStatus(svnCommand, localWorkingCopy);
     }
 
     private boolean svnMerge(String svnCommand, String localWorkingDir, String svnBranchDir, String issueId)
@@ -149,7 +142,7 @@ public class Review extends Operation
     private boolean svnShowEligibleRevisions(String svnCommand, String localWorkingDir, String svnBranchDir, String issueId)
     {
 	System.out.println("[*] List of eligible revisions that will be merged from branch.");
-	return executeSvnCommand(new Command(svnCommand + " mergeinfo --show-revs eligible " + getMergeSourceDir(svnCommand, localWorkingDir, svnBranchDir, issueId)), localWorkingDir);
+	return executeSvnCommand(new Command(svnCommand + " mergeinfo --show-revs eligible " + getMergeSourceDir(svnCommand, localWorkingDir, svnBranchDir, issueId) + " " + localWorkingDir), localWorkingDir);
     }
 
     private boolean svnUpdate(String svnCommand, String localWorkingDir)
@@ -237,25 +230,136 @@ public class Review extends Operation
 	}
     }
 
-    private void openIDE(Properties prop, String localWorkingDir)
+    private void openIDE(Properties prop, Issue issue)
     {
 	String idePath = getParameterString(prop, PARAMETER_IDE_PATH, false);
 	if (!isEmpty(idePath))
 	{
+	    String workspacePath = trimRight(getParameterString(prop, PARAMETER_WORKSPACE_PATH, false), "/");
 	    Scanner scanner = new Scanner(System.in);
-	    System.out.print("[?] If merge has no conflicts, open IDE to review code changes. (Y/N)? ");
+	    System.out.print("[?] Would you like open to IDE for development? (Y/N) ");
 	    String answer = scanner.next();
 	    if (!isEmpty(answer) && (answer.charAt(0) == 'Y' || answer.charAt(0) == 'y'))
 	    {
-		Command cmd = new Command(new String[]
+		File projectPath = new File(workspacePath + "/" + "i" + issue.getId() + "r"
+			+ "/" + trimLeft(trimRight(getParameterString(prop, PARAMETER_TRUNK_PATH, false), "/"), "/"));
+		if (projectPath.exists())
 		{
-		    idePath, localWorkingDir
-		});
-		System.out.println("* Opening IDE ...");
-		System.out.println(cmd.getCommandString());
-		cmd.executeNoWait();
+		    Command cmd = new Command(new String[]
+		    {
+			idePath, projectPath.getAbsolutePath()
+		    });
+		    System.out.println("[*] Opening IDE ...");
+		    System.out.println(cmd.getCommandString());
+		    cmd.executeNoWait();
+		}
+		else
+		{
+		    System.out.print("Ooops! " + "Project not found in path:" + projectPath.getAbsolutePath());
+		}
 	    }
 	}
+    }
+
+    private boolean createLocalWorkingCopyOfTrunk(Properties prop, Issue issue)
+    {
+	String workspacePath = trimRight(getParameterString(prop, PARAMETER_WORKSPACE_PATH, false), "/");
+	String branchPath = workspacePath + "/" + "i" + issue.getId() + "r";
+	if (deleteIfUserConfirmed(branchPath))
+	{
+	    String cachePath = getWorkingDirectory() + "/" + "cache";
+	    createFolder(cachePath);
+
+	    String repositoryPath = trimRight(getParameterString(prop, PARAMETER_REPOSITORY_PATH, false), "/");
+	    cachePath += "/" + new File(repositoryPath).getName();
+	    createFolder(cachePath);
+
+	    String trunk = "/" + trimLeft(trimRight(getParameterString(prop, PARAMETER_TRUNK_PATH, false), "/"), "/");
+	    File cache = new File(cachePath + trunk);
+	    if (!cache.exists())
+	    {
+		svnCheckout(tryExecute("which svn"), repositoryPath + trunk, cache.getAbsolutePath());
+	    }
+	    if (svnUpdate(tryExecute("which svn"), cache.getAbsolutePath()))
+	    {
+		createFolder(branchPath);
+		branchPath += "/" + cache.getName();
+		if (copy(cache.getAbsolutePath(), branchPath))
+		{
+		    System.out.println("[✓] Local working copy is ready. \\o/");
+		    return true;
+		}
+		else
+		{
+		    System.out.println("[e] Local working copy could not be created!");
+		    return false;
+		}
+	    }
+	}
+	return true;
+    }
+
+    private boolean svnCheckout(String svnCommand, String source, String target)
+    {
+	String[] command = new String[]
+	{
+	    svnCommand, "checkout", "--quiet", source, target
+	};
+	System.out.println(svnCommand + " checkout " + source + " " + target);
+	Thread thread = startFolderSizeProgress(target);
+	String[] output = execute(command);
+	stopFolderSizeProgress(thread, target);
+	if (output == null || output[1].length() > 0)
+	{
+	    System.err.println(output[1]);
+	    return false;
+	}
+
+	System.out.println(output[0]);
+	return true;
+    }
+
+    private boolean deleteIfUserConfirmed(String localPath)
+    {
+	File file = new File(localPath);
+	if (file.exists())
+	{
+	    System.out.println("[info] '" + file.getName() + "' is found in local workspace.");
+	    Scanner scanner = new Scanner(System.in);
+	    System.out.println("[?] Would you like to delete it to refresh local working copy? ");
+	    System.out.print("[?] Choosing 'yes' will remove all unsaved local changes! (y/n)? ");
+	    String answer = scanner.next();
+	    if (!isEmpty(answer) && (answer.charAt(0) == 'Y' || answer.charAt(0) == 'y'))
+	    {
+		execute(new String[]
+		{
+		    "rm", "-Rf", localPath
+		});
+		System.out.println("[✓] Local working copy is deleted.");
+		return true;
+	    }
+	    else
+	    {
+		System.out.println("[✓] Ok, continue using existing local working copy.");
+		return false;
+	    }
+	}
+	return true;
+    }
+
+    private boolean copy(String sourcePath, String targetPath)
+    {
+	String command = "cp -r " + sourcePath + " " + targetPath;
+	System.out.println(command);
+	String[] output = execute(command);
+	if (output == null || output[1].length() > 0)
+	{
+	    System.err.println(output[1]);
+	    return false;
+	}
+
+	System.out.println(output[0]);
+	return true;
     }
 
 }
