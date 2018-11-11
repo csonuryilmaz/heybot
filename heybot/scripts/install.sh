@@ -32,8 +32,10 @@ findPreviousFolders()
 copyPreviousFoldersIntoCurrent()
 {
     echo "[*] Copying user folders from previous installation ..."
-    rsync -a -v --ignore-existing $HEYBOT_OLD_WORKSPACE $(pwd)
-    rsync -a -v --ignore-existing $HEYBOT_OLD_CACHE $(pwd)
+    echo $HEYBOT_OLD_WORKSPACE
+    rsync -ah --stats --ignore-existing $HEYBOT_OLD_WORKSPACE $(pwd)
+    echo $HEYBOT_OLD_CACHE
+    rsync -ah --stats --ignore-existing $HEYBOT_OLD_CACHE $(pwd)
     printf "[\xE2\x9C\x94] Copied.\n"
 }
 
