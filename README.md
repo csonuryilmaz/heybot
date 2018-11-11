@@ -413,3 +413,24 @@ Once done, you’ll see your incoming webhook integration’s configuration page
 Scroll down and there’ll be a Webhook URL in the format https://hooks.slack.com/services/TXXXXXXXX/BXXXXXXXX/token. Save that URL somewhere, we’ll need it later. You can further change the icon and name of the integration in this page itself.
 
 [1]: [Detailed documentation about software versioning](https://github.com/csonuryilmaz/notes/blob/master/how_to/version_your_software_(en).md)
+
+### Test Platforms
+
+I've tested app on below platforms and it works fine:
+
+* Debian GNU/Linux 8.11 (jessie) / java 1.8.0_181
+* Debian GNU/Linux 9.5 (stretch) / java 1.8.0_162
+
+If something goes wrong, let me know the situation by opening an issue. See the [contributing](CONTRIBUTING.md) file for details. Also see our [code of conduct](CODE_OF_CONDUCT.md) file for other social details.
+
+### License
+
+This project is licensed under the MIT License. See the [license](LICENSE.txt) file for details.
+
+### Authors
+
+**Onur Yılmaz**     
+
+[![Twitter Follow](https://img.shields.io/twitter/follow/csonuryilmaz.svg?style=social)](http://bit.ly/2RCmMgx)
+
+[![Stackoverflow Profile](https://stackoverflow.com/users/flair/1750142.png)](http://bit.ly/2qu14zS)
