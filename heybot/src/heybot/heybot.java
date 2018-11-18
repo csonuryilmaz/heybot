@@ -21,7 +21,7 @@ import org.apache.http.util.TextUtils;
 public class heybot
 {
 
-    private final static String VERSION = "1.24.1.2";
+    private final static String VERSION = "1.25.0.0";
     private static final String NEWLINE = System.getProperty("line.separator");
 
     public static void main(String[] args)
@@ -71,7 +71,7 @@ public class heybot
 	}
 	else if (line.hasOption("select"))
 	{
-	    selectOperationParameters(line.getOptionValue("select"));
+	    selectOperationParameters(line.getOptionValue("select"), line.getArgs());
 	}
 	else if (line.hasOption("open"))
 	{
@@ -408,7 +408,7 @@ public class heybot
 	return new String[0];
     }
 
-    private static void selectOperationParameters(String operation)
+    private static void selectOperationParameters(String operation, String[] parameters)
     {
 	try
 	{
@@ -417,15 +417,36 @@ public class heybot
 	    Properties prop = new Properties();
 	    prop.load(hbFile);
 
-	    String[][] parameters = prop.getAllParameters();
-	    for (String[] parameter : parameters)
+	    if (parameters.length == 0)
 	    {
-		System.out.println(parameter[0] + "=" + parameter[1]);
+		selectAllParameters(prop);
+	    }
+	    else
+	    {
+		selectParameters(prop, parameters);
 	    }
 	}
 	catch (ConfigurationException | FileNotFoundException ex)
 	{
 	    System.err.println("Ooops! Error occurred while handling operation file: " + ex.getMessage());
+	}
+    }
+
+    private static void selectAllParameters(Properties prop)
+    {
+	String[][] parameters = prop.getAllParameters();
+	for (String[] parameter : parameters)
+	{
+	    System.out.println(parameter[0] + "=" + parameter[1]);
+	}
+    }
+
+    private static void selectParameters(Properties prop, String[] parameters)
+    {
+	for (String parameter : parameters)
+	{
+	    System.out.println(parameter + "="
+		    + (prop.getProperty(parameter) != null ? prop.getProperty(parameter) : ""));
 	}
     }
 
