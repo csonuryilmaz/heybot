@@ -3,6 +3,7 @@ package heybot;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.net.URISyntaxException;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Locale;
 import model.Command;
@@ -17,6 +18,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.http.util.TextUtils;
+import org.apache.commons.io.comparator.NameFileComparator;
 
 public class heybot
 {
@@ -101,6 +103,7 @@ public class heybot
     {
 	if (files != null)
 	{
+	    Arrays.sort(files, NameFileComparator.NAME_COMPARATOR);
 	    for (File file : files)
 	    {
 		System.out.println(file.getName());
