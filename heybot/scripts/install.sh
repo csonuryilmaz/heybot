@@ -69,6 +69,15 @@ else
     exit -1
 fi
 
+BIN_FOLDER="/usr/local/bin"
+echo "[*] Checking is $BIN_FOLDER exists? ..."
+if [ ! -d "$BIN_FOLDER" ]; then
+    echo "Not exists! Needs to create directory ..."
+    sudo mkdir $BIN_FOLDER && printf "\n[\xE2\x9C\x94]\n"
+else
+    printf "[\xE2\x9C\x94] Exists.\n"
+fi
+
 echo "[*] Checking whether java version is 1.8+? ..."
 if [[ "$JAVA_EXECUTABLE" ]]; then
     version=$("$JAVA_EXECUTABLE" -version 2>&1 | awk -F '"' '/version/ {print $2}')
