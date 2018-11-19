@@ -365,10 +365,8 @@ public class BeginIssue extends Operation
 			+ "/" + new File(trimLeft(trimRight(getParameterString(prop, PARAMETER_TRUNK_PATH, false), "/"), "/")).getName());
 		if (projectPath.exists())
 		{
-		    Command cmd = new Command(new String[]
-		    {
-			idePath, projectPath.getAbsolutePath()
-		    });
+		    Command cmd = new Command(idePath.contains("%s") ? String.format(idePath, projectPath.getAbsolutePath())
+			    : idePath + " " + projectPath.getAbsolutePath());
 		    System.out.println("[*] Opening IDE ...");
 		    System.out.println(cmd.getCommandString());
 		    cmd.executeNoWait();
