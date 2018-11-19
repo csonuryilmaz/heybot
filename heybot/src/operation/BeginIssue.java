@@ -362,7 +362,7 @@ public class BeginIssue extends Operation
 	    if (!isEmpty(answer) && (answer.charAt(0) == 'Y' || answer.charAt(0) == 'y'))
 	    {
 		File projectPath = new File(workspacePath + "/" + "i" + issue.getId()
-			+ "/" + trimLeft(trimRight(getParameterString(prop, PARAMETER_TRUNK_PATH, false), "/"), "/"));
+			+ "/" + new File(trimLeft(trimRight(getParameterString(prop, PARAMETER_TRUNK_PATH, false), "/"), "/")).getName());
 		if (projectPath.exists())
 		{
 		    Command cmd = new Command(new String[]
