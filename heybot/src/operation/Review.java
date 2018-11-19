@@ -120,7 +120,7 @@ public class Review extends Operation
 	String svnCommand = tryExecute("which svn");
 	String localWorkingCopy = trimRight(getParameterString(prop, PARAMETER_WORKSPACE_PATH, false), "/")
 		+ "/" + "i" + issue.getId() + "r"
-		+ "/" + trimLeft(trimRight(getParameterString(prop, PARAMETER_TRUNK_PATH, false), "/"), "/");
+		+ "/" + new File(trimLeft(trimRight(getParameterString(prop, PARAMETER_TRUNK_PATH, false), "/"), "/")).getName();
 	String branchPath = trimRight(getParameterString(prop, PARAMETER_REPOSITORY_PATH, false), "/")
 		+ "/" + trimLeft(trimRight(getParameterString(prop, PARAMETER_BRANCHES_PATH, false), "/"), "/");
 	String issueId = getParameterString(prop, PARAMETER_ISSUE, false);
@@ -242,7 +242,7 @@ public class Review extends Operation
 	    if (!isEmpty(answer) && (answer.charAt(0) == 'Y' || answer.charAt(0) == 'y'))
 	    {
 		File projectPath = new File(workspacePath + "/" + "i" + issue.getId() + "r"
-			+ "/" + trimLeft(trimRight(getParameterString(prop, PARAMETER_TRUNK_PATH, false), "/"), "/"));
+			+ "/" + new File(trimLeft(trimRight(getParameterString(prop, PARAMETER_TRUNK_PATH, false), "/"), "/")).getName());
 		if (projectPath.exists())
 		{
 		    Command cmd = new Command(new String[]
