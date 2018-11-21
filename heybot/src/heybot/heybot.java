@@ -6,7 +6,6 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Locale;
-import model.Command;
 import utilities.Properties;
 import operation.*;
 import org.apache.commons.cli.CommandLine;
@@ -19,11 +18,12 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.http.util.TextUtils;
 import org.apache.commons.io.comparator.NameFileComparator;
+import utilities.Open;
 
 public class heybot
 {
 
-    private final static String VERSION = "1.26.0.4";
+    private final static String VERSION = "1.26.1.0";
     private static final String NEWLINE = System.getProperty("line.separator");
 
     public static void main(String[] args)
@@ -455,40 +455,13 @@ public class heybot
 
     private static void openOperation(String operation)
     {
-	String editor = System.getenv("HEYBOT_EDITOR");
-	String hbFile = getFileName(operation);
-
-	if (TextUtils.isEmpty(editor))
+	try
 	{
-	    System.err.println("Ooops! Could not use external editor to open *" + hbFile + "* operation; consider setting the HEYBOT_EDITOR environment variable!");
+	    new Open(getWorkspacePath(), getFileName(operation)).run();
 	}
-	else
+	catch (Exception ex)
 	{
-	    String hbFilePath = getWorkspacePath() + "/" + hbFile;
-	    if (new File(hbFilePath).exists())
-	    {
-		Command editorCmd = new Command(new String[]
-		{
-		    "which", editor
-		});
-		if (editorCmd.execute() && !TextUtils.isEmpty(editorCmd.toString()))
-		{
-		    System.out.println("[*] Opening " + hbFile + " with editor ");
-		    System.out.println(editorCmd.toString());
-		    new Command(new String[]
-		    {
-			editor, hbFilePath
-		    }).executeNoWait();
-		}
-		else
-		{
-		    System.err.println("Ooops! Could not find editor *" + editor + "* in global path!");
-		}
-	    }
-	    else
-	    {
-		System.err.println("Ooops! Could not find *" + hbFile + "* in workspace!");
-	    }
+	    System.err.println(ex.getMessage());
 	}
     }
 
