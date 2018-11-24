@@ -24,7 +24,7 @@ import utilities.Open;
 public class heybot
 {
 
-    private final static String VERSION = "1.27.0.0";
+    private final static String VERSION = "1.27.0.1";
     private static final String NEWLINE = System.getProperty("line.separator");
 
     public static void main(String[] args)
@@ -257,9 +257,10 @@ public class heybot
     private static final String HEADER = NEWLINE + "Designed to help developers on their day-to-day development activities. Works in subversion and redmine ecosystem." + NEWLINE + NEWLINE;
 
     private static final String FOOTER = NEWLINE
-	    + "Report bugs to: csonuryilmaz@gmail.com" + NEWLINE
-	    + "Home page (releases): https://goo.gl/fkSGrp" + NEWLINE
-	    + "General help using heybot: https://goo.gl/NDqZuC" + NEWLINE
+	    + "Report bugs to \"csonuryilmaz@gmail.com\" " + NEWLINE
+	    + "  or drop an issue @ http://bit.ly/2S83xvy" + NEWLINE
+	    + "Releases: http://bit.ly/2BukdrR" + NEWLINE
+	    + "Document: http://bit.ly/2Sd8zqQ" + NEWLINE
 	    + NEWLINE + "Happy coding!" + NEWLINE;
 
     private static void printHelp()
@@ -284,7 +285,7 @@ public class heybot
 	options.addOption("lp", "list-prefix", true, "Lists operation files in workspace which starts with given value.");
 	options.addOption("i", "insert", true, "Inserts (by replacing if exists) given parameter values of an operation.");
 	options.addOption("s", "select", true, "Selects all parameters with values of an operation");
-	options.addOption("o", "open", true, "Opens operation file in editor defined in HEYBOT_EDITOR environment variable.");
+	options.addOption("o", "open", true, "Opens operation file by default external editor in order to view or modify.");
 	options.addOption("r", "remove", true, "Removes operation file from workspace.");
 
 	Option editor = new Option("e", "editor", true, "Sets default external editor used when a file needs to be viewed or edited.");
