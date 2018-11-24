@@ -18,12 +18,13 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.http.util.TextUtils;
 import org.apache.commons.io.comparator.NameFileComparator;
+import utilities.Editor;
 import utilities.Open;
 
 public class heybot
 {
 
-    private final static String VERSION = "1.26.1.0";
+    private final static String VERSION = "1.27.0.0";
     private static final String NEWLINE = System.getProperty("line.separator");
 
     public static void main(String[] args)
@@ -82,6 +83,10 @@ public class heybot
 	else if (line.hasOption("remove"))
 	{
 	    removeOperation(line.getOptionValue("remove"));
+	}
+	else if (line.hasOption("editor"))
+	{
+	    setDefaultEditor(line.getOptionValue("editor"));
 	}
 	else
 	{
@@ -281,6 +286,10 @@ public class heybot
 	options.addOption("s", "select", true, "Selects all parameters with values of an operation");
 	options.addOption("o", "open", true, "Opens operation file in editor defined in HEYBOT_EDITOR environment variable.");
 	options.addOption("r", "remove", true, "Removes operation file from workspace.");
+
+	Option editor = new Option("e", "editor", true, "Sets default external editor used when a file needs to be viewed or edited.");
+	editor.setOptionalArg(true);
+	options.addOption(editor);
 
 	return options;
     }
@@ -482,6 +491,18 @@ public class heybot
 	else
 	{
 	    System.out.println("[!] Operation file could not be found in workspace.");
+	}
+    }
+
+    private static void setDefaultEditor(String editor)
+    {
+	try
+	{
+	    new Editor(getWorkspacePath(), editor).run();
+	}
+	catch (Exception ex)
+	{
+	    System.err.println(ex.getMessage());
 	}
     }
 
