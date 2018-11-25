@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import utilities.Properties;
 import model.VersionTag;
+import org.apache.commons.lang3.StringUtils;
 import static org.apache.http.util.TextUtils.isEmpty;
 
 /**
@@ -43,6 +44,8 @@ public class NextVersion extends Operation
     private final static String PARAMETER_TAGS_PATH = "TAGS_PATH";
     private final static String PARAMETER_APP_VERSION_FILE_PATH = "APP_VERSION_FILE_PATH";
     private final static String PARAMETER_APP_VERSION_FILE_PATTERN = "APP_VERSION_FILE_PATTERN";
+    private final static String PARAMETER_APP_BUILD_FILE_PATH = "APP_BUILD_FILE_PATH";
+    private final static String PARAMETER_APP_BUILD_FILE_PATTERN = "APP_BUILD_FILE_PATTERN";
     // internal
     private final static String PARAMETER_VERSION_TAG = "VERSION_TAG";
     private final static String PARAMETER_PREVIOUS_VERSION_TAG = "PREVIOUS_VERSION_TAG";
@@ -270,9 +273,7 @@ public class NextVersion extends Operation
 		String svnCommand = tryExecute("which svn");
 		if (svnCommand.length() > 0)
 		{
-		    createSubversionTag(svnCommand, getVersion(redmineManager, versionId), repositoryPath, trunkPath, tagsPath,
-			    getParameterStringArray(prop, PARAMETER_APP_VERSION_FILE_PATH, false),
-			    getParameterString(prop, PARAMETER_APP_VERSION_FILE_PATTERN, false));
+		    createSubversionTag(prop, svnCommand, getVersion(redmineManager, versionId), repositoryPath, trunkPath, tagsPath);
 		}
 		else
 		{
@@ -286,11 +287,41 @@ public class NextVersion extends Operation
 	}
     }
 
-    private void createSubversionTag(String svnCommand, Version version, String repositoryPath, String trunkPath, String tagsPath, String[] appVersionFilePaths, String appVersionFilePattern)
+    private void createSubversionTag(Properties prop, String svnCommand, Version version, String repositoryPath, String trunkPath, String tagsPath)
     {
 	if (version != null)
 	{
-	    if (appVersionFilePaths.length == 0 || updateAppVersionFile(svnCommand, version.getName(), repositoryPath, trunkPath, appVersionFilePaths, appVersionFilePattern))
+	    boolean isAppUpdated = true;
+
+	    String[] filePaths = getParameterStringArray(prop, PARAMETER_APP_BUILD_FILE_PATH, false);
+	    if (filePaths.length > 0)
+	    {
+		int build = getBuild(prop, svnCommand);
+		if (build > 0)
+		{
+		    String pattern = getParameterString(prop, PARAMETER_APP_BUILD_FILE_PATTERN, false);
+		    if (!StringUtils.isBlank(pattern))
+		    {
+			isAppUpdated = updateApp(svnCommand, build + "", repositoryPath, trunkPath, filePaths, pattern);
+		    }
+		}
+	    }
+
+	    filePaths = getParameterStringArray(prop, PARAMETER_APP_VERSION_FILE_PATH, false);
+	    if (filePaths.length > 0)
+	    {
+		String versionTag = getVersionTag(version.getName());
+		if (!StringUtils.isBlank(versionTag))
+		{
+		    String pattern = getParameterString(prop, PARAMETER_APP_VERSION_FILE_PATTERN, false);
+		    if (!StringUtils.isBlank(pattern))
+		    {
+			isAppUpdated = updateApp(svnCommand, versionTag, repositoryPath, trunkPath, filePaths, pattern);
+		    }
+		}
+	    }
+
+	    if (isAppUpdated)
 	    {
 		createSubversionTag(svnCommand, version.getName(), repositoryPath, trunkPath, tagsPath);
 	    }
@@ -349,9 +380,9 @@ public class NextVersion extends Operation
 	return false;
     }
 
-    private boolean updateAppVersionFile(String svnCommand, String versionName, String repositoryPath, String trunkPath, String[] appVersionFilePaths, String appVersionFilePattern)
+    private boolean updateApp(String svnCommand, String replace, String repositoryPath, String trunkPath, String[] files, String pattern)
     {
-	appVersionFilePaths = trimLeft(appVersionFilePaths, "/");
+	files = trimLeft(files, "/");
 
 	String localPath = getWorkingDirectory() + "/" + "tmp";
 	createFolder(localPath);
@@ -359,12 +390,12 @@ public class NextVersion extends Operation
 	localPath += "/" + trunkPath;
 	repositoryPath += "/" + trunkPath;
 
-	System.out.println("=== " + "Getting app version files into " + localPath);
+	System.out.println("=== " + "Getting app files into " + localPath);
 	if (delete(new File(localPath)) && svnCheckout(svnCommand, repositoryPath, localPath, true))
 	{
-	    svnCheckout(svnCommand, localPath, appVersionFilePaths);
-	    if (updateAppVersionFile(localPath, appVersionFilePaths, appVersionFilePattern, versionName)
-		    && svnCommit(svnCommand, localPath, "Version tag is modified for release: " + versionName))
+	    svnCheckout(svnCommand, localPath, files);
+	    if (updateAppFile(localPath, files, pattern, replace)
+		    && svnCommit(svnCommand, localPath, "App is modified for next release: " + replace))
 	    {
 		return true;
 	    }
@@ -456,29 +487,22 @@ public class NextVersion extends Operation
 	return true;
     }
 
-    private boolean updateAppVersionFile(String localPath, String[] appVersionFilePaths, String appVersionFilePattern, String versionName)
+    private boolean updateAppFile(String localPath, String[] files, String pattern, String replace)
     {
-	String versionTag = getVersionTag(versionName);
-	if (isEmpty(versionTag))
+	String[] parts = pattern.split("<>");
+	if (parts.length != 3)
 	{
-	    System.err.println("Ooops! Version tag is not recognized from version name. (" + versionName + ")");
+	    System.err.println("Ooops! Pattern is not recognized. (" + pattern + ")");
 	    return false;
 	}
+	String headPattern = parts[0];
+	String tailPattern = parts[2];
 
-	String[] pattern = appVersionFilePattern.split("<>");
-	if (pattern.length != 3 || !pattern[1].equals("VERSION_TAG"))
+	for (String file : files)
 	{
-	    System.err.println("Ooops! App version file pattern is not recognized. (" + appVersionFilePattern + ")");
-	    return false;
-	}
-	String headPattern = pattern[0];
-	String tailPattern = pattern[2];
-
-	for (String appVersionFilePath : appVersionFilePaths)
-	{
-	    if (!replaceInFile(localPath + "/" + appVersionFilePath, headPattern, versionTag, tailPattern))
+	    if (!replaceInFile(localPath + "/" + file, headPattern, replace, tailPattern))
 	    {
-		System.err.println("Ooops! Replacing version tag in app file could not be done.");
+		System.err.println("Ooops! Replacing in app file could not be done.");
 		return false;
 	    }
 	}
@@ -543,7 +567,7 @@ public class NextVersion extends Operation
 	    String temp = line.substring(0, index);
 	    temp += versionTag;
 
-	    index = line.indexOf(tailPattern);
+	    index = line.lastIndexOf(tailPattern);
 	    if (index >= 0)
 	    {
 		temp += line.substring(index);
@@ -575,6 +599,39 @@ public class NextVersion extends Operation
 	}
 
 	return path.delete();
+    }
+
+    private int getBuild(Properties prop, String svn)
+    {
+	String svnPath = trimRight(getParameterString(prop, PARAMETER_REPOSITORY_PATH, false), "/") + "/"
+		+ trimLeft(trimRight(getParameterString(prop, PARAMETER_TRUNK_PATH, false), "/"), "/");
+	String command = svn + " info " + svnPath;
+	System.out.println(command);
+	String[] output = execute(command);
+	if (output == null || output[1].length() > 0)
+	{
+	    System.err.println(output[1]);
+	    return 0;
+	}
+
+	System.out.println(output[0]);
+	String[] lines = output[0].split("\n");
+	for (String line : lines)
+	{
+	    line = line.toLowerCase();
+	    if (line.contains("revision"))
+	    {
+		String[] pair = line.split(":");
+		if (pair.length == 2 && pair[1].length() > 0)
+		{
+		    System.out.println("[i] Build: " + pair[1]);
+		    return Integer.parseInt(pair[1].trim());
+		}
+	    }
+	}
+
+	System.out.println("[e] Although svn info got correctly, no \"revision\" number was found on output!");
+	return 0;
     }
 
 }

@@ -24,7 +24,7 @@ import utilities.Open;
 public class heybot
 {
 
-    private final static String VERSION = "1.27.0.1";
+    private final static String VERSION = "1.28.0.0";
     private static final String NEWLINE = System.getProperty("line.separator");
 
     public static void main(String[] args)
