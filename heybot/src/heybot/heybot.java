@@ -18,13 +18,14 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.http.util.TextUtils;
 import org.apache.commons.io.comparator.NameFileComparator;
+import utilities.Copy;
 import utilities.Editor;
 import utilities.Open;
 
 public class heybot
 {
 
-    private final static String VERSION = "1.28.0.3";
+    private final static String VERSION = "1.29.0.0";
     private static final String NEWLINE = System.getProperty("line.separator");
 
     public static void main(String[] args)
@@ -87,6 +88,10 @@ public class heybot
 	else if (line.hasOption("editor"))
 	{
 	    setDefaultEditor(line.getOptionValue("editor"));
+	}
+	else if (line.hasOption("copy"))
+	{
+	    copyOperation(line);
 	}
 	else
 	{
@@ -291,6 +296,8 @@ public class heybot
 	Option editor = new Option("e", "editor", true, "Sets default external editor used when a file needs to be viewed or edited.");
 	editor.setOptionalArg(true);
 	options.addOption(editor);
+
+	options.addOption(new Option("c", "copy", true, "Copies an operation file as a new operation file in workspace."));
 
 	return options;
     }
@@ -500,6 +507,18 @@ public class heybot
 	try
 	{
 	    new Editor(getWorkspacePath(), editor).run();
+	}
+	catch (Exception ex)
+	{
+	    System.err.println(ex.getMessage());
+	}
+    }
+
+    private static void copyOperation(CommandLine line)
+    {
+	try
+	{
+	    new Copy(getWorkspacePath(), line).run();
 	}
 	catch (Exception ex)
 	{
