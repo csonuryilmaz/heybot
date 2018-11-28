@@ -101,7 +101,7 @@ public class Upload extends Operation
     {
 	try
 	{
-	    return "(" + InetAddress.getByName("www.example.com").getHostAddress() + ")";
+	    return " (" + InetAddress.getByName(host).getHostAddress() + ")";
 	}
 	catch (UnknownHostException ex)
 	{
