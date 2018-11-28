@@ -11,6 +11,8 @@ import com.jcraft.jsch.SftpProgressMonitor;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import utilities.Properties;
@@ -50,96 +52,75 @@ public class Upload extends Operation
     {
 	if (areMandatoryParametersNotEmpty(prop))
 	{
-	    String sftpHost = getParameterString(prop, PARAMETER_HOST, false);
+	    String[] sftpHosts = getParameterStringArray(prop, PARAMETER_HOST, false);
 	    String sftpUser = getParameterString(prop, PARAMETER_USERNAME, false);
 	    String sftpPass = getParameterString(prop, PARAMETER_PASSWORD, false);
 	    String sftpTargetDir = getParameterString(prop, PARAMETER_REMOTE_PATH, false);
 	    String sftpSourceDir = getParameterString(prop, PARAMETER_SOURCE_PATH, false);
-	    String revision = "";// @todo
 
 	    if (sftpSourceDir == null || sftpSourceDir.length() == 0)
-	    {// try to assign default argument
+	    {
 		sftpSourceDir = tryExecute("pwd");
 	    }
 	    String svnCommand = tryExecute("which svn");
-	    // ---- some log
-	    System.out.println("Using default SFTP port: " + SFTPPORT);
-	    System.out.println("Using --source-directory: " + sftpSourceDir);
-	    System.out.println("Using SVN command:" + svnCommand);
-
-	    if (svnCommand.length() == 0)// check svn command
+	    if (svnCommand.length() == 0)
 	    {
 		System.err.println("Ooops! Couldn't find SVN command.");
 	    }
-	    else if (sftpSourceDir.length() == 0)// check source directory
+	    else if (sftpSourceDir.length() == 0)
 	    {
 		System.err.println("Ooops! Couldn't find/detect any --source-directory.");
 	    }
 	    else
 	    {
-		String repoRootDir = tryGetRepoRootDir(svnCommand, sftpSourceDir);
-		if (repoRootDir.length() == 0)// check repo root dir
-		{
-		    System.err.println("Ooops! Couldn't get repository Relative URL.");
-		}
-		else
-		{
-		    // ---- some log
-		    System.out.println("Using repo relative URL: " + repoRootDir);
-		    // let's send changes baby :)
-		    start(sftpHost, sftpTargetDir, sftpUser, sftpPass, sftpSourceDir, revision, svnCommand, repoRootDir);
-		}
+		System.out.println("[i] SFTP Port: " + SFTPPORT);
+		System.out.println("[i] Svn Client: " + svnCommand);
+		System.out.println("[i] Source: " + sftpSourceDir);
+		start(sftpHosts, sftpTargetDir, sftpUser, sftpPass, sftpSourceDir, svnCommand);
 	    }
 	}
     }
 
-    //<editor-fold defaultstate="collapsed" desc="SFTP SEND">
-    private void start(String sftpHost, String sftpTargetDir, String sftpUser, String sftpPass, String sftpSourceDir, String revision, String svnCommand, String repoRootDir)
+    private void start(String[] sftpHosts, String sftpTargetDir, String sftpUser, String sftpPass, String sftpSourceDir, String svnCommand)
     {
 	System.out.println();
 	System.out.println("==========================[ SVN ]==========================");
-	String changes;
-	boolean absPath = true;
-	if (revision != null && revision.length() > 0)
-	{// specific revision
-	    changes = tryExecute(svnCommand + " log -v -r " + revision + " " + sftpSourceDir);
-	    System.out.println(changes);
-	    // trim trash data from changes
-	    String pattern = "Changed paths:";
-	    int i = changes.indexOf(pattern);
-	    if (i >= 0)
-	    {
-		changes = changes.substring(i + pattern.length());
-		absPath = false;
-	    }
-	    else
-	    {
-		System.out.println("There is no change in revision to upload!");
-		System.exit(0);
-	    }
-	}
-	else
+	String changes = tryExecute(svnCommand + " st " + sftpSourceDir);
+	System.out.println(changes);
+	for (String sftpHost : sftpHosts)
 	{
-	    changes = tryExecute(svnCommand + " st " + sftpSourceDir);
-	    absPath = true;
-	    System.out.println(changes);
+	    System.out.println("==========================[ FTP ]==========================");
+	    System.out.println("[i] Host: " + sftpHost + getHostIPAddress(sftpHost));
+	    System.out.println("[i] Path: " + sftpTargetDir);
+	    System.out.println();
+	    upload(changes, sftpHost, sftpUser, sftpPass, sftpTargetDir, sftpSourceDir);
 	}
-	System.out.println("==========================[ FTP ]==========================");
-	upload(changes, absPath, sftpHost, sftpUser, sftpPass, sftpTargetDir, sftpSourceDir, repoRootDir);
+    }
+    
+    private String getHostIPAddress(String host)
+    {
+	try
+	{
+	    return "(" + InetAddress.getByName("www.example.com").getHostAddress() + ")";
+	}
+	catch (UnknownHostException ex)
+	{
+	    return "";
+	}
     }
 
-    private void upload(String changes, boolean absPath, String sftpHost, String sftpUser, String sftpPass, String sftpTargetDir, String sftSourceDir, String repoRootDir)
+    private void upload(String changes, String sftpHost, String sftpUser, String sftpPass, String sftpTargetDir, String sftSourceDir)
     {
 	if (!sftSourceDir.endsWith("/"))
-	{// append last /
+	{
 	    sftSourceDir += "/";
 	}
 
-	Session session = null;
-	Channel channel = null;
-	ChannelSftp channelSftp = null;
 	try
 	{
+	    Session session;
+	    Channel channel;
+	    ChannelSftp channelSftp;
 
 	    JSch jsch = new JSch();
 	    session = jsch.getSession(sftpUser, sftpHost, SFTPPORT);
@@ -157,22 +138,20 @@ public class Upload extends Operation
 	    String operation, fileordir;
 	    for (String row : rows)
 	    {
-		// check first column
 		if (row.length() > 0 && row.substring(0, 1).equals(" "))
-		{// empty! (only directory metadata change)
+		{
 		    continue;
 		}
 
 		row = row.trim();
 		if (row.length() == 0)
-		{// pass empty rows
+		{
 		    continue;
 		}
 
 		int fs = row.indexOf("/");
 		if (fs > 0)
 		{
-		    // check first column for operation
 		    operation = row.substring(0, 1);
 		    fileordir = row.substring(fs).trim();
 
@@ -180,11 +159,6 @@ public class Upload extends Operation
 		    if (ei > 0)
 		    {
 			fileordir = fileordir.substring(0, ei).trim();
-		    }
-
-		    if (!absPath)
-		    {// modify path to be absolute local path
-			fileordir = sftSourceDir + fileordir.replace(repoRootDir, "");
 		    }
 
 		    if (operation.equals("A") || operation.equals("?"))
@@ -200,12 +174,12 @@ public class Upload extends Operation
 			delete(channelSftp, fileordir, sftSourceDir);
 		    }
 		    else
-		    {// unknown operation || end of modifications
+		    {
 			break;
 		    }
 		}
 		else
-		{// end of modifications
+		{
 		    break;
 		}
 	    }
@@ -401,9 +375,7 @@ public class Upload extends Operation
 	    }
 	}
     }
-//</editor-fold>
 
-    //<editor-fold defaultstate="collapsed" desc="sftp put progress monitor">
     public class UploadProgressMonitor implements SftpProgressMonitor
     {
 
@@ -430,6 +402,4 @@ public class Upload extends Operation
 	    System.out.println(" " + total + " bytes [✓]");
 	}
     }
-
-//</editor-fold>
 }
