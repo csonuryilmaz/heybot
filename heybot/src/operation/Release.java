@@ -201,26 +201,34 @@ public class Release extends Operation
 	System.out.println("* Sending slack notification ... ");
 	String slackWebHookUrl = getParameterString(prop, PARAMETER_NOTIFY_SLACK, false);
 
-	StringBuilder summary = new StringBuilder(getParameterString(prop, PARAMETER_DESCRIPTION, false).trim());
+	StringBuilder summary = new StringBuilder();
+	
+	String description = getParameterString(prop, PARAMETER_DESCRIPTION, false).trim();
+	String splitter = getParameterString(prop, PARAMETER_EMAIL_BODY_RELEASE_NOTES_SPLITTER, false);
+	if (!StringUtils.isBlank(splitter))
+	{
+	    description = description.replace(splitter, "\n :pushpin: ");
+	}
+	summary.append(description);
 	summary.append("\n");
 	String dbModifications = getParameterString(prop, PARAMETER_DB_MODIFICATIONS, false);
 	if (!isEmpty(dbModifications))
 	{
-	    summary.append("Has database schema migrations: \n");
+	    summary.append("\n");
+	    summary.append(":scroll: Has database schema migrations: \n");
 	    appendSlackSummaryMigrations(summary, getMigrations(dbModifications));
 	}
 
 	Attachment attachment = Attachment.builder().text(summary.toString())
-		.pretext("Cheers! <" + redmineUrl + "/versions/" + version.getId() + "|" + version.getName() + "> is released.")
+		.pretext(":tada: Cheers! <" + redmineUrl + "/versions/" + version.getId() + "|" + version.getName() + "> is released.")
 		.authorName(version.getProjectName())
 		.color("#FF8000")
-		.fallback("Cheers! " + version.getName() + " is released.")
-		.title(issues.length + " issues(s) fixed.")
+		.fallback(":tada: Cheers! " + version.getName() + " is released.")
+		.title(issues.length + " issue(s) fixed.")
 		.footer("onur.yilmaz@kitapyurdu.com" + " | " + dateTimeFormat.format(new Date()))
-		.fields(new ArrayList<Field>())
+		.fields(new ArrayList<>())
 		.build();
 
-	// empty line
 	attachment.getFields().add(Field.builder()
 		.title("")
 		.valueShortEnough(false).build());
@@ -228,8 +236,9 @@ public class Release extends Operation
 	for (Issue issue : issues)
 	{
 	    attachment.getFields().add(Field.builder()
-		    .title("#" + issue.getId() + " - " + issue.getTracker().getName() + " (" + issue.getPriorityText() + ")")
-		    .value("<" + redmineUrl + "/issues/" + issue.getId() + "|:link:> " + issue.getSubject())
+		    .title("#" + issue.getId() + " - " + issue.getTracker().getName().toLowerCase())
+		    .value("<" + redmineUrl + "/issues/" + issue.getId() + "|:spider_web:> ["
+			    + issue.getPriorityText().toLowerCase() + "] " + issue.getSubject())
 		    .valueShortEnough(false).build());
 	}
 
