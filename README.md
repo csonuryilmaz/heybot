@@ -1,6 +1,6 @@
 # heybot
 
-[![GitHub stars](https://img.shields.io/github/stars/csonuryilmaz/heybot.svg?style=social&label=Star)](http://bit.ly/2ROXHzb)   [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)   [![Issues](https://img.shields.io/github/issues/csonuryilmaz/heybot.svg)](https://github.com/csonuryilmaz/heybot/issues)   [![Latest](https://img.shields.io/badge/release-v1.29.0.1-red.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)   [![GitHub Releases](https://img.shields.io/github/downloads/csonuryilmaz/heybot/latest/total.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)
+[![GitHub stars](https://img.shields.io/github/stars/csonuryilmaz/heybot.svg?style=social&label=Star)](http://bit.ly/2ROXHzb)   [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)   [![Issues](https://img.shields.io/github/issues/csonuryilmaz/heybot.svg)](https://github.com/csonuryilmaz/heybot/issues)   [![Latest](https://img.shields.io/badge/release-v1.29.0.2-red.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)   [![GitHub Releases](https://img.shields.io/github/downloads/csonuryilmaz/heybot/latest/total.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)
 
 ### Table of Contents
   1. [Introduction](#1-introduction)  
