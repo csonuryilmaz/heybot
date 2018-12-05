@@ -59,8 +59,10 @@ public class EmailSender
 	    transport.connect(host, username, password);
 
 	    MimeMessage msg = new MimeMessage(session);
+	    System.out.println("[i] List of recipients for e-mail notification:");
 	    for (String recipient : recipients)
 	    {
+		System.out.println("[.] \t" + recipient);
 		msg.addRecipient(Message.RecipientType.BCC, new InternetAddress(recipient, recipient, "ISO-8859-9"));
 	    }
 	    msg.setFrom(new InternetAddress(username, username, "ISO-8859-9"));
@@ -81,17 +83,10 @@ public class EmailSender
 	    mp.addBodyPart(mbp1);
 	    msg.setContent(mp);
 
+	    System.out.println("[i] Subject: " + subject);
 	    transport.sendMessage(msg, msg.getAllRecipients());
 	}
-	catch (MessagingException ex)
-	{
-	    throw new Exception("Smtp sending error!" + ex.getMessage());
-	}
-	catch (UnsupportedEncodingException ex)
-	{
-	    throw new Exception("Smtp sending error!" + ex.getMessage());
-	}
-	catch (IOException ex)
+	catch (MessagingException | IOException ex)
 	{
 	    throw new Exception("Smtp sending error!" + ex.getMessage());
 	}

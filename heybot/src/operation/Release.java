@@ -336,7 +336,7 @@ public class Release extends Operation
 	String[] recipients = getParameterStringArray(prop, PARAMETER_NOTIFY_EMAIL, true);
 	if (recipients.length > 0)
 	{
-	    System.out.println("* Sending email notification ... ");
+	    System.out.println("[*] Sending email notification ... ");
 	    try
 	    {
 		emailSender = new EmailSender(
@@ -349,7 +349,7 @@ public class Release extends Operation
 		);
 
 		emailSender.send(recipients, getSubject(releaseType, version, issues), getBody(releaseType, version, issues, redmineUrl));
-		System.out.println("|_> Done.");
+		System.out.println("[✓] Done.");
 	    }
 	    catch (Exception ex)
 	    {
