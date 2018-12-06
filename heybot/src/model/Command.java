@@ -13,7 +13,11 @@ public class Command
 
     public Command(String command)
     {
-	this.command = command.split(" ");
+	this.command = command.split("(?<!\\\\)\\s+");
+	for (int i = 0; i < this.command.length; i++)
+	{
+	    this.command[i] = this.command[i].replace("\\", "");
+	}
     }
 
     public Command(String[] command)
