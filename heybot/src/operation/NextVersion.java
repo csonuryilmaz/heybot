@@ -13,10 +13,14 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.Scanner;
 import utilities.Properties;
 import model.VersionTag;
 import org.apache.commons.lang3.StringUtils;
 import static org.apache.http.util.TextUtils.isEmpty;
+import org.apache.velocity.VelocityContext;
+import org.apache.velocity.app.Velocity;
 
 /**
  *
@@ -44,8 +48,10 @@ public class NextVersion extends Operation
     private final static String PARAMETER_TAGS_PATH = "TAGS_PATH";
     private final static String PARAMETER_APP_VERSION_FILE_PATH = "APP_VERSION_FILE_PATH";
     private final static String PARAMETER_APP_VERSION_FILE_PATTERN = "APP_VERSION_FILE_PATTERN";
+    private final static String PARAMETER_APP_VERSION_FILE_UPCMD = "APP_VERSION_FILE_UPCMD";
     private final static String PARAMETER_APP_BUILD_FILE_PATH = "APP_BUILD_FILE_PATH";
     private final static String PARAMETER_APP_BUILD_FILE_PATTERN = "APP_BUILD_FILE_PATTERN";
+    private final static String PARAMETER_APP_BUILD_FILE_UPCMD = "APP_BUILD_FILE_UPCMD";
     // internal
     private final static String PARAMETER_VERSION_TAG = "VERSION_TAG";
     private final static String PARAMETER_PREVIOUS_VERSION_TAG = "PREVIOUS_VERSION_TAG";
@@ -304,6 +310,12 @@ public class NextVersion extends Operation
 		    {
 			isAppUpdated = updateApp(svnCommand, build + "", repositoryPath, trunkPath, filePaths, pattern);
 		    }
+                    String upCmd = getParameterString(prop, PARAMETER_APP_BUILD_FILE_UPCMD, false);
+                    if (!StringUtils.isBlank(upCmd))
+                    {
+                        upCmd = fillUpCmdWithBuild(upCmd, build + "", trunkPath, filePaths[0]);
+                        isAppUpdated = updateApp(svnCommand, upCmd, repositoryPath, trunkPath, filePaths[0]);
+                    }
 		}
 	    }
 
@@ -318,6 +330,12 @@ public class NextVersion extends Operation
 		    {
 			isAppUpdated = updateApp(svnCommand, versionTag, repositoryPath, trunkPath, filePaths, pattern);
 		    }
+                    String upCmd = getParameterString(prop, PARAMETER_APP_VERSION_FILE_UPCMD, false);
+                    if (!StringUtils.isBlank(upCmd))
+                    {
+                        upCmd = fillUpCmdWithVersion(upCmd, versionTag, trunkPath, filePaths[0]);
+                        isAppUpdated = updateApp(svnCommand, upCmd, repositoryPath, trunkPath, filePaths[0]);
+                    }
 		}
 	    }
 
@@ -469,22 +487,31 @@ public class NextVersion extends Operation
 	return true;
     }
 
-    private boolean svnCommit(String svnCommand, String workingDirPath, String comment)
-    {
-	String[] command = new String[]
-	{
-	    svnCommand, "commit", workingDirPath, "-m", comment
-	};
-	System.out.println(svnCommand + " commit " + workingDirPath + " -m \"" + comment + "\"");
-	String[] output = execute(command);
-	if (output == null || output[1].length() > 0)
-	{
-	    System.err.println(output[1]);
-	    return false;
-	}
-
-	System.out.println(output[0]);
-	return true;
+    private boolean svnCommit(String svnCommand, String workingDirPath, String comment) {
+        String[] command = new String[]{
+            svnCommand, "diff", workingDirPath
+        };
+        System.out.println(svnCommand + " diff " + workingDirPath);
+        String[] output = execute(command);
+        System.out.println(output[0]);
+        System.out.println(output[1]);
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("[?] Would you like to commit app modifications to repository? (Y/n) ");
+        String answer = scanner.next();
+        if (!isEmpty(answer) && (answer.charAt(0) == 'Y' || answer.charAt(0) == 'y')) {
+            command = new String[]{
+                svnCommand, "commit", workingDirPath, "-m", comment
+            };
+            System.out.println(svnCommand + " commit " + workingDirPath + " -m \"" + comment + "\"");
+            output = execute(command);
+            if (output == null || output[1].length() > 0) {
+                System.err.println(output[1]);
+                return false;
+            }
+            System.out.println(output[0]);
+            return true;
+        }
+        return true;
     }
 
     private boolean updateAppFile(String localPath, String[] files, String pattern, String replace)
@@ -632,6 +659,56 @@ public class NextVersion extends Operation
 
 	System.out.println("[e] Although svn info got correctly, no \"revision\" number was found on output!");
 	return 0;
+    }
+
+    private String fillUpCmdWithBuild(String upCmd, String build, String trunkPath, String filePath) {
+        Velocity.init();
+
+        VelocityContext context = new VelocityContext();
+        context.put("file", getWorkingDirectory() + "/" + "tmp" + "/" + trunkPath + "/" + filePath);
+        context.put("build", build);
+
+        StringWriter writer = new StringWriter();
+        Velocity.evaluate(context, writer, "TemplateName", upCmd);
+        return writer.toString();
+    }
+    
+    private String fillUpCmdWithVersion(String upCmd, String version, String trunkPath, String filePath) {
+        Velocity.init();
+
+        VelocityContext context = new VelocityContext();
+        context.put("file", getWorkingDirectory() + "/" + "tmp" + "/" + trunkPath + "/" + filePath);
+        context.put("version", version);
+
+        StringWriter writer = new StringWriter();
+        Velocity.evaluate(context, writer, "TemplateName", upCmd);
+        return writer.toString();
+    }
+    
+    private boolean updateApp(String svnCommand, String upCmd, String repositoryPath, String trunkPath, String file) {
+        file = trimLeft(file, "/");
+
+        String localPath = getWorkingDirectory() + "/" + "tmp";
+        createFolder(localPath);
+
+        localPath += "/" + trunkPath;
+        repositoryPath += "/" + trunkPath;
+
+        System.out.println("=== " + "Getting app files into " + localPath);
+        if (delete(new File(localPath)) && svnCheckout(svnCommand, repositoryPath, localPath, true)) {
+            svnCheckout(svnCommand, localPath, new String[]{file});
+            String[] upCmdResult = execute(upCmd);
+            System.out.println(upCmdResult[0]);
+            System.out.println(upCmdResult[1]);
+            System.out.println("Exit Code: " + upCmdResult[2]);
+            if (upCmdResult[2].equals("0") && svnCommit(svnCommand, localPath, "App version/build is modified.")) {
+                return true;
+            }
+        } else {
+            System.err.println("Ooops! Checkout " + trunkPath + " could not be done!");
+        }
+
+        return false;
     }
 
 }

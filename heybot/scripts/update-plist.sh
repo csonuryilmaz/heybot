@@ -5,17 +5,21 @@
 
 set -e
 
+for i; do 
+    echo $i 
+done
+
 VERSION="CFBundleShortVersionString"
 BUILD="CFBundleVersion"
 
 if [[ ! -e $1 ]]; then
     echo "[e] Arg(1): Wrong file path. File not found!"
-    exit 255;
+    exit -1;
 fi
 
 if [ "$3" != $VERSION ] && [ "$3" != $BUILD ]; then
   echo "[e] Arg(3): Wrong pattern. "$VERSION" or "$BUILD" should be given."
-  exit 255;
+  exit -1;
 fi
 
 PATTERN="<key>"$3"</key>"
@@ -34,3 +38,4 @@ tail -n $(( $TOTAL-($LINE+1) )) $1 >> $1"_tmp"
 echo "[*] Replacing old file with new one ..."
 mv $1"_tmp" $1
 printf "[\xE2\x9C\x94] Modified.\n"
+exit 0;

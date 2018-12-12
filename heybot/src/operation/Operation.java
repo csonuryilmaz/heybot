@@ -160,9 +160,10 @@ public abstract class Operation
 	InputStream ns = process.getInputStream();// normal output stream
 	InputStream es = process.getErrorStream();// error output stream
 
-	String[] output = new String[2];
+	String[] output = new String[3];
 	output[0] = read(ns);
 	output[1] = read(es);
+        output[2] = r + "";
 
 	ns.close();
 	es.close();
