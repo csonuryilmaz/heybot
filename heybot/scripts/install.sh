@@ -38,7 +38,8 @@ removeOldHeybot()
 install()
 {
     echo "[*] Installing ... "
-    sudo ln -s $PWD/heybot.run /usr/local/bin/heybot && sudo chmod +x /usr/local/bin/heybot && printf "[\xE2\x9C\x94] Installed! \\o/ \n"
+    DIRECTORY=`dirname $0`
+    sudo ln -s $DIRECTORY/heybot.run /usr/local/bin/heybot && sudo chmod +x /usr/local/bin/heybot && printf "[\xE2\x9C\x94] Installed! \\o/ \n"
     exit 0
 }
 
