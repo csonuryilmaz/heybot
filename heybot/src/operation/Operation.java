@@ -793,13 +793,14 @@ public abstract class Operation
 	return output == null || (output[1].length() == 0 && output[0].length() == 0);
     }
 
-    protected void createFolder(String folderName)
+    protected boolean createFolder(String folderName)
     {
 	File folder = new File(folderName);
 	if (!folder.exists())
 	{
-	    folder.mkdir();
+	    return folder.mkdir();
 	}
+        return true;
     }
 
     protected void sleep(int miliSeconds)

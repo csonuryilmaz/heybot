@@ -432,15 +432,20 @@ public class BeginIssue extends Operation
 		String branchPath = workspacePath + "/" + "i" + issue.getId();
 		if (deleteIfExists(branchPath))
 		{
-		    createFolder(branchPath);
-		    branchPath += "/" + cache.getName();
-		    copy(cache.getAbsolutePath(), branchPath);
-		    repositoryPath += "/" + trimLeft(trimRight(getParameterString(prop, PARAMETER_BRANCHES_PATH, false), "/"), "/");
-		    repositoryPath += "/" + "i" + issue.getId() + "/" + cache.getName();
-		    if (svnSwitch(tryExecute("which svn"), repositoryPath, branchPath))
-		    {
-			System.out.println("[✓] Local working copy is ready. \\o/");
-		    }
+		    if (createFolder(branchPath)) {
+                        branchPath += "/" + cache.getName();
+                        copy(cache.getAbsolutePath(), branchPath);
+                        repositoryPath += "/" + trimLeft(trimRight(getParameterString(prop, PARAMETER_BRANCHES_PATH, false), "/"), "/");
+                        repositoryPath += "/" + "i" + issue.getId() + "/" + cache.getName();
+                        if (svnSwitch(tryExecute("which svn"), repositoryPath, branchPath)) {
+                            System.out.println("[✓] Local working copy is ready. \\o/");
+                        }
+                    } else {
+                        System.err.println("[e] Local working copy could not be created!");
+                        System.err.println("[e] Please check whether workspace path exists.");
+                        System.err.println("[e] " + branchPath);
+                        System.exit(-1);
+                    }
 		}
 	    }
 	}
