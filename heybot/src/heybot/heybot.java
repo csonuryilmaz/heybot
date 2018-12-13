@@ -2,7 +2,6 @@ package heybot;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Locale;
@@ -25,13 +24,15 @@ import utilities.Open;
 public class heybot
 {
 
-    private final static String VERSION = "1.29.1.2";
+    private final static String VERSION = "1.29.2.2";
     private static final String NEWLINE = System.getProperty("line.separator");
+    public static final String WORKSPACE = System.getProperty("user.home") + "/.heybot/workspace";
 
     public static void main(String[] args)
     {
 	printLogo();
 	printVersion();
+	createWorkspaceIfNotExists();
 
 	if (args.length > 0)
 	{
@@ -101,12 +102,12 @@ public class heybot
 
     private static void listAllOperations()
     {
-	listFiles(new File(getWorkspacePath()).listFiles((File dir, String name) -> name.toLowerCase().endsWith(".hb")));
+	listFiles(new File(WORKSPACE).listFiles((File dir, String name) -> name.toLowerCase().endsWith(".hb")));
     }
 
     private static void listOperationsStartsWith(String prefix)
     {
-	listFiles(new File(getWorkspacePath()).listFiles((File dir, String name) -> name.toLowerCase().startsWith(prefix.toLowerCase()) && name.toLowerCase().endsWith(".hb")));
+	listFiles(new File(WORKSPACE).listFiles((File dir, String name) -> name.toLowerCase().startsWith(prefix.toLowerCase()) && name.toLowerCase().endsWith(".hb")));
     }
 
     private static void listFiles(File[] files)
@@ -240,22 +241,22 @@ public class heybot
 	}
 	else
 	{
-	    return getWorkspacePath() + "/" + hbFile;
+	    return WORKSPACE + "/" + hbFile;
 	}
     }
 
-    private static String getWorkspacePath()
+    private static void createWorkspaceIfNotExists()
     {
-	try
+	File workspace = new File(WORKSPACE);
+	if (!workspace.exists())
 	{
-	    return new java.io.File(heybot.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath()).getParent() + "/workspace";
+	    if (!workspace.mkdirs())
+	    {
+		System.err.println("[e] Workspace folder not found and could not be created!");
+		System.err.println("[e] " + workspace.getAbsolutePath());
+		System.exit(-1);
+	    }
 	}
-	catch (URISyntaxException ex)
-	{
-	    System.err.println("Ooops! URISyntaxException caught." + ex.getMessage());
-	}
-
-	return "";
     }
 
     //<editor-fold defaultstate="collapsed" desc="help">
@@ -361,7 +362,7 @@ public class heybot
     {
 	try
 	{
-	    String hbFile = getWorkspacePath() + "/" + getFileName(operation);
+	    String hbFile = WORKSPACE + "/" + getFileName(operation);
 
 	    Properties prop = new Properties();
 	    prop.load(hbFile);
@@ -432,7 +433,7 @@ public class heybot
     {
 	try
 	{
-	    String hbFile = getWorkspacePath() + "/" + getFileName(operation);
+	    String hbFile = WORKSPACE + "/" + getFileName(operation);
 
 	    Properties prop = new Properties();
 	    prop.load(hbFile);
@@ -474,7 +475,7 @@ public class heybot
     {
 	try
 	{
-	    new Open(getWorkspacePath(), getFileName(operation)).run();
+	    new Open(WORKSPACE, getFileName(operation)).run();
 	}
 	catch (Exception ex)
 	{
@@ -484,7 +485,7 @@ public class heybot
 
     private static void removeOperation(String operation)
     {
-	File hbFile = new File(getWorkspacePath() + "/" + getFileName(operation));
+	File hbFile = new File(WORKSPACE + "/" + getFileName(operation));
 	if (hbFile.exists())
 	{
 	    if (hbFile.isFile() && hbFile.delete())
@@ -506,7 +507,7 @@ public class heybot
     {
 	try
 	{
-	    new Editor(getWorkspacePath(), editor).run();
+	    new Editor(WORKSPACE, editor).run();
 	}
 	catch (Exception ex)
 	{
@@ -518,7 +519,7 @@ public class heybot
     {
 	try
 	{
-	    new Copy(getWorkspacePath(), line).run();
+	    new Copy(WORKSPACE, line).run();
 	}
 	catch (Exception ex)
 	{

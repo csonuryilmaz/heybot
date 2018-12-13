@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="1.29.1.2"
+VERSION="1.29.2.2"
 RELEASE_PATH="../release/heybot-$VERSION"
 
 if [ -d "$RELEASE_PATH" ]; then
@@ -12,7 +12,6 @@ echo "[*] Listing ../dist/ directory ... "
 ls -lh ../dist/
 echo "[*] Packaging ... "
 cp -R ../dist/* "$RELEASE_PATH/"
-mkdir "$RELEASE_PATH/workspace"
 cp -R ../templates "$RELEASE_PATH/"
 cp ./heybot.run "$RELEASE_PATH/"
 cat "$RELEASE_PATH/heybot.run" "$RELEASE_PATH/heybot.jar" > "$RELEASE_PATH/heybot.final" && chmod +x "$RELEASE_PATH/heybot.final"

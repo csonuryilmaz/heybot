@@ -18,7 +18,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URISyntaxException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -703,14 +702,7 @@ public abstract class Operation
 
     protected String getWorkingDirectory()
     {
-	try
-	{
-	    return new java.io.File(heybot.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath()).getParent();
-	}
-	catch (URISyntaxException ex)
-	{
-	    return "";
-	}
+	return heybot.WORKSPACE;
     }
 
     protected Issue[] getVersionIssues(RedmineManager redmineManager, Version version)

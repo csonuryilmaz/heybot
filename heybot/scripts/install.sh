@@ -6,56 +6,43 @@ strIndex()
     [[ "$x" = "$1" ]] && echo -1 || echo "${#x}"
 }
 
-tryGetHeybotOldPath()
+removeOldHeybot()
 {
+    echo "[*] Finding old heybot installation ..."
     HEYBOT_OLD_PATH=$(ls -lh /usr/local/bin | grep heybot | awk '{print $(NF-1), $NF}' | tail -1)
-    echo "-- Heybot old working path:"
-    [[ !  -z  $HEYBOT_OLD_PATH  ]] && echo $HEYBOT_OLD_PATH || echo "Not found."
-}
-
-findPreviousFolders()
-{
-    FIRST_INDEX_OF_SLASH=$(strIndex "${HEYBOT_OLD_PATH}" "/")
-    HEYBOT_RUN_FILE="${HEYBOT_OLD_PATH##*/}"
-    LAST_INDEX_OF_SLASH=$(strIndex "${HEYBOT_OLD_PATH}" "/${HEYBOT_RUN_FILE}")
-
-    HEYBOT_OLD_FOLDER=$(echo "${HEYBOT_OLD_PATH}" | cut -c $FIRST_INDEX_OF_SLASH-$LAST_INDEX_OF_SLASH)
-
-    HEYBOT_OLD_WORKSPACE="${HEYBOT_OLD_FOLDER}/workspace"
-    HEYBOT_OLD_CACHE="${HEYBOT_OLD_FOLDER}/cache"
-
-    echo "[i] Previous installation user folders:"
-    echo $HEYBOT_OLD_WORKSPACE
-    echo $HEYBOT_OLD_CACHE
-}
-
-copyPreviousFoldersIntoCurrent()
-{
-    echo "[*] Copying user folders from previous installation ..."
-    echo $HEYBOT_OLD_WORKSPACE
-    rsync -ah --stats --ignore-existing $HEYBOT_OLD_WORKSPACE $(pwd)
-    echo $HEYBOT_OLD_CACHE
-    rsync -ah --stats --ignore-existing $HEYBOT_OLD_CACHE $(pwd)
-    printf "[\xE2\x9C\x94] Copied.\n"
-}
-
-removePreviousInstallation()
-{
-    echo "[*] Removing previous installation ..."
-    sudo rm -f /usr/local/bin/heybot
-    sudo rm -Rf $HEYBOT_OLD_FOLDER
-    printf "[\xE2\x9C\x94] Removed.\n"
+    if [[ ! -z  $HEYBOT_OLD_PATH ]]; then 
+	FIRST_INDEX_OF_SLASH=$(strIndex "${HEYBOT_OLD_PATH}" "/")
+	HEYBOT_RUN_FILE="${HEYBOT_OLD_PATH##*/}"
+	LAST_INDEX_OF_SLASH=$(strIndex "${HEYBOT_OLD_PATH}" "/${HEYBOT_RUN_FILE}")
+	HEYBOT_OLD_FOLDER=$(echo "${HEYBOT_OLD_PATH}" | cut -c $FIRST_INDEX_OF_SLASH-$LAST_INDEX_OF_SLASH)
+	HEYBOT_OLD_FOLDER="$(echo -e "${HEYBOT_OLD_FOLDER}" | sed -e 's/^[[:space:]]*//')"
+	echo "[i] "$HEYBOT_OLD_FOLDER
+	read -p "[?] Removing old heybot installation. Are you sure? (y/n) " -n 1 -r
+	if [[ $REPLY =~ ^[Yy]$ ]]; then
+	    echo ""
+	    echo "[*] Removing old heybot installation ..."
+	    sudo rm -f /usr/local/bin/heybot
+	    sudo rm -Rf $HEYBOT_OLD_FOLDER
+	    if [ -d "$HEYBOT_OLD_FOLDER" ]; then
+		echo "[w] Could not be removed!"
+	    else
+		printf "[\xE2\x9C\x94] Removed.\n"
+	    fi
+	fi
+	echo ""
+    else
+	echo "[i] Not found."
+    fi
 }
 
 install()
 {
-    echo "[*] Installing new version ... "
+    echo "[*] Installing ... "
     sudo ln -s $PWD/heybot.run /usr/local/bin/heybot && sudo chmod +x /usr/local/bin/heybot && printf "[\xE2\x9C\x94] Installed! \\o/ \n"
     exit 0
 }
 
-tryGetHeybotOldPath
-[[ !  -z  $HEYBOT_OLD_PATH  ]] && findPreviousFolders && copyPreviousFoldersIntoCurrent && removePreviousInstallation
+removeOldHeybot
 
 echo "[*] Checking whether java is installed? ..."
 if type -p java; then
