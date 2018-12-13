@@ -12,7 +12,6 @@ import com.taskadapter.redmineapi.bean.Project;
 import com.taskadapter.redmineapi.bean.SavedQuery;
 import com.taskadapter.redmineapi.bean.Tracker;
 import com.taskadapter.redmineapi.bean.Version;
-import heybot.heybot;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -702,7 +701,7 @@ public abstract class Operation
 
     protected String getWorkingDirectory()
     {
-	return heybot.WORKSPACE;
+	return System.getProperty("user.home") + "/.heybot";
     }
 
     protected Issue[] getVersionIssues(RedmineManager redmineManager, Version version)

@@ -11,12 +11,15 @@ import com.jcraft.jsch.SftpProgressMonitor;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import utilities.Properties;
 import java.util.Vector;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Operation: upload
@@ -199,10 +202,20 @@ public class Upload extends Operation
 	System.out.println("[I] " + path);
 
 	File f = new File(path);
+	int permissions = 0;
+	if (f.isDirectory() && f.exists())
+	{
+	    String[] result = execute(new String[]{"stat", "-c","%a %n", f.getAbsolutePath()});
+	    permissions = result[2].equals("0") ? Integer.parseInt(result[0].split(" ")[0],8) : 0;
+	}
 	path = path.replace(sftSourceDir, "");// relative path
 	if (f.isDirectory())
 	{
 	    makeDir(channelSftp, path);
+	    if (permissions > 0)
+	    {
+		channelSftp.chmod(permissions, path);
+	    }
 	    for (String child : f.list())
 	    {
 		insert(channelSftp, f.getPath() + "/" + child, sftSourceDir);
