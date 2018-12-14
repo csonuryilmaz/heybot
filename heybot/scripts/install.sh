@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 strIndex()
 {
     x="${1%%$2*}"
@@ -9,21 +11,16 @@ strIndex()
 removeOldHeybot()
 {
     echo "[*] Finding old heybot installation ..."
-    HEYBOT_OLD_PATH=$(ls -lh /usr/local/bin | grep heybot | awk '{print $(NF-1), $NF}' | tail -1)
-    if [[ ! -z  $HEYBOT_OLD_PATH ]]; then 
-	FIRST_INDEX_OF_SLASH=$(strIndex "${HEYBOT_OLD_PATH}" "/")
-	HEYBOT_RUN_FILE="${HEYBOT_OLD_PATH##*/}"
-	LAST_INDEX_OF_SLASH=$(strIndex "${HEYBOT_OLD_PATH}" "/${HEYBOT_RUN_FILE}")
-	HEYBOT_OLD_FOLDER=$(echo "${HEYBOT_OLD_PATH}" | cut -c $FIRST_INDEX_OF_SLASH-$LAST_INDEX_OF_SLASH)
-	HEYBOT_OLD_FOLDER="$(echo -e "${HEYBOT_OLD_FOLDER}" | sed -e 's/^[[:space:]]*//')"
-	echo "[i] "$HEYBOT_OLD_FOLDER
-	read -p "[?] Removing old heybot installation. Are you sure? (y/n) " -n 1 -r
+    if [ -e "$HOME/.heybot/installed.path" ]; then
+        HEYBOT_INSTALLED_PATH=$(head -1 $HOME/.heybot/installed.path)
+        echo "[i] "$HEYBOT_INSTALLED_PATH
+        read -p "[?] Removing old heybot installation. Are you sure? (y/n) " -n 1 -r
 	if [[ $REPLY =~ ^[Yy]$ ]]; then
 	    echo ""
 	    echo "[*] Removing old heybot installation ..."
 	    sudo rm -f /usr/local/bin/heybot
-	    sudo rm -Rf $HEYBOT_OLD_FOLDER
-	    if [ -d "$HEYBOT_OLD_FOLDER" ]; then
+	    sudo rm -Rf $HEYBOT_INSTALLED_PATH
+	    if [ -d "$HEYBOT_INSTALLED_PATH" ]; then
 		echo "[w] Could not be removed!"
 	    else
 		printf "[\xE2\x9C\x94] Removed.\n"
@@ -39,8 +36,32 @@ install()
 {
     echo "[*] Installing ... "
     DIRECTORY=`dirname $0`
-    sudo ln -s $DIRECTORY/heybot.run /usr/local/bin/heybot && sudo chmod +x /usr/local/bin/heybot && printf "[\xE2\x9C\x94] Installed! \\o/ \n"
-    exit 0
+    sudo ln -s $DIRECTORY/heybot.run /usr/local/bin/heybot && sudo chmod +x /usr/local/bin/heybot
+    LN_RESULT="$?"
+    if [ "$LN_RESULT" -ne 0 ]; then
+        echo "[e] Could not create runnable in /usr/local/bin!"
+        exit 1
+    fi
+    if [ -x "$(command -v heybot)" ]; then
+        HEYBOT_LINK=$(command -v heybot)
+        echo -e "\t[i] "$HEYBOT_LINK
+        HEYBOT_EXEC=$(ls -lh $HEYBOT_LINK | awk '{print $(NF-1), $NF}' | tail -1)
+        echo -e "\t[i] "$HEYBOT_EXEC
+        FIRST_INDEX_OF_SLASH=$(strIndex "${HEYBOT_EXEC}" "/")
+        HEYBOT_RUN="${HEYBOT_EXEC##*/}"
+        LAST_INDEX_OF_SLASH=$(strIndex "${HEYBOT_EXEC}" "/${HEYBOT_RUN}")
+        HEYBOT_FOLDER=$(echo "${HEYBOT_EXEC}" | cut -c $FIRST_INDEX_OF_SLASH-$LAST_INDEX_OF_SLASH)
+        HEYBOT_FOLDER="$(echo -e "${HEYBOT_FOLDER}" | sed -e 's/^[[:space:]]*//')"
+        echo -e "\t[i] "$HEYBOT_FOLDER
+        if [ ! -d "$HOME/.heybot" ]; then
+        mkdir $HOME/.heybot
+        echo -e "\t[i] Created "$HOME/.heybot
+        fi
+        echo $HEYBOT_FOLDER > $HOME/.heybot/installed.path
+        echo -e "\t[i] Installation folder is saved."
+        printf "[\xE2\x9C\x94] Installed! \\o/ \n"
+        exit 0
+    fi
 }
 
 removeOldHeybot
