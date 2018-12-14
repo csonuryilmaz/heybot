@@ -32,10 +32,21 @@ removeOldHeybot()
     fi
 }
 
+setDirectory() {
+    DIRECTORY=`dirname $0`
+    if [[ -d "$DIRECTORY" ]]; then
+        cd "$DIRECTORY"
+        DIRECTORY=$(pwd -P)
+    else 
+        cd "$(dirname "$DIRECTORY")"
+        DIRECTORY=$(pwd -P)/$(basename "$DIRECTORY")
+    fi
+}
+
 install()
 {
     echo "[*] Installing ... "
-    DIRECTORY=`dirname $0`
+    setDirectory
     sudo ln -s $DIRECTORY/heybot.run /usr/local/bin/heybot && sudo chmod +x /usr/local/bin/heybot
     LN_RESULT="$?"
     if [ "$LN_RESULT" -ne 0 ]; then
