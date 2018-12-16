@@ -1,20 +1,17 @@
-# Operation configuration file for heybot.
-# See <URL:https://github.com/csonuryilmaz/heybot/releases/latest> for detailed information.
-
 OPERATION=begin-issue
 
 # ************
 # * required *
 # ************
 
-# redmine
+# credentials (redmine)
 REDMINE_URL=
 REDMINE_TOKEN=
 
 # issue
 ISSUE=
 
-# svn repository
+# repository (svn)
 REPOSITORY_PATH=
 TRUNK_PATH=
 BRANCHES_PATH=
@@ -23,10 +20,15 @@ BRANCHES_PATH=
 # * optional *
 # ************
 
+CACHE_ENABLED=true
+REFRESH_IF_EXISTS=false
+
 # issue
 BEGAN_STATUS=
 ASSIGNEE_ID=
 
-# workspace
+# local
 WORKSPACE_PATH=
-# Last run was on 2017-05-29 14:33:02
+IDE_PATH=
+SWITCH_FROM_ISSUE=
+CHECKOUT_IF_SWITCH_FAILS=
