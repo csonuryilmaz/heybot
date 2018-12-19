@@ -110,7 +110,10 @@ public class Release extends Operation
 	    if (isProductionRelease(releaseType))
 	    {
 		deployVersion(version, issues);
-		notifySlack(version, issues, redmineUrl);
+		String slackWebHookUrl = getParameterString(prop, PARAMETER_NOTIFY_SLACK, false);
+		if (!StringUtils.isBlank(slackWebHookUrl)) {
+		    notifySlack(version, issues, redmineUrl, slackWebHookUrl);
+		}
 	    }
 	    notifyEmail(releaseType, version, issues, redmineUrl);
 	}
@@ -196,11 +199,10 @@ public class Release extends Operation
 	System.out.println("  Version is updated as deployed.");
     }
 
-    private void notifySlack(Version version, Issue[] issues, String redmineUrl)
+    private void notifySlack(Version version, Issue[] issues, String redmineUrl, String slackWebHookUrl)
     {
 	System.out.println("* Sending slack notification ... ");
-	String slackWebHookUrl = getParameterString(prop, PARAMETER_NOTIFY_SLACK, false);
-
+	
 	StringBuilder summary = new StringBuilder();
 	
 	String description = getParameterString(prop, PARAMETER_DESCRIPTION, false).trim();
