@@ -176,14 +176,6 @@ public class Upload extends Operation
 		    {// deleted || missing
 			delete(channelSftp, fileordir, sftSourceDir);
 		    }
-		    else
-		    {
-			break;
-		    }
-		}
-		else
-		{
-		    break;
 		}
 	    }
 

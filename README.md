@@ -1,6 +1,6 @@
 # heybot
 
-[![GitHub stars](https://img.shields.io/github/stars/csonuryilmaz/heybot.svg?style=social&label=Star)](http://bit.ly/2ROXHzb)   [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)   [![Issues](https://img.shields.io/github/issues/csonuryilmaz/heybot.svg)](https://github.com/csonuryilmaz/heybot/issues)   [![Latest](https://img.shields.io/badge/release-v1.30.0.0-red.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)   [![GitHub Releases](https://img.shields.io/github/downloads/csonuryilmaz/heybot/latest/total.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)
+[![GitHub stars](https://img.shields.io/github/stars/csonuryilmaz/heybot.svg?style=social&label=Star)](http://bit.ly/2ROXHzb)   [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)   [![Issues](https://img.shields.io/github/issues/csonuryilmaz/heybot.svg)](https://github.com/csonuryilmaz/heybot/issues)   [![Latest](https://img.shields.io/badge/release-v1.30.0.1-red.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)   [![GitHub Releases](https://img.shields.io/github/downloads/csonuryilmaz/heybot/latest/total.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)
 
 ## Table of Contents
 
@@ -73,9 +73,9 @@ After handling Java dependency, simply;
 - execute installtion script
 
 ```bash
-wget https://github.com/csonuryilmaz/heybot/releases/download/1.30.0.0/heybot-1.30.0.0.tar.gz
-tar -zxvf heybot-1.30.0.0.tar.gz
-cd heybot-1.30.0.0
+wget https://github.com/csonuryilmaz/heybot/releases/download/1.30.0.1/heybot-1.30.0.1.tar.gz
+tar -zxvf heybot-1.30.0.1.tar.gz
+cd heybot-1.30.0.1
 chmod a+x install.sh
 ./install.sh
 ```
@@ -85,10 +85,10 @@ Above command will downlod **heybot** archive into current directory.
 In order to download into different directory, for example `~/Downloads`
 
 ```bash
-wget https://github.com/csonuryilmaz/heybot/releases/download/1.30.0.0/heybot-1.30.0.0.tar.gz -P ~/Downloads
-tar -zxvf ~/Downloads/heybot-1.30.0.0.tar.gz
-chmod a+x heybot-1.30.0.0/install.sh
-heybot-1.30.0.0/install.sh
+wget https://github.com/csonuryilmaz/heybot/releases/download/1.30.0.1/heybot-1.30.0.1.tar.gz -P ~/Downloads
+tar -zxvf ~/Downloads/heybot-1.30.0.1.tar.gz
+chmod a+x heybot-1.30.0.1/install.sh
+heybot-1.30.0.1/install.sh
 ```
 
 It will ask for sudo permission at installation process, so your user should be a sudoer. (Or maybe you can run installation script as root, but it's not recommended.)
@@ -102,7 +102,7 @@ $ heybot -v
  |_|_|___|_  |___|___|_|
          |___|
 
- 1.30.0.0
+ 1.30.0.1
 
 Copyright (c) 2017 Onur Yılmaz
 MIT License: <https://github.com/csonuryilmaz/heybot/blob/master/LICENSE.txt>
@@ -120,7 +120,7 @@ $ heybot
  |_|_|___|_  |___|___|_|
          |___|
 
- 1.30.0.0
+ 1.30.0.1
 
 usage: heybot -d <arg> [-h] [-v] [-l] [-lp <arg>] [-i <arg>] [-s <arg>]
        [-o <arg>] [-r <arg>] [-e <arg>] [-c <arg>]
