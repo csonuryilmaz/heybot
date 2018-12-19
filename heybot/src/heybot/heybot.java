@@ -17,6 +17,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.http.util.TextUtils;
 import org.apache.commons.io.comparator.NameFileComparator;
+import org.apache.commons.lang3.StringUtils;
 import utilities.Copy;
 import utilities.Editor;
 import utilities.Open;
@@ -24,7 +25,7 @@ import utilities.Open;
 public class heybot
 {
 
-    private final static String VERSION = "1.29.2.7";
+    private final static String VERSION = "1.30.0.0";
     private static final String NEWLINE = System.getProperty("line.separator");
     public static final String WORKSPACE = System.getProperty("user.home") + "/.heybot/workspace";
 
@@ -145,16 +146,19 @@ public class heybot
     private static void start(CommandLine line)
     {
 	String[] args = line.getArgs();
-	if (args.length == 1)
+	if (args.length > 1) {
+	    processOperation(args[0], Arrays.copyOfRange(args, 1, args.length));
+	}
+	else if (args.length == 1)
 	{
-	    processOperation(args[0]);
+	    processOperation(args[0], new String[0]);
 	}
 	else
 	{
 	    String doOptionValue = line.getOptionValue("do");
 	    if (!TextUtils.isEmpty(doOptionValue))
 	    {
-		processOperation(doOptionValue);
+		processOperation(doOptionValue, new String[0]);
 	    }
 	    else
 	    {
@@ -163,11 +167,11 @@ public class heybot
 	}
     }
 
-    private static void processOperation(String operation)
+    private static void processOperation(String operation, String[] parameters)
     {
 	try
 	{
-	    tryExecute(getFullPath(getFileName(operation)));
+	    tryExecute(getFullPath(getFileName(operation)), parameters);
 	}
 	catch (Exception ex)
 	{
@@ -181,7 +185,7 @@ public class heybot
 	return arg.endsWith(".hb") ? arg : arg + ".hb";
     }
 
-    private static void tryExecute(String hbFile) throws Exception
+    private static void tryExecute(String hbFile, String[] parameters) throws Exception
     {
 	Properties prop = new Properties();
 	prop.load(hbFile);
@@ -189,7 +193,33 @@ public class heybot
 	Operation operation = getOperation(prop);
 	if (operation != null)
 	{
+	    insertOnTheFlyParameters(operation, prop, parameters);
 	    operation.start(prop);
+	}
+    }
+    
+    private static void insertOnTheFlyParameters(Operation operation, Properties prop, String[] parameters)
+    {
+	if (parameters.length > 0) {
+	    String value;
+	    if (operation instanceof BeginIssue) {
+		if ((value = parseIssue(parameters[0])).length() > 0) {
+		    insertParameter("ISSUE=" + value, prop);
+		}
+	    }
+	}
+    }
+
+    private static String parseIssue(String parameter)
+    {
+	parameter = StringUtils.trimToEmpty(parameter);
+	parameter = parameter.replaceAll("[^\\d.]", "");
+	try {
+	    return String.valueOf(Integer.parseUnsignedInt(parameter));
+	}
+	catch (NumberFormatException e) {
+	    System.out.println(e.getMessage() + " Tried to parse value: " + parameter);
+	    return "";
 	}
     }
 
