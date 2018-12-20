@@ -25,7 +25,7 @@ import utilities.Open;
 public class heybot
 {
 
-    private final static String VERSION = "1.30.0.2";
+    private final static String VERSION = "1.30.0.3";
     private static final String NEWLINE = System.getProperty("line.separator");
     public static final String WORKSPACE = System.getProperty("user.home") + "/.heybot/workspace";
 
@@ -206,7 +206,11 @@ public class heybot
 		if ((value = parseIssue(parameters[0])).length() > 0) {
 		    insertParameter("ISSUE=" + value, prop);
 		}
-	    }
+	    } else if (operation instanceof Review) {
+                if ((value = parseIssue(parameters[0])).length() > 0) {
+		    insertParameter("ISSUE=" + value, prop);
+		}
+            }
 	}
     }
 
