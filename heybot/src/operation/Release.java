@@ -110,9 +110,9 @@ public class Release extends Operation
 	    if (isProductionRelease(releaseType))
 	    {
 		deployVersion(version, issues);
-		String slackWebHookUrl = getParameterString(prop, PARAMETER_NOTIFY_SLACK, false);
-		if (!StringUtils.isBlank(slackWebHookUrl)) {
-		    notifySlack(version, issues, redmineUrl, slackWebHookUrl);
+		String[] slackWebHookUrls = getParameterStringArray(prop, PARAMETER_NOTIFY_SLACK, false);
+		if (slackWebHookUrls.length > 0) {
+		    notifySlack(version, issues, redmineUrl, slackWebHookUrls);
 		}
 	    }
 	    notifyEmail(releaseType, version, issues, redmineUrl);
@@ -199,7 +199,7 @@ public class Release extends Operation
 	System.out.println("  Version is updated as deployed.");
     }
 
-    private void notifySlack(Version version, Issue[] issues, String redmineUrl, String slackWebHookUrl)
+    private void notifySlack(Version version, Issue[] issues, String redmineUrl, String[] slackWebHookUrls)
     {
 	System.out.println("* Sending slack notification ... ");
 	
@@ -256,8 +256,12 @@ public class Release extends Operation
 	WebhookResponse response;
 	try
 	{
-	    response = Slack.getInstance().send(slackWebHookUrl, payload);
-	    System.out.println(response.toString());
+            for (String slackWebHookUrl : slackWebHookUrls) {
+                System.out.println("Sending notification to hook: ");
+                System.out.println(slackWebHookUrl);
+                response = Slack.getInstance().send(slackWebHookUrl, payload);
+                System.out.println(response.toString());
+            }
 	}
 	catch (IOException ex)
 	{
