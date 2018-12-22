@@ -1,6 +1,6 @@
 # heybot
 
-[![GitHub stars](https://img.shields.io/github/stars/csonuryilmaz/heybot.svg?style=social&label=Star)](http://bit.ly/2ROXHzb)   [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)   [![Issues](https://img.shields.io/github/issues/csonuryilmaz/heybot.svg)](https://github.com/csonuryilmaz/heybot/issues)   [![Latest](https://img.shields.io/badge/release-v1.30.0.1-red.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)   [![GitHub Releases](https://img.shields.io/github/downloads/csonuryilmaz/heybot/latest/total.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)
+[![GitHub stars](https://img.shields.io/github/stars/csonuryilmaz/heybot.svg?style=social&label=Star)](http://bit.ly/2ROXHzb)   [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)   [![Issues](https://img.shields.io/github/issues/csonuryilmaz/heybot.svg)](https://github.com/csonuryilmaz/heybot/issues)   [![Latest](https://img.shields.io/badge/release-v1.31.0.3-red.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)   [![GitHub Releases](https://img.shields.io/github/downloads/csonuryilmaz/heybot/latest/total.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)
 
 ## Table of Contents
 
@@ -73,9 +73,9 @@ After handling Java dependency, simply;
 - execute installtion script
 
 ```bash
-wget https://github.com/csonuryilmaz/heybot/releases/download/1.30.0.1/heybot-1.30.0.1.tar.gz
-tar -zxvf heybot-1.30.0.1.tar.gz
-cd heybot-1.30.0.1
+wget https://github.com/csonuryilmaz/heybot/releases/download/1.31.0.3/heybot-1.31.0.3.tar.gz
+tar -zxvf heybot-1.31.0.3.tar.gz
+cd heybot-1.31.0.3
 chmod a+x install.sh
 ./install.sh
 ```
@@ -85,10 +85,10 @@ Above command will downlod **heybot** archive into current directory.
 In order to download into different directory, for example `~/Downloads`
 
 ```bash
-wget https://github.com/csonuryilmaz/heybot/releases/download/1.30.0.1/heybot-1.30.0.1.tar.gz -P ~/Downloads
-tar -zxvf ~/Downloads/heybot-1.30.0.1.tar.gz
-chmod a+x heybot-1.30.0.1/install.sh
-heybot-1.30.0.1/install.sh
+wget https://github.com/csonuryilmaz/heybot/releases/download/1.31.0.3/heybot-1.31.0.3.tar.gz -P ~/Downloads
+tar -zxvf ~/Downloads/heybot-1.31.0.3.tar.gz
+chmod a+x heybot-1.31.0.3/install.sh
+heybot-1.31.0.3/install.sh
 ```
 
 It will ask for sudo permission at installation process, so your user should be a sudoer. (Or maybe you can run installation script as root, but it's not recommended.)
@@ -102,7 +102,7 @@ $ heybot -v
  |_|_|___|_  |___|___|_|
          |___|
 
- 1.30.0.1
+ 1.31.0.3
 
 Copyright (c) 2017 Onur Yılmaz
 MIT License: <https://github.com/csonuryilmaz/heybot/blob/master/LICENSE.txt>
@@ -120,7 +120,7 @@ $ heybot
  |_|_|___|_  |___|___|_|
          |___|
 
- 1.30.0.1
+ 1.31.0.3
 
 usage: heybot -d <arg> [-h] [-v] [-l] [-lp <arg>] [-i <arg>] [-s <arg>]
        [-o <arg>] [-r <arg>] [-e <arg>] [-c <arg>]
@@ -222,6 +222,14 @@ Optional parameters:
 - SWITCH_FROM_ISSUE= Also there is another option to speed up checkout process when you don't use `CACHE_ENABLED`. If you have completed development of some issues and you don't need them in the future; by giving its number as value, heybot will convert it into new `ISSUE` so you will save up from local disk space and also it'll be a faster checkout because of `svn switch`.
 - CHECKOUT_IF_SWITCH_FAILS= If switching from an existing issue fails in someway, and you don't want the checkout process to be broken, setting it `true` will checkout project folder in traditional, slower way.
 
+If you want to execute some command at the end of begin issue process below use below **optional** parameters for SSH credentials and executable.
+
+- REMOTE_HOST= Hostname or IP of remote machine which has an eligible SSH access with username and password.
+- REMOTE_USER= SSH user's username.
+- REMOTE_PASS= SSH user's password.
+- REMOTE_PORT= If empty, default 22 is assumed. Enter integer value if server has custom port for SSH connections.
+- REMOTE_EXEC= Enter any bash command here. It may be a simple executable bash file or a combination of piped commands. Internally when heybot connected to host by SSH, working directory is user's home directory. For example; `/home/onur/` So for successful execution, test your command and be sure it's working on remote host's user home directory. Then it'll work in heybot without any problem. If entered command contains **$issue** keyword, all occurences will be replaced with the value of **ISSUE** parameter.
+
 Example:
 
 ```properties
@@ -261,6 +269,13 @@ WORKSPACE_PATH=/home/onur/sourcerepo/test/branches
 IDE_PATH=/home/onur/netbeans-8.2/bin/netbeans
 SWITCH_FROM_ISSUE=
 CHECKOUT_IF_SWITCH_FAILS=
+
+# remote command execution
+REMOTE_HOST=192.10.10.12
+REMOTE_USER=onuryilmaz
+REMOTE_PASS=nbvT03js
+REMOTE_EXEC=php create-issue/app.php $issue
+REMOTE_PORT=
 ```
 
 #### 5.2. Upload
