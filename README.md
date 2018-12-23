@@ -1,6 +1,6 @@
 # heybot
 
-[![GitHub stars](https://img.shields.io/github/stars/csonuryilmaz/heybot.svg?style=social&label=Star)](http://bit.ly/2ROXHzb)   [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)   [![Issues](https://img.shields.io/github/issues/csonuryilmaz/heybot.svg)](https://github.com/csonuryilmaz/heybot/issues)   [![Latest](https://img.shields.io/badge/release-v1.31.0.3-red.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)   [![GitHub Releases](https://img.shields.io/github/downloads/csonuryilmaz/heybot/latest/total.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)
+[![GitHub stars](https://img.shields.io/github/stars/csonuryilmaz/heybot.svg?style=social&label=Star)](http://bit.ly/2ROXHzb)   [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)   [![Issues](https://img.shields.io/github/issues/csonuryilmaz/heybot.svg)](https://github.com/csonuryilmaz/heybot/issues)   [![Latest](https://img.shields.io/badge/release-v1.32.0.0-red.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)   [![GitHub Releases](https://img.shields.io/github/downloads/csonuryilmaz/heybot/latest/total.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)
 
 ## Table of Contents
 
@@ -17,14 +17,16 @@
         - [5. Operations](#5-operations)
             - [5.1. Begin-Issue](#51-begin-issue)
             - [5.2. Upload](#52-upload)
-            - [5.3. Cleanup](#53-cleanup)
-            - [5.4. Cleanup-Svn](#54-cleanup-svn)
-            - [5.5. Review](#55-review)
-            - [5.6. Check-New](#56-check-new)
-            - [5.7. Sync-Issue](#57-sync-issue)
-            - [5.8. Next-Version](#58-next-version)
-            - [5.9. Release](#59-release)
-            - [5.10. Snapshot](#510-snapshot)
+            - [5.3. Upload File](#53-upload-file)
+                - [5.3.1 Example Configuration for PhpStorm File Watcher](#531-example-configuration-for-phpstorm-file-watcher)
+            - [5.4. Cleanup](#54-cleanup)
+            - [5.5. Cleanup-Svn](#55-cleanup-svn)
+            - [5.6. Review](#56-review)
+            - [5.7. Check-New](#57-check-new)
+            - [5.8. Sync-Issue](#58-sync-issue)
+            - [5.9. Next-Version](#59-next-version)
+            - [5.10. Release](#510-release)
+            - [5.11. Snapshot](#511-snapshot)
         - [6. Notes](#6-notes)
             - [6.1. How to obtain slack incoming webhook URL](#61-how-to-obtain-slack-incoming-webhook-url)
         - [Test Platforms](#test-platforms)
@@ -73,9 +75,9 @@ After handling Java dependency, simply;
 - execute installtion script
 
 ```bash
-wget https://github.com/csonuryilmaz/heybot/releases/download/1.31.0.3/heybot-1.31.0.3.tar.gz
-tar -zxvf heybot-1.31.0.3.tar.gz
-cd heybot-1.31.0.3
+wget https://github.com/csonuryilmaz/heybot/releases/download/1.32.0.0/heybot-1.32.0.0.tar.gz
+tar -zxvf heybot-1.32.0.0.tar.gz
+cd heybot-1.32.0.0
 chmod a+x install.sh
 ./install.sh
 ```
@@ -85,10 +87,10 @@ Above command will downlod **heybot** archive into current directory.
 In order to download into different directory, for example `~/Downloads`
 
 ```bash
-wget https://github.com/csonuryilmaz/heybot/releases/download/1.31.0.3/heybot-1.31.0.3.tar.gz -P ~/Downloads
-tar -zxvf ~/Downloads/heybot-1.31.0.3.tar.gz
-chmod a+x heybot-1.31.0.3/install.sh
-heybot-1.31.0.3/install.sh
+wget https://github.com/csonuryilmaz/heybot/releases/download/1.32.0.0/heybot-1.32.0.0.tar.gz -P ~/Downloads
+tar -zxvf ~/Downloads/heybot-1.32.0.0.tar.gz
+chmod a+x heybot-1.32.0.0/install.sh
+heybot-1.32.0.0/install.sh
 ```
 
 It will ask for sudo permission at installation process, so your user should be a sudoer. (Or maybe you can run installation script as root, but it's not recommended.)
@@ -102,7 +104,7 @@ $ heybot -v
  |_|_|___|_  |___|___|_|
          |___|
 
- 1.31.0.3
+ 1.32.0.0
 
 Copyright (c) 2017 Onur Yılmaz
 MIT License: <https://github.com/csonuryilmaz/heybot/blob/master/LICENSE.txt>
@@ -120,7 +122,7 @@ $ heybot
  |_|_|___|_  |___|___|_|
          |___|
 
- 1.31.0.3
+ 1.32.0.0
 
 usage: heybot -d <arg> [-h] [-v] [-l] [-lp <arg>] [-i <arg>] [-s <arg>]
        [-o <arg>] [-r <arg>] [-e <arg>] [-c <arg>]
@@ -316,7 +318,107 @@ REMOTE_PATH=/var/www/html/myproject/
 SOURCE_PATH=/Users/smith/NetBeansProjects/myproject/
 ```
 
-#### 5.3. Cleanup
+#### 5.3. Upload File
+
+It's designed to work with IDE file watchers. File watcher allows you to automatically run a command-line tool like compilers, formatters, or linters when you change or save a file in the IDE. If you want to upload saved or modified file to remote server, you can use upload file operation. Its one file processing logic, is more efficient than above upload operation which uploads all changes when triggered. File watcher doesn't trigger when a file or directory is deleted because after delete there is no file to work on. As similar, file watcher don't trigger when an empty directory is created, because it's not a file. But don't worry! When you add a new file into that empty directory it'll be triggered and when you create a new file with the same name, which was previously deleted, but probably has different content, it'll be triggered. On both cases you'll have the ability to upload meaningful (up-to-date) changes to server although server has some additional changes that you don't have. But those are redundant, mostly passive changes.
+
+In a nutshell, by combining with an IDE file watcher, upload-file operation enables you to work with remote servers. While you're editing project files, it'll automatically upload saved files to remote host and keep changes in sync with your local project.
+
+Required parameters:
+
+- REMOTE_HOST= Hostname or IP of remote machine which has an eligible SFTP access with username and password. (Comma seperated multiple servers are accepted.)
+- REMOTE_USER= SFTP user's username.
+- REMOTE_PASS= SFTP user's password.
+- REMOTE_WORKSPACE= It's the equivalent root path of local workspace directory on remote host. For example, it's the folder where you keep all the branches on remote host.
+- SOURCE_WORKSPACE= It's the path (parent folder) where you keep all the branches in your localhost. Root directory which contains different branches.
+
+Optional parameters:
+
+- REMOTE_PORT= If empty, default 22 is assumed. Enter integer value if server has custom port for SFTP connections.
+
+Example:
+
+```properties
+# File: upload-saved-file.hb
+
+OPERATION=upload-file
+
+# ************
+# * required *
+# ************
+
+REMOTE_HOST=192.10.11.12
+REMOTE_USER=onuryilmaz
+REMOTE_PASS=nbvT03js
+REMOTE_WORKSPACE=/var/www/html/branch
+SOURCE_WORKSPACE=/home/onur/sourcerepo/web/branch
+
+# ************
+# * optional *
+# ************
+
+REMOTE_PORT=
+```
+
+Example scenario about given example .hb file:
+
+- I keep all branches at `/home/onur/sourcerepo/web/branch` localhost.
+- I open branch related with redmine issue #5421 for code editing.
+- Local branch path is `/home/onur/sourcerepo/web/branch/i5421/hiPhpProject`
+- I edited and saved `index.php` file whose local path is `/home/onur/sourcerepo/web/branch/i5421/hiPhpProject/index.php`.
+- File watcher is triggered and heybot uploads file to remote path `/var/www/html/branch/i5421/hiPhpProject/index.php`.
+
+Heybot assumes the same folder structure between local and remote host, so it replaces *source workspace path* with *remote workspace path*. By means of this assumption, you don't need any modification to hb file between different projects. You can use the same file watcher globally for all projects.
+
+##### 5.3.1 Example Configuration for PhpStorm File Watcher
+
+Open `File > Settings > Tools > File Watchers`. You will see list of file watchers. Heybot upload-file operation can be used both `Global` level or `Project` level.
+
+Click `+` (plus) button to add a new file watcher and select `<custom>` template for new file watcher.
+
+![tools-file-watchers](doc-images/tools-file-watchers.png)
+
+Below, suggested settings for heybot:
+
+![edit-file-watcher](doc-images/edit-file-watcher.png)
+
+- Give you file watcher a `Name` related with its function.
+- `File Type` should be set to `Any` but limiting to some types only can make minimal network traffic.
+- `Scope` should be set to `Project Files`. You can also use other optionns to make minimal network traffic.
+- As heybot is installed globally, you can enter `heybot` into `Program` textbox. Also full executable path can be used.
+- Enter two arguments into `Arguments` textbox. First argument is heybot file, and second one is saved or edited file's full path. (`$FileDir$/$FileName$`)
+- `Working Directory` should be set to `$ProjectFileDir$`.
+- For `Advanced Options` only second option is suggested for minimal network traffic. But you can use other options also.
+- `Always` or at least `On Error` is suggested for `Show Console` option in order to track file watcher activity.
+
+Below is exported xml of above file watcher:
+
+```xml
+<TaskOptions>
+  <TaskOptions>
+    <option name="arguments" value="up-wktp-t12 $FileDir$/$FileName$" />
+    <option name="checkSyntaxErrors" value="true" />
+    <option name="description" />
+    <option name="exitCodeBehavior" value="ALWAYS" />
+    <option name="fileExtension" value="*" />
+    <option name="immediateSync" value="false" />
+    <option name="name" value="sftp-upload" />
+    <option name="output" value="" />
+    <option name="outputFilters">
+      <array />
+    </option>
+    <option name="outputFromStdout" value="false" />
+    <option name="program" value="heybot" />
+    <option name="runOnExternalChanges" value="true" />
+    <option name="scopeName" value="Project Files" />
+    <option name="trackOnlyRoot" value="false" />
+    <option name="workingDir" value="$ProjectFileDir$" />
+    <envs />
+  </TaskOptions>
+</TaskOptions>
+```
+
+#### 5.4. Cleanup
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -352,7 +454,7 @@ LIMIT=10
 
 ```
 
-#### 5.4. Cleanup-Svn
+#### 5.5. Cleanup-Svn
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -388,7 +490,7 @@ LIMIT=10
 
 ```
 
-#### 5.5. Review
+#### 5.6. Review
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -428,7 +530,7 @@ ISSUE_STATUS_SHOULD_BE=Resolved
 
 ```
 
-#### 5.6. Check-New
+#### 5.7. Check-New
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -479,7 +581,7 @@ Also you can schedule this operation with a crontab entry. For example, below en
 */5 * * * * /usr/local/bin/heybot -d check_new.hb 1> /dev/null 2> /var/www/html/heybot.log
 ```
 
-#### 5.7. Sync-Issue
+#### 5.8. Sync-Issue
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -552,7 +654,7 @@ REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
 LAST_CHECK_TIME=Sat Nov 19 15:45:11 EET 2016
 ```
 
-#### 5.8. Next-Version
+#### 5.9. Next-Version
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -599,11 +701,11 @@ Internal Parameters:
 
 **todo:** Example and notes will be added for *next-version* .
 
-#### 5.9. Release
+#### 5.10. Release
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
-#### 5.10. Snapshot
+#### 5.11. Snapshot
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 

@@ -25,7 +25,7 @@ import utilities.Open;
 public class heybot
 {
 
-    private final static String VERSION = "1.31.0.3";
+    private final static String VERSION = "1.32.0.0";
     private static final String NEWLINE = System.getProperty("line.separator");
     public static final String WORKSPACE = System.getProperty("user.home") + "/.heybot/workspace";
 
@@ -190,7 +190,7 @@ public class heybot
 	Properties prop = new Properties();
 	prop.load(hbFile);
 
-	Operation operation = getOperation(prop);
+	Operation operation = getOperation(prop, parameters);
 	if (operation != null)
 	{
 	    insertOnTheFlyParameters(operation, prop, parameters);
@@ -227,7 +227,7 @@ public class heybot
 	}
     }
 
-    private static Operation getOperation(Properties prop)
+    private static Operation getOperation(Properties prop, String[] parameters) throws Exception
     {
 	String opValue = prop.getProperty("OPERATION");
 	if (TextUtils.isEmpty(opValue))
@@ -241,6 +241,8 @@ public class heybot
 	    {
 		case "upload":
 		    return new Upload();
+		case "upload-file":
+		    return new UploadFile(parameters.length > 0 ? parameters[0] : "");
 		case "cleanup":
 		    return new Cleanup();
 		case "review":
