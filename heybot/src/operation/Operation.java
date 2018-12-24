@@ -545,7 +545,7 @@ public abstract class Operation
 	String sValue = getParameterString(props, parameter, isLowerCased);
 	if (!isEmpty(sValue))
 	{
-	    return sValue.split("\\s*[ ,]\\s*");
+	    return sValue.split("\\s*,\\s*");
 	}
 	return new String[0];
     }
