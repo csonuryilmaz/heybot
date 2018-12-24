@@ -4,6 +4,7 @@ import com.taskadapter.redmineapi.Include;
 import com.taskadapter.redmineapi.Params;
 import com.taskadapter.redmineapi.RedmineException;
 import com.taskadapter.redmineapi.RedmineManager;
+import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.CustomField;
 import com.taskadapter.redmineapi.bean.Issue;
 import com.taskadapter.redmineapi.bean.IssueRelation;
@@ -704,26 +705,25 @@ public abstract class Operation
 	return System.getProperty("user.home") + "/.heybot";
     }
 
-    protected Issue[] getVersionIssues(RedmineManager redmineManager, Version version)
+    protected Issue[] getVersionIssues(String url, String accessToken, Version version)
     {
+	RedmineManager redmine = RedmineManagerFactory.createWithApiKey(
+		url + "/projects/" + version.getProjectName(), accessToken);
+	Params params = new Params().add("set_filter", "1");
 
-	HashMap<String, String> params = new HashMap<>();
-	params.put("project_id", Integer.toString(version.getProjectId()));
-	params.put("fixed_version_id", Integer.toString(version.getId()));
+	params.add("f[]", "fixed_version_id");
+	params.add("op[fixed_version_id]", "=");
+	params.add("v[fixed_version_id][]", Integer.toString(version.getId()));
 
-	// default
-	params.put("offset", Integer.toString(0));
-	params.put("limit", Integer.toString(Integer.MAX_VALUE));
-	params.put("sort", "id:desc");
+	params.add("offset", Integer.toString(0));
+	params.add("limit", Integer.toString(Integer.MAX_VALUE));
+	params.add("sort", "tracker,priority,id:desc");
 
-	try
-	{
-	    List<Issue> issues = redmineManager.getIssueManager().getIssues(params).getResults();
-
+	try {
+	    List<Issue> issues = redmine.getIssueManager().getIssues(params).getResults();
 	    return issues.toArray(new Issue[issues.size()]);
 	}
-	catch (RedmineException ex)
-	{
+	catch (RedmineException ex) {
 	    System.err.println("Ooops! Couldn't get issues.(" + ex.getMessage() + ")");
 	}
 

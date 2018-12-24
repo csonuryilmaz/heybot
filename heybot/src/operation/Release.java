@@ -61,6 +61,10 @@ public class Release extends Operation
     private final static String PARAMETER_EMAIL_BODY_TEST_USERS = "EMAIL_BODY_TEST_USERS";
     private final static String PARAMETER_EMAIL_BODY_TEST_USERS_TITLE = "EMAIL_BODY_TEST_USERS_TITLE";
     private final static String PARAMETER_EMAIL_BODY_RELATED_ISSUES_FROM_PROJECTS = "EMAIL_BODY_RELATED_ISSUES_FROM_PROJECTS";
+    
+    private final static String PARAMETER_DRY_RUN="DRY_RUN";
+    private final static String PARAMETER_DRY_RUN_NOTIFY_SLACK="DRY_RUN_NOTIFY_SLACK";
+    private final static String PARAMETER_DRY_RUN_NOTIFY_EMAIL="DRY_RUN_NOTIFY_EMAIL";
     //</editor-fold>
     private RedmineManager redmineManager;
     private Properties prop;
@@ -83,17 +87,17 @@ public class Release extends Operation
 	{
 	    String redmineAccessToken = getParameterString(prop, PARAMETER_REDMINE_TOKEN, false);
 	    String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
-	    int versionId = getParameterInt(prop, PARAMETER_VERSION_ID, 0);
-
+	    
 	    redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
 	    this.prop = prop;
 
 	    relateIssuesFromProjects = getParameterStringHash(prop, PARAMETER_EMAIL_BODY_RELATED_ISSUES_FROM_PROJECTS, true);
 
-	    System.out.println("* Getting version from redmine: " + versionId);
+	    int versionId = getParameterInt(prop, PARAMETER_VERSION_ID, 0);
+	    System.out.println("[*] Getting version from redmine ... ");
+	    System.out.println("[i] VersionId: " + versionId);
 	    Version version = getVersion(redmineManager, versionId);
-	    if (version != null)
-	    {
+	    if (version != null) {
 		release(version, redmineUrl);
 	    }
 	}
@@ -101,25 +105,46 @@ public class Release extends Operation
 
     private void release(Version version, String redmineUrl) throws Exception
     {
-	System.out.println("  [" + version.getName() + "]");
-	Issue[] issues = getVersionIssues(redmineManager, version);
+	System.out.println("[✓] " + version.getName());
+	Issue[] issues = getVersionIssues(getParameterString(prop, PARAMETER_REDMINE_URL, false),
+		getParameterString(prop, PARAMETER_REDMINE_TOKEN, false), version);
 
-	if (!isVersionDeployed(version))
-	{
-	    String releaseType = getParameterString(prop, PARAMETER_RELEASE_TYPE, true);
-	    if (isProductionRelease(releaseType))
-	    {
-		deployVersion(version, issues);
-		String[] slackWebHookUrls = getParameterStringArray(prop, PARAMETER_NOTIFY_SLACK, false);
-		if (slackWebHookUrls.length > 0) {
-		    notifySlack(version, issues, redmineUrl, slackWebHookUrls);
-		}
-	    }
-	    notifyEmail(releaseType, version, issues, redmineUrl);
+	String releaseType = getParameterString(prop, PARAMETER_RELEASE_TYPE, true);
+	boolean isDryRun = getParameterBoolean(prop, PARAMETER_DRY_RUN);
+
+	if (!isDryRun) {
+	    deployVersion(releaseType, version, issues);
 	}
-	else
-	{
-	    System.out.println("- [info] Version is already deployed!");
+	else {
+	    System.out.println("[i] Running in --dry-run mode. Be cool, there won't be real deployment. ¯\\_(ツ)_/¯");
+	    for (Issue issue : issues) {
+		System.out.println("[✓] " + "#" + issue.getId() + " [" + issue.getStatusName() + "] " + issue.getSubject());
+	    }
+	    System.out.println("[i] Total " + issues.length + " issue(s).");
+	}
+
+	String[] slackWebHookUrls = getParameterStringArray(prop, 
+		isDryRun ? PARAMETER_DRY_RUN_NOTIFY_SLACK : PARAMETER_NOTIFY_SLACK, false);
+	if (slackWebHookUrls.length > 0) {
+	    notifySlack(version, issues, redmineUrl, slackWebHookUrls);
+	}
+	
+	String[] recipients = getParameterStringArray(prop, 
+		isDryRun ? PARAMETER_DRY_RUN_NOTIFY_EMAIL : PARAMETER_NOTIFY_EMAIL, true);
+	if (recipients.length > 0) {
+	    notifyEmail(releaseType, recipients, version, issues, redmineUrl);
+	}
+    }
+    
+    private void deployVersion(String releaseType, Version version, Issue[] issues) throws Exception
+    {
+	if (!isVersionDeployed(version)) {
+	    if (isProductionRelease(releaseType)) {
+		deployVersion(version, issues);
+	    }
+	}
+	else {
+	    System.out.println("[i] Version is already deployed! Version status is closed.");
 	}
     }
 
@@ -201,7 +226,7 @@ public class Release extends Operation
 
     private void notifySlack(Version version, Issue[] issues, String redmineUrl, String[] slackWebHookUrls)
     {
-	System.out.println("* Sending slack notification ... ");
+	System.out.println("[*] Sending slack notification ... ");
 	
 	StringBuilder summary = new StringBuilder();
 	
@@ -211,16 +236,19 @@ public class Release extends Operation
 	{
 	    description = description.replace(splitter, "\n :pushpin: ");
 	}
+	summary.append("\n :point_up: _Release Notes:_ \n");
+	summary.append("-------------------");
 	summary.append(description);
-	summary.append("\n");
+	summary.append("\n ------------------ \n");
 	String dbModifications = getParameterString(prop, PARAMETER_DB_MODIFICATIONS, false);
 	if (!isEmpty(dbModifications))
 	{
 	    summary.append("\n");
-	    summary.append(":scroll: Has database schema migrations: \n");
+	    summary.append(":scroll: _Has database schema migrations:_ \n");
 	    appendSlackSummaryMigrations(summary, getMigrations(dbModifications));
+	    summary.append("\n ------------------ \n");
 	}
-
+	
 	Attachment attachment = Attachment.builder().text(summary.toString())
 		.pretext(":tada: Cheers! <" + redmineUrl + "/versions/" + version.getId() + "|" + version.getName() + "> is released.")
 		.authorName(version.getProjectName())
@@ -232,7 +260,7 @@ public class Release extends Operation
 		.build();
 
 	attachment.getFields().add(Field.builder()
-		.title("")
+		.title(":fire: _Related Issues:_ ")
 		.valueShortEnough(false).build());
 
 	for (Issue issue : issues)
@@ -335,32 +363,26 @@ public class Release extends Operation
 	redmineManager.getProjectManager().update(version);
     }
 
-    private void notifyEmail(String releaseType, Version version, Issue[] issues, String redmineUrl)
+    private void notifyEmail(String releaseType, String[] recipients, Version version, Issue[] issues, String redmineUrl)
     {
 	EmailSender emailSender;
 
-	String[] recipients = getParameterStringArray(prop, PARAMETER_NOTIFY_EMAIL, true);
-	if (recipients.length > 0)
-	{
-	    System.out.println("[*] Sending email notification ... ");
-	    try
-	    {
-		emailSender = new EmailSender(
-			getParameterString(prop, PARAMETER_SMTP_USERNAME, false),
-			getParameterString(prop, PARAMETER_SMTP_PASSWORD, false),
-			getParameterString(prop, PARAMETER_SMTP_HOST, false),
-			getParameterString(prop, PARAMETER_SMTP_PORT, false),
-			getParameterString(prop, PARAMETER_SMTP_TLS_ENABLED, false),
-			getParameterString(prop, PARAMETER_SMTP_REPLY_TO, false)
-		);
+	System.out.println("[*] Sending email notification ... ");
+	try {
+	    emailSender = new EmailSender(
+		    getParameterString(prop, PARAMETER_SMTP_USERNAME, false),
+		    getParameterString(prop, PARAMETER_SMTP_PASSWORD, false),
+		    getParameterString(prop, PARAMETER_SMTP_HOST, false),
+		    getParameterString(prop, PARAMETER_SMTP_PORT, false),
+		    getParameterString(prop, PARAMETER_SMTP_TLS_ENABLED, false),
+		    getParameterString(prop, PARAMETER_SMTP_REPLY_TO, false)
+	    );
 
-		emailSender.send(recipients, getSubject(releaseType, version, issues), getBody(releaseType, version, issues, redmineUrl));
-		System.out.println("[✓] Done.");
-	    }
-	    catch (Exception ex)
-	    {
-		System.err.println("Ooops! Email sending could not be completed. (" + ex.getMessage() + ")");
-	    }
+	    emailSender.send(recipients, getSubject(releaseType, version, issues), getBody(releaseType, version, issues, redmineUrl));
+	    System.out.println("[✓] Done.");
+	}
+	catch (Exception ex) {
+	    System.err.println("Ooops! Email sending could not be completed. (" + ex.getMessage() + ")");
 	}
     }
 
