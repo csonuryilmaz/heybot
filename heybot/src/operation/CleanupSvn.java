@@ -1,5 +1,7 @@
 package operation;
 
+import com.taskadapter.redmineapi.NotAuthorizedException;
+import com.taskadapter.redmineapi.NotFoundException;
 import com.taskadapter.redmineapi.RedmineException;
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
@@ -144,6 +146,11 @@ public class CleanupSvn extends Operation
 	catch (RedmineException ex)
 	{
 	    System.err.println(System.getProperty("line.separator") + "Ooops! Error while checking issue status " + issueId + ". (" + ex.getMessage() + ")");
+	    if (ex instanceof NotFoundException) {
+		return "404";
+	    } else if (ex instanceof NotAuthorizedException) {
+		return "403";
+	    }
 	}
 
 	return ""; // unknown!
