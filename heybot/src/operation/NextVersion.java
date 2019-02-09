@@ -257,12 +257,59 @@ public class NextVersion extends Operation
 	versionTag.next(issues);
 
 	Version version = getVersion(redmineManager, versionId);
-	if (version != null && updateVersion(redmineManager, version, versionTitle, versionTag.toString()))
-	{
-	    setParameterString(prop, PARAMETER_VERSION_TAG, versionTag.toString());
+	if (version != null) {
+	    deleteVersionTagIfExists(prop, version);
+	    if (updateVersion(redmineManager, version, versionTitle, versionTag.toString())) {
+		setParameterString(prop, PARAMETER_VERSION_TAG, versionTag.toString());
+	    }
 	}
 
 	return version;
+    }
+    
+    private void deleteVersionTagIfExists(Properties prop, Version version)
+    {
+	String repositoryPath = trimRight(getParameterString(prop, PARAMETER_REPOSITORY_PATH, false), "/");
+	String tagsPath = trimLeft(trimRight(getParameterString(prop, PARAMETER_TAGS_PATH, false), "/"), "/");
+	if (!isEmpty(repositoryPath) && !isEmpty(tagsPath)) {
+	    String tagPath = repositoryPath + "/" + tagsPath + "/" + version.getName();
+	    System.out.println("[*] Checking whether current version tag exists ...");
+	    if (isSvnPathExists(tryExecute("which svn"), tagPath)) {
+		System.out.println("[i] Tag " + version.getName() + " is found in repository:");
+		System.out.println("[i] " + tagPath);
+		Scanner scanner = new Scanner(System.in);
+		System.out.print("[?] Would you like to delete obsolete (possibly undeployed) tag? (Y/N) ");
+		String answer = scanner.next();
+		if (!isEmpty(answer) && (answer.charAt(0) == 'Y' || answer.charAt(0) == 'y')) {
+		    if (svnDeleteTag(tryExecute("which svn"), tagPath)) {
+			System.out.println("[✓] ^/" + tagsPath + "/" + version.getName() + " is deleted successfully.");
+		    }
+		}
+		else {
+		    System.out.println("[i] Nothing is done.");
+		}
+	    }
+	    else {
+		System.out.println("[✓] Nothing found.");
+	    }
+	}
+    }
+
+    private boolean svnDeleteTag(String svnCommand, String tagPath)
+    {
+	String comment = "Obsolete tag is deleted, but another new one will be created as a replacement of this.";
+	String[] command = new String[]{
+	    svnCommand, "delete", tagPath, "-m", comment
+	};
+	System.out.println(svnCommand + " delete " + tagPath + " -m \"" + comment + "\"");
+	String[] output = execute(command);
+	if (output == null || output[1].length() > 0) {
+	    System.err.println(output[1]);
+	    return false;
+	}
+
+	System.out.println(output[0]);
+	return true;
     }
 
     private void createSubversionTag(Properties prop, RedmineManager redmineManager, int versionId)
