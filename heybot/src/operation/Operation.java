@@ -604,7 +604,13 @@ public abstract class Operation
 	String sValue = getParameterString(props, parameter, false);
 	if (sValue != null && sValue.length() > 0)
 	{
-	    return Integer.parseInt(sValue);
+            try {
+                return Integer.parseInt(sValue);
+            } catch (NumberFormatException nfe) {
+                System.out.println("[w] " + parameter + " could not be parsed! "
+                        + " Error: " + nfe.getClass().getCanonicalName() + " " + nfe.getMessage());
+                System.out.println("[w] Default value " + defaultValue + " will be used for " + parameter + ".");
+            }
 	}
 
 	return defaultValue;

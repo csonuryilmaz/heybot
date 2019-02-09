@@ -2,6 +2,7 @@ package operation;
 
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
+import com.taskadapter.redmineapi.bean.Issue;
 import utilities.Properties;
 
 public class BeginIssueWithGit extends Operation {
@@ -37,13 +38,35 @@ public class BeginIssueWithGit extends Operation {
     @Override
     protected void execute(Properties prop) throws Exception {
         if (areMandatoryParametersNotEmpty(prop)) {
-            int issueId = getParameterInt(prop, PARAMETER_ISSUE, 0);
-	    String redmineAccessToken = getParameterString(prop, PARAMETER_REDMINE_TOKEN, false);
-	    String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
+            String redmineAccessToken = getParameterString(prop, PARAMETER_REDMINE_TOKEN, false);
+            String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
+            redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
 
-	    redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
-            
-            System.out.println("@todo: Not implemented yet! " + issueId);
+            Issue issue = getIssue(redmineManager, getParameterInt(prop, PARAMETER_ISSUE, 0));
+            if (issue != null) {
+                System.out.println("#" + issue.getId() + " - " + issue.getSubject());
+                if (isIssueAssignedTo(issue, prop)) {
+                    System.out.println("continue");
+                }
+            }
         }
+    }
+    
+    private boolean isIssueAssignedTo(Issue issue, Properties prop) {
+        int assigneeId = getParameterInt(prop, PARAMETER_ASSIGNEE_ID, 0);
+        System.out.println("[i] #" + issue.getId() + " is assigned to " + issue.getAssigneeName() + ".");
+        if (assigneeId > 0) {
+            if (issue.getAssigneeId() != assigneeId) {
+                System.out.println("[e] Assignee check is failed!");
+                System.out.println("[i] (suggested option!) Change assignee of the issue to yourself if you're sure to begin this issue.");
+                System.out.println("[i] (not suggested but) You can comment " + PARAMETER_ASSIGNEE_ID + " from config file to disable assignee check.");
+                return false;
+            } else {
+                System.out.println("[✓] Assignee check is successful.");
+            }
+        } else {
+            System.out.println("[i] Assignee check is disabled.");
+        }
+        return true;
     }
 }
