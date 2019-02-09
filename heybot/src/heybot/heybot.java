@@ -25,7 +25,7 @@ import utilities.Open;
 public class heybot
 {
 
-    private final static String VERSION = "1.34.1.1";
+    private final static String VERSION = "1.35.1.1";
     private static final String NEWLINE = System.getProperty("line.separator");
     public static final String WORKSPACE = System.getProperty("user.home") + "/.heybot/workspace";
 
@@ -210,7 +210,11 @@ public class heybot
                 if ((value = parseIssue(parameters[0])).length() > 0) {
 		    insertParameter("ISSUE=" + value, prop);
 		}
-            }
+            } else if (operation instanceof BeginIssueWithGit) {
+		if ((value = parseIssue(parameters[0])).length() > 0) {
+		    insertParameter("ISSUE=" + value, prop);
+		}
+	    }
 	}
     }
 
@@ -261,6 +265,8 @@ public class heybot
 		    return new BeginIssue();
 		case "snapshot":
 		    return new Snapshot();
+                case "begin-issue-with-git":
+                    return new BeginIssueWithGit();
 		default:
 		    System.err.println("Ooops! Unsupported operation. Please check version and manual.");
 	    }
