@@ -12,11 +12,11 @@ import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jgit.api.FetchCommand;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.ListBranchCommand;
 import org.eclipse.jgit.api.LsRemoteCommand;
 import org.eclipse.jgit.api.TransportConfigCallback;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -209,14 +209,24 @@ public class BeginIssueWithGit extends Operation {
 	}
         File cachePath = new File(cacheDir + "/" + 
                 new File(trimRight(getParameterString(prop, PARAMETER_GIT_REPOSITORY, false), "/")).getName());
-        boolean isCacheReady;
+	boolean isCacheReady;
         if (!cachePath.exists()) {
             isCacheReady = cloneRepository(cachePath);
         } else {
             isCacheReady = fetchRepository(cachePath);
         }
+	if (isCacheReady) {
+	    listCurrentStatus(cachePath);
+	}
 
         return true;
+    }
+
+    private void listCurrentStatus(File cachePath) {
+	System.out.println("\t[*] Listing current status in local cached repository ...");
+	listRepositoryLocalBranches(cachePath);
+	//listRepositoryLocalStatus(cachePath);
+	System.out.println("\t[✓] Done.");
     }
     
     private boolean cloneRepository(File cachePath) {
@@ -237,7 +247,6 @@ public class BeginIssueWithGit extends Operation {
     
     private boolean fetchRepository(File cachePath) {
 	System.out.println("\t[*] Locally cached repository exists. Updating remote refs ...");
-
 	try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
 	    try (Git git = new Git(gitRepo)) {
 		FetchCommand fetch = git.fetch();
@@ -270,5 +279,27 @@ public class BeginIssueWithGit extends Operation {
 	return builder
 		.readEnvironment() // scan environment GIT_* variables
 		.build();
+    }
+
+    private void listRepositoryLocalBranches(File cachePath) {
+	try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
+	    try (Git git = new Git(gitRepo)) {
+		System.out.println("\t[i] On branch: * " + gitRepo.getBranch());
+		ListBranchCommand branchList = git.branchList();
+		List<Ref> refs = branchList.call();
+		if (refs.size() > 0) {
+		    System.out.println("\t[i] Branch list: ");
+		    for (Ref ref : refs) {
+			System.out.println("\t\t" + ref.getName() + " " + ref.getObjectId().getName());
+		    }
+		}
+	    }
+	    catch (GitAPIException ex) {
+		System.out.println("\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+	    }
+	}
+	catch (IOException ex) {
+	    System.out.println("\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+	}
     }
 }
