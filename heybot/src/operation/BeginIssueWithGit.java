@@ -7,18 +7,25 @@ import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.Issue;
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.commons.lang3.StringUtils;
+import org.eclipse.jgit.api.FetchCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LsRemoteCommand;
 import org.eclipse.jgit.api.TransportConfigCallback;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.lib.TextProgressMonitor;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.CredentialsProvider;
+import org.eclipse.jgit.transport.FetchResult;
 import org.eclipse.jgit.transport.JschConfigSessionFactory;
 import org.eclipse.jgit.transport.OpenSshConfig;
 import org.eclipse.jgit.transport.SshSessionFactory;
@@ -206,7 +213,7 @@ public class BeginIssueWithGit extends Operation {
         if (!cachePath.exists()) {
             isCacheReady = cloneRepository(cachePath);
         } else {
-            // pull
+            isCacheReady = fetchRepository(cachePath);
         }
 
         return true;
@@ -226,5 +233,42 @@ public class BeginIssueWithGit extends Operation {
             System.out.println("\t[e] Git clone failed with error! " + gae.getClass().getCanonicalName() + " " + gae.getMessage());
         }
         return false;
+    }
+    
+    private boolean fetchRepository(File cachePath) {
+	System.out.println("\t[*] Locally cached repository exists. Updating remote refs ...");
+
+	try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
+	    try (Git git = new Git(gitRepo)) {
+		FetchCommand fetch = git.fetch();
+		fetch.setCredentialsProvider(credentialsProvider);
+		fetch.setTransportConfigCallback(transportConfigCallback);
+		fetch.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)));
+		fetch.setCheckFetchedObjects(true);
+		fetch.setRemoveDeletedRefs(true);
+		FetchResult result = fetch.call();
+		if (!StringUtils.isBlank(result.getMessages())) {
+		    System.out.println("\t[i] Messages: " + result.getMessages());
+		}
+		System.out.println("\t[✓] Git fetch completed.");
+		return true;
+	    }
+	    catch (GitAPIException ex) {
+		System.out.println("\t[e] Git fetch failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+	    }
+	}
+	catch (IOException ex) {
+	    System.out.println("\t[e] Git fetch failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+	}
+	return false;
+    }
+    
+    private Repository openRepository(String cachePath) throws IOException {
+	FileRepositoryBuilder builder = new FileRepositoryBuilder();
+	builder.setGitDir(new File(cachePath + "/.git"));
+	builder.setMustExist(true);
+	return builder
+		.readEnvironment() // scan environment GIT_* variables
+		.build();
     }
 }
