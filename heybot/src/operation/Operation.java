@@ -795,7 +795,7 @@ public abstract class Operation
 	File folder = new File(folderName);
 	if (!folder.exists())
 	{
-	    return folder.mkdir();
+	    return folder.mkdirs();
 	}
         return true;
     }

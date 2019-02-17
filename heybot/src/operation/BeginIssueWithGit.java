@@ -1,5 +1,8 @@
 package operation;
 
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.Session;
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.Issue;
@@ -11,11 +14,18 @@ import java.util.HashSet;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LsRemoteCommand;
+import org.eclipse.jgit.api.TransportConfigCallback;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.TextProgressMonitor;
 import org.eclipse.jgit.transport.CredentialsProvider;
+import org.eclipse.jgit.transport.JschConfigSessionFactory;
+import org.eclipse.jgit.transport.OpenSshConfig;
+import org.eclipse.jgit.transport.SshSessionFactory;
+import org.eclipse.jgit.transport.SshTransport;
+import org.eclipse.jgit.transport.Transport;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
+import org.eclipse.jgit.util.FS;
 import utilities.Properties;
 
 public class BeginIssueWithGit extends Operation {
@@ -50,6 +60,7 @@ public class BeginIssueWithGit extends Operation {
     
     private final static HashSet<String> supportedProtocols = new HashSet<>(Arrays.asList("http", "https","ssh"));
     private CredentialsProvider credentialsProvider;
+    private TransportConfigCallback transportConfigCallback;
     private String repository;
 
     public BeginIssueWithGit() {
@@ -105,11 +116,12 @@ public class BeginIssueWithGit extends Operation {
             System.out.println("[i] Supported protocols: " + String.join(",", supportedProtocols));
             return false;
         }
-        repository = getRepositoryWithProtocol(trimRight(getParameterString(prop, PARAMETER_GIT_REPOSITORY, false), "/"), protocol);
-        credentialsProvider = getCredentialsProvider(prop, protocol);
+        repository = getRepository(trimRight(getParameterString(prop, PARAMETER_GIT_REPOSITORY, false), "/"), protocol);
+        setCredentials(prop, protocol);
         try {
             LsRemoteCommand lsRemote = new LsRemoteCommand(null);
             lsRemote.setCredentialsProvider(credentialsProvider);
+	    lsRemote.setTransportConfigCallback(transportConfigCallback);
             lsRemote.setRemote(repository);
             lsRemote.setHeads(true);
             Collection<Ref> refs = lsRemote.call();
@@ -123,36 +135,71 @@ public class BeginIssueWithGit extends Operation {
         return false;
     }
 
-    private String getRepositoryWithProtocol(String repository, String protocol) {
+    private String getRepository(String repository, String protocol) {
         int indexOfColonWithDoubleSlash;
         if ((indexOfColonWithDoubleSlash = repository.indexOf("://")) > -1) {
-            String protocolInURL = repository.substring(0, indexOfColonWithDoubleSlash);
-            if (!supportedProtocols.contains(protocolInURL)) {
-                repository = protocol + repository.substring(indexOfColonWithDoubleSlash + 3);
-            }
-        } else {
-            repository = protocol + "://" + repository;
+            repository = repository.substring(indexOfColonWithDoubleSlash + 3);
         }
-        return repository;
+        return protocol.equals("ssh") ? repository : protocol + "://" + repository;
     }
 
-    private CredentialsProvider getCredentialsProvider(Properties prop, String protocol) {
-        if (protocol.equals("https") || protocol.equals("http")) {
-            String username = getParameterString(prop, PARAMETER_GIT_USERNAME, false);
-            String password = getParameterString(prop, PARAMETER_GIT_PASSWORD, false);
-            if (!StringUtils.isBlank(username) && !StringUtils.isBlank(password)) {
-                return new UsernamePasswordCredentialsProvider(username, password);
-            }
-        } else if (protocol.equals("ssh")) {
+    private void setCredentials(Properties prop, String protocol) {
+	if (protocol.equals("https") || protocol.equals("http")) {
+	    String username = getParameterString(prop, PARAMETER_GIT_USERNAME, false);
+	    String password = getParameterString(prop, PARAMETER_GIT_PASSWORD, false);
+	    if (!StringUtils.isBlank(username) && !StringUtils.isBlank(password)) {
+		credentialsProvider = new UsernamePasswordCredentialsProvider(username, password);
+	    }
+	}
+	else if (protocol.equals("ssh")) {
+	    final File identity = new File(getSshPrivateKey(prop));
+	    if (identity.exists()) {
+		final SshSessionFactory sshSessionFactory = new JschConfigSessionFactory()
+		{
+		    @Override
+		    protected void configure(OpenSshConfig.Host hc, Session session) {
+			// do nothing
+		    }
 
-        }
-        return null;
+		    @Override
+		    protected JSch createDefaultJSch(FS fs) throws JSchException {
+			JSch defaultJSch = super.createDefaultJSch(fs);
+			defaultJSch.addIdentity(identity.getAbsolutePath());
+			return defaultJSch;
+		    }
+		};
+		transportConfigCallback = new TransportConfigCallback()
+		{
+		    @Override
+		    public void configure(Transport transport) {
+			SshTransport sshTransport = (SshTransport) transport;
+			sshTransport.setSshSessionFactory(sshSessionFactory);
+		    }
+		};
+	    }
+	}
+    }
+
+    private String getSshPrivateKey(Properties prop) {
+	String sshPrivateKey = getParameterString(prop, PARAMETER_SSH_PRIVATE_KEY, false);
+	if (!StringUtils.isBlank(sshPrivateKey)) {
+	    if (sshPrivateKey.startsWith("~")) {
+		sshPrivateKey = System.getProperty("user.home") + sshPrivateKey.substring(1);
+	    }
+	}
+	else {
+	    sshPrivateKey = System.getProperty("user.home") + "/.ssh/id_rsa";
+	}
+	return sshPrivateKey;
     }
     
     private boolean createBranch(Issue issue, Properties prop) {
         System.out.println("[*] Creating branch ...");
-        String cacheDir = getWorkingDirectory() + "/" + "cache";
-        createFolder(cacheDir);
+        String cacheDir = getWorkingDirectory() + "/" + "cache/git-data/repositories";
+        if (!createFolder(cacheDir)) {
+	    System.out.println("[e] Cache directory is unreachable! " + cacheDir);
+	    return false;
+	}
         File cachePath = new File(cacheDir + "/" + 
                 new File(trimRight(getParameterString(prop, PARAMETER_GIT_REPOSITORY, false), "/")).getName());
         boolean isCacheReady;
