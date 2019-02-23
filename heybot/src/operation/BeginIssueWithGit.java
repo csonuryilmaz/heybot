@@ -37,6 +37,7 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.eclipse.jgit.util.FS;
 import utilities.Properties;
 import java.util.Set;
+import org.eclipse.jgit.lib.BranchTrackingStatus;
 
 public class BeginIssueWithGit extends Operation
 {
@@ -283,14 +284,14 @@ public class BeginIssueWithGit extends Operation
 		ListBranchCommand branchList = git.branchList();
 		List<Ref> refs = branchList.call();
 		if (refs.size() > 0) {
-		    System.out.println("\t[i] All branches: ");
+		    System.out.println("\t[i] Branch list of repository: ");
 		    refs.forEach((ref) -> {
 			System.out.print("\t\t" + ref.getName());
 			Optional.ofNullable(ref.getObjectId()).ifPresent(objectId -> System.out.print(" " + objectId.getName()));
 			System.out.println();
 		    });
 		}
-		System.out.println("\t[i] On branch: * " + gitRepo.getBranch());
+		System.out.println("\t[i] You're currently on branch '" + gitRepo.getBranch() + "'.");
 	    } catch (GitAPIException ex) {
 		System.out.println("\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
 	    }
@@ -298,11 +299,11 @@ public class BeginIssueWithGit extends Operation
 	    System.out.println("\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
 	}
     }
-    
+
     private void listRepositoryLocalStatus(File cachePath) {
 	try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
 	    try (Git git = new Git(gitRepo)) {
-		System.out.print("\t[i] Branch status: ");
+		System.out.print("\t[i] Status of branch '" + gitRepo.getBranch() + "': ");
 		Status status = git.status().call();
 		if (status.isClean()) {
 		    System.out.println("nothing to commit, working tree clean");
@@ -321,6 +322,7 @@ public class BeginIssueWithGit extends Operation
 		    listModifiedFiles("Untracked", status.getUntracked());
 		    listModifiedFiles("UntrackedFolders", status.getUntrackedFolders());
 		}
+		listBranchTrackingStatus(gitRepo, gitRepo.getBranch());
 	    } catch (GitAPIException ex) {
 		System.out.println("\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
 	    }
@@ -332,9 +334,27 @@ public class BeginIssueWithGit extends Operation
     private void listModifiedFiles(String title, Set<String> files) {
 	if (files.size() > 0) {
 	    System.out.println("\t\t" + title + ": (" + files.size() + ")");
-	    for (String file : files) {
+	    files.forEach((file) -> {
 		System.out.println("\t\t\t" + file);
-	    }
+	    });
 	}
+    }
+    
+    private void listBranchTrackingStatus(Repository repository, String branchName) throws IOException {
+	int[] status = getTrackingStatus(repository, branchName);
+	if (status != null && (status[0] > 0 || status[1] > 0)) {
+	    System.out.println("\t[i] Branch '" + branchName + "' is now (" + status[0] + ") commits ahead, (" + status[1] + ") commits behind.");
+	}
+    }
+    
+    private int[] getTrackingStatus(Repository repository, String branchName) throws IOException {
+	BranchTrackingStatus trackingStatus = BranchTrackingStatus.of(repository, branchName);
+	if (trackingStatus != null) {
+	    int[] counts = new int[2];
+	    counts[0] = trackingStatus.getAheadCount();
+	    counts[1] = trackingStatus.getBehindCount();
+	    return counts;
+	}
+	return null;
     }
 }
