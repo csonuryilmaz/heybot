@@ -14,6 +14,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Scanner;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jgit.api.FetchCommand;
 import org.eclipse.jgit.api.Git;
@@ -37,6 +38,7 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.eclipse.jgit.util.FS;
 import utilities.Properties;
 import java.util.Set;
+import static org.apache.http.util.TextUtils.isEmpty;
 import org.eclipse.jgit.api.MergeResult;
 import org.eclipse.jgit.api.PullCommand;
 import org.eclipse.jgit.api.PullResult;
@@ -79,7 +81,6 @@ public class BeginIssueWithGit extends Operation
     private String repository;
     private String project;
     private boolean hasRemoteBranch;
-    private File localBranch;
     private Issue issue;
 
     public BeginIssueWithGit() {
@@ -238,8 +239,12 @@ public class BeginIssueWithGit extends Operation
             if (listRepositoryLocalStatus(cachePath) > 0) {
                 pullCurrentBranchOnRepository(cachePath);
             }
+            File localBranch;
             if ((localBranch = getLocalBranch(prop)) != null) {
-                System.out.println();
+                localBranch = new File(localBranch.getAbsolutePath() + "/" + project);
+                if (createOrReuseLocalBranchIfExists(cachePath, localBranch)) {
+                    System.out.println();
+                }
             }
         }
 
@@ -426,5 +431,51 @@ public class BeginIssueWithGit extends Operation
         }
         System.out.println("\t\t[e] Local branch folder couldn't be found in workspace!");
         return null;
+    }
+
+    private boolean createOrReuseLocalBranchIfExists(File cachedBranch, File localBranch) {
+        boolean isReady = false;
+        System.out.println("\t[i] Local branch: " + localBranch.getAbsolutePath());
+        if (localBranch.exists()) {
+            System.out.println("\t\t[i] Previously used local branch is found in workspace.");
+            Scanner scanner = new Scanner(System.in);
+            System.out.print("\t\t[?] Would you like to delete existing working copy for fresh checkout? (Y/N) ");
+            String answer = scanner.next();
+            if (!isEmpty(answer) && (answer.charAt(0) == 'Y' || answer.charAt(0) == 'y')) {
+                execute(new String[]{
+                    "rm", "-Rf", localBranch.getAbsolutePath()
+                });
+                if (copy(cachedBranch.getAbsolutePath(), localBranch.getAbsolutePath())) {
+                    System.out.println("\t\t[✓] Ok, working copy is deleted and created.");
+                    isReady = true;
+                }
+            } else {
+                System.out.println("\t\t[✓] Ok, working copy will be reused.");
+                isReady = true;
+            }
+        } else {
+            if (copy(cachedBranch.getAbsolutePath(), localBranch.getAbsolutePath())) {
+                System.out.println("\t\t[✓] Ok, working copy is created.");
+                isReady = true;
+            }
+        }
+        if (!isReady) {
+            System.out.println("\t\t[e] Local branch could not be created successfully.");
+            System.out.println("\t\t[e] Please, restart operation. If still getting error? Delete local branch manually.");
+        }
+        return isReady;
+    }
+
+    private boolean copy(String sourcePath, String targetPath) {
+        String command = "cp -r " + sourcePath + " " + targetPath;
+        System.out.println(command);
+        String[] output = execute(command);
+        if (output == null || output[1].length() > 0) {
+            System.err.println(output[1]);
+            return false;
+        }
+
+        System.out.println(output[0]);
+        return true;
     }
 }
