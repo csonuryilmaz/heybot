@@ -79,81 +79,82 @@ public class BeginIssueWithGit extends Operation
     private String repository;
     private String project;
     private boolean hasRemoteBranch;
+    private File localBranch;
     private Issue issue;
 
     public BeginIssueWithGit() {
-	super(new String[]{
-	    PARAMETER_ISSUE, PARAMETER_REDMINE_TOKEN, PARAMETER_REDMINE_URL, PARAMETER_GIT_REPOSITORY, PARAMETER_GIT_PROTOCOL
-	});
+        super(new String[]{
+            PARAMETER_ISSUE, PARAMETER_REDMINE_TOKEN, PARAMETER_REDMINE_URL, PARAMETER_GIT_REPOSITORY, PARAMETER_GIT_PROTOCOL, PARAMETER_WORKSPACE_PATH
+        });
     }
 
     @Override
     protected void execute(Properties prop) throws Exception {
-	if (areMandatoryParametersNotEmpty(prop)) {
-	    String redmineAccessToken = getParameterString(prop, PARAMETER_REDMINE_TOKEN, false);
-	    String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
-	    redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
+        if (areMandatoryParametersNotEmpty(prop)) {
+            String redmineAccessToken = getParameterString(prop, PARAMETER_REDMINE_TOKEN, false);
+            String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
+            redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
 
-	    if ((issue = getIssue(redmineManager, getParameterInt(prop, PARAMETER_ISSUE, 0))) == null) {
-		return;
-	    }
-	    System.out.println("#" + issue.getId() + " - " + issue.getSubject());
-	    if (!isIssueAssigneeOk(issue, prop) || !isGitCredentialsOk(prop)) {
-		return;
-	    }
-	    createBranch(prop);
-	}
+            if ((issue = getIssue(redmineManager, getParameterInt(prop, PARAMETER_ISSUE, 0))) == null) {
+                return;
+            }
+            System.out.println("#" + issue.getId() + " - " + issue.getSubject());
+            if (!isIssueAssigneeOk(issue, prop) || !isGitCredentialsOk(prop)) {
+                return;
+            }
+            createBranch(prop);
+        }
     }
 
     private boolean isIssueAssigneeOk(Issue issue, Properties prop) {
-	int assigneeId = getParameterInt(prop, PARAMETER_ASSIGNEE_ID, 0);
-	System.out.println("[i] #" + issue.getId() + " is assigned to " + issue.getAssigneeName() + ".");
-	if (assigneeId > 0) {
-	    System.out.println("[*] Checking issue assignee ...");
-	    if (issue.getAssigneeId() != assigneeId) {
-		System.out.println("\t[e] Issue assignee failed!");
-		System.out.println("\t[i] (suggested option!) Change assignee to yourself if you're sure to begin this issue.");
-		System.out.println("\t[i] (not suggested but) You can comment " + PARAMETER_ASSIGNEE_ID + " from config file to disable assignee check.");
-		return false;
-	    } else {
-		System.out.println("\t[✓] Issue assignee is ok.");
-	    }
-	} else {
-	    System.out.println("[i] Issue assignee check is disabled.");
-	}
-	return true;
+        int assigneeId = getParameterInt(prop, PARAMETER_ASSIGNEE_ID, 0);
+        System.out.println("[i] #" + issue.getId() + " is assigned to " + issue.getAssigneeName() + ".");
+        if (assigneeId > 0) {
+            System.out.println("[*] Checking issue assignee ...");
+            if (issue.getAssigneeId() != assigneeId) {
+                System.out.println("\t[e] Issue assignee failed!");
+                System.out.println("\t[i] (suggested option!) Change assignee to yourself if you're sure to begin this issue.");
+                System.out.println("\t[i] (not suggested but) You can comment " + PARAMETER_ASSIGNEE_ID + " from config file to disable assignee check.");
+                return false;
+            } else {
+                System.out.println("\t[✓] Issue assignee is ok.");
+            }
+        } else {
+            System.out.println("[i] Issue assignee check is disabled.");
+        }
+        return true;
     }
 
     @SuppressWarnings("UseSpecificCatch")
     private boolean isGitCredentialsOk(Properties prop) {
-	System.out.println("[*] Checking git credentials ...");
-	String protocol = getParameterString(prop, PARAMETER_GIT_PROTOCOL, true);
-	if (!SUPPORTED_PROTOCOLS.contains(protocol)) {
-	    System.out.println("[e] Unrecognized git protocol: " + protocol);
-	    System.out.println("[i] Supported protocols: " + String.join(",", SUPPORTED_PROTOCOLS));
-	    return false;
-	}
-	repository = getRepository(prop, protocol);
+        System.out.println("[*] Checking git credentials ...");
+        String protocol = getParameterString(prop, PARAMETER_GIT_PROTOCOL, true);
+        if (!SUPPORTED_PROTOCOLS.contains(protocol)) {
+            System.out.println("[e] Unrecognized git protocol: " + protocol);
+            System.out.println("[i] Supported protocols: " + String.join(",", SUPPORTED_PROTOCOLS));
+            return false;
+        }
+        repository = getRepository(prop, protocol);
         project = getProject(prop);
-	setCredentials(prop, protocol);
-	try {
-	    LsRemoteCommand lsRemote = new LsRemoteCommand(null);
-	    lsRemote.setCredentialsProvider(credentialsProvider);
-	    lsRemote.setTransportConfigCallback(transportConfigCallback);
-	    lsRemote.setRemote(repository);
-	    lsRemote.setHeads(true);
-	    Collection<Ref> refs = lsRemote.call();
-	    System.out.println("\t[i] " + refs.size() + " remote (head) refs found.");
+        setCredentials(prop, protocol);
+        try {
+            LsRemoteCommand lsRemote = new LsRemoteCommand(null);
+            lsRemote.setCredentialsProvider(credentialsProvider);
+            lsRemote.setTransportConfigCallback(transportConfigCallback);
+            lsRemote.setRemote(repository);
+            lsRemote.setHeads(true);
+            Collection<Ref> refs = lsRemote.call();
+            System.out.println("\t[i] " + refs.size() + " remote (head) refs found.");
             hasRemoteBranch = findIfRemoteBranchExists(refs);
-	    System.out.println("\t[✓] Git credentials are ok.");
-	    // https://github.com/centic9/jgit-cookbook/blob/master/src/main/java/org/dstadler/jgit/porcelain/ListRemotes.java
-	    return true;
-	} catch (Exception ex) {
-	    System.out.println("\t[e] Credentials failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
-	}
-	return false;
+            System.out.println("\t[✓] Git credentials are ok.");
+            // https://github.com/centic9/jgit-cookbook/blob/master/src/main/java/org/dstadler/jgit/porcelain/ListRemotes.java
+            return true;
+        } catch (Exception ex) {
+            System.out.println("\t[e] Credentials failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+        }
+        return false;
     }
-    
+
     private boolean findIfRemoteBranchExists(Collection<Ref> refs) {
         for (Ref ref : refs) {
             if (ref.getName().equals("refs/heads/i" + issue.getId() + "/" + project)) {
@@ -166,245 +167,264 @@ public class BeginIssueWithGit extends Operation
 
     private String getRepository(Properties prop, String protocol) {
         String repository = trimRight(getParameterString(prop, PARAMETER_GIT_REPOSITORY, false), "/");
-	int indexOfColonWithDoubleSlash;
-	if ((indexOfColonWithDoubleSlash = repository.indexOf("://")) > -1) {
-	    repository = repository.substring(indexOfColonWithDoubleSlash + 3);
-	}
-	return protocol.equals("ssh") ? repository : protocol + "://" + repository;
+        int indexOfColonWithDoubleSlash;
+        if ((indexOfColonWithDoubleSlash = repository.indexOf("://")) > -1) {
+            repository = repository.substring(indexOfColonWithDoubleSlash + 3);
+        }
+        return protocol.equals("ssh") ? repository : protocol + "://" + repository;
     }
 
     private void setCredentials(Properties prop, String protocol) {
-	if (protocol.equals("https") || protocol.equals("http")) {
-	    String username = getParameterString(prop, PARAMETER_GIT_USERNAME, false);
-	    String password = getParameterString(prop, PARAMETER_GIT_PASSWORD, false);
-	    if (!StringUtils.isBlank(username) && !StringUtils.isBlank(password)) {
-		credentialsProvider = new UsernamePasswordCredentialsProvider(username, password);
-	    }
-	} else if (protocol.equals("ssh")) {
-	    final File identity = new File(getSshPrivateKey(prop));
-	    if (identity.exists()) {
-		final SshSessionFactory sshSessionFactory = new JschConfigSessionFactory()
-		{
-		    @Override
-		    protected void configure(OpenSshConfig.Host hc, Session session) {
-			// do nothing
-		    }
+        if (protocol.equals("https") || protocol.equals("http")) {
+            String username = getParameterString(prop, PARAMETER_GIT_USERNAME, false);
+            String password = getParameterString(prop, PARAMETER_GIT_PASSWORD, false);
+            if (!StringUtils.isBlank(username) && !StringUtils.isBlank(password)) {
+                credentialsProvider = new UsernamePasswordCredentialsProvider(username, password);
+            }
+        } else if (protocol.equals("ssh")) {
+            final File identity = new File(getSshPrivateKey(prop));
+            if (identity.exists()) {
+                final SshSessionFactory sshSessionFactory = new JschConfigSessionFactory()
+                {
+                    @Override
+                    protected void configure(OpenSshConfig.Host hc, Session session) {
+                        // do nothing
+                    }
 
-		    @Override
-		    protected JSch createDefaultJSch(FS fs) throws JSchException {
-			JSch defaultJSch = super.createDefaultJSch(fs);
-			defaultJSch.addIdentity(identity.getAbsolutePath());
-			return defaultJSch;
-		    }
-		};
-		transportConfigCallback = (Transport transport) -> {
-		    SshTransport sshTransport = (SshTransport) transport;
-		    sshTransport.setSshSessionFactory(sshSessionFactory);
-		};
-	    }
-	}
+                    @Override
+                    protected JSch createDefaultJSch(FS fs) throws JSchException {
+                        JSch defaultJSch = super.createDefaultJSch(fs);
+                        defaultJSch.addIdentity(identity.getAbsolutePath());
+                        return defaultJSch;
+                    }
+                };
+                transportConfigCallback = (Transport transport) -> {
+                    SshTransport sshTransport = (SshTransport) transport;
+                    sshTransport.setSshSessionFactory(sshSessionFactory);
+                };
+            }
+        }
     }
 
     private String getSshPrivateKey(Properties prop) {
-	String sshPrivateKey = getParameterString(prop, PARAMETER_SSH_PRIVATE_KEY, false);
-	if (!StringUtils.isBlank(sshPrivateKey)) {
-	    if (sshPrivateKey.startsWith("~")) {
-		sshPrivateKey = System.getProperty("user.home") + sshPrivateKey.substring(1);
-	    }
-	} else {
-	    sshPrivateKey = System.getProperty("user.home") + "/.ssh/id_rsa";
-	}
-	return sshPrivateKey;
+        String sshPrivateKey = getParameterString(prop, PARAMETER_SSH_PRIVATE_KEY, false);
+        if (!StringUtils.isBlank(sshPrivateKey)) {
+            if (sshPrivateKey.startsWith("~")) {
+                sshPrivateKey = System.getProperty("user.home") + sshPrivateKey.substring(1);
+            }
+        } else {
+            sshPrivateKey = System.getProperty("user.home") + "/.ssh/id_rsa";
+        }
+        return sshPrivateKey;
     }
 
     private boolean createBranch(Properties prop) {
-	System.out.println("[*] Creating branch ...");
-	String cacheDir = getWorkingDirectory() + "/" + "cache/git-data/repositories";
-	if (!createFolder(cacheDir)) {
-	    System.out.println("[e] Cache directory is unreachable! " + cacheDir);
-	    return false;
-	}
-	File cachePath = new File(cacheDir + "/"
-		+ new File(trimRight(getParameterString(prop, PARAMETER_GIT_REPOSITORY, false), "/")).getName());
-	boolean isCacheReady;
-	if (!cachePath.exists()) {
-	    isCacheReady = cloneRepository(cachePath);
-	} else {
-	    isCacheReady = fetchRepository(cachePath);
-	}
-	if (isCacheReady) {
-	    listRepositoryLocalBranches(cachePath);
-	    if (listRepositoryLocalStatus(cachePath) > 0) {
-		pullCurrentBranchOnRepository(cachePath);
-	    }
-	}
+        System.out.println("[*] Creating branch ...");
+        String cacheDir = getWorkingDirectory() + "/" + "cache/git-data/repositories";
+        if (!createFolder(cacheDir)) {
+            System.out.println("[e] Cache directory is unreachable! " + cacheDir);
+            return false;
+        }
+        File cachePath = new File(cacheDir + "/"
+                + new File(trimRight(getParameterString(prop, PARAMETER_GIT_REPOSITORY, false), "/")).getName());
+        boolean isCacheReady;
+        if (!cachePath.exists()) {
+            isCacheReady = cloneRepository(cachePath);
+        } else {
+            isCacheReady = fetchRepository(cachePath);
+        }
+        if (isCacheReady) {
+            listRepositoryLocalBranches(cachePath);
+            if (listRepositoryLocalStatus(cachePath) > 0) {
+                pullCurrentBranchOnRepository(cachePath);
+            }
+            if ((localBranch = getLocalBranch(prop)) != null) {
+                System.out.println();
+            }
+        }
 
-	return true;
+        return true;
     }
 
     private boolean cloneRepository(File cachePath) {
-	System.out.println("\t[*] Locally cached repository not found. Cloning once ...");
-	try (Git result = Git.cloneRepository()
-		.setURI(repository)
-		.setCredentialsProvider(credentialsProvider)
-		.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)))
-		.setDirectory(cachePath)
-		.call()) {
-	    System.out.println("\t[✓] Cloned repository: " + result.getRepository().getDirectory());
-	    return true;
-	} catch (GitAPIException gae) {
-	    System.out.println("\t[e] Git clone failed with error! " + gae.getClass().getCanonicalName() + " " + gae.getMessage());
-	}
-	return false;
+        System.out.println("\t[*] Locally cached repository not found. Cloning once ...");
+        try (Git result = Git.cloneRepository()
+                .setURI(repository)
+                .setCredentialsProvider(credentialsProvider)
+                .setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)))
+                .setDirectory(cachePath)
+                .call()) {
+            System.out.println("\t[✓] Cloned repository: " + result.getRepository().getDirectory());
+            return true;
+        } catch (GitAPIException gae) {
+            System.out.println("\t[e] Git clone failed with error! " + gae.getClass().getCanonicalName() + " " + gae.getMessage());
+        }
+        return false;
     }
 
     private boolean fetchRepository(File cachePath) {
-	System.out.println("\t[*] Locally cached repository exists. Updating remote refs ...");
-	try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
-	    try (Git git = new Git(gitRepo)) {
-		FetchCommand fetch = git.fetch();
-		fetch.setCredentialsProvider(credentialsProvider);
-		fetch.setTransportConfigCallback(transportConfigCallback);
-		fetch.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)));
-		fetch.setCheckFetchedObjects(true);
-		fetch.setRemoveDeletedRefs(true);
-		FetchResult result = fetch.call();
-		if (!StringUtils.isBlank(result.getMessages())) {
-		    System.out.println("\t[i] Messages: " + result.getMessages());
-		}
-		System.out.println("\t[✓] Git fetch completed.");
-		return true;
-	    } catch (GitAPIException ex) {
-		System.out.println("\t[e] Git fetch failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
-	    }
-	} catch (IOException ex) {
-	    System.out.println("\t[e] Git fetch failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
-	}
-	return false;
+        System.out.println("\t[*] Locally cached repository exists. Updating remote refs ...");
+        try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
+            try (Git git = new Git(gitRepo)) {
+                FetchCommand fetch = git.fetch();
+                fetch.setCredentialsProvider(credentialsProvider);
+                fetch.setTransportConfigCallback(transportConfigCallback);
+                fetch.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)));
+                fetch.setCheckFetchedObjects(true);
+                fetch.setRemoveDeletedRefs(true);
+                FetchResult result = fetch.call();
+                if (!StringUtils.isBlank(result.getMessages())) {
+                    System.out.println("\t[i] Messages: " + result.getMessages());
+                }
+                System.out.println("\t[✓] Git fetch completed.");
+                return true;
+            } catch (GitAPIException ex) {
+                System.out.println("\t[e] Git fetch failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            }
+        } catch (IOException ex) {
+            System.out.println("\t[e] Git fetch failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+        }
+        return false;
     }
 
     private Repository openRepository(String cachePath) throws IOException {
-	FileRepositoryBuilder builder = new FileRepositoryBuilder();
-	builder.setGitDir(new File(cachePath + "/.git"));
-	builder.setMustExist(true);
-	return builder
-		.readEnvironment() // scan environment GIT_* variables
-		.build();
+        FileRepositoryBuilder builder = new FileRepositoryBuilder();
+        builder.setGitDir(new File(cachePath + "/.git"));
+        builder.setMustExist(true);
+        return builder
+                .readEnvironment() // scan environment GIT_* variables
+                .build();
     }
 
     private void listRepositoryLocalBranches(File cachePath) {
-	try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
-	    try (Git git = new Git(gitRepo)) {
-		ListBranchCommand branchList = git.branchList();
-		List<Ref> refs = branchList.call();
-		if (refs.size() > 0) {
-		    System.out.println("\t[i] Branch list of repository: ");
-		    refs.forEach((ref) -> {
-			System.out.print("\t\t" + ref.getName());
-			Optional.ofNullable(ref.getObjectId()).ifPresent(objectId -> System.out.print(" " + objectId.getName()));
-			System.out.println();
-		    });
-		}
-		System.out.println("\t[i] You're currently on branch '" + gitRepo.getBranch() + "'.");
-	    } catch (GitAPIException ex) {
-		System.out.println("\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
-	    }
-	} catch (IOException ex) {
-	    System.out.println("\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
-	}
+        try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
+            try (Git git = new Git(gitRepo)) {
+                ListBranchCommand branchList = git.branchList();
+                List<Ref> refs = branchList.call();
+                if (refs.size() > 0) {
+                    System.out.println("\t[i] Branch list of repository: ");
+                    refs.forEach((ref) -> {
+                        System.out.print("\t\t" + ref.getName());
+                        Optional.ofNullable(ref.getObjectId()).ifPresent(objectId -> System.out.print(" " + objectId.getName()));
+                        System.out.println();
+                    });
+                }
+                System.out.println("\t[i] You're currently on branch '" + gitRepo.getBranch() + "'.");
+            } catch (GitAPIException ex) {
+                System.out.println("\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            }
+        } catch (IOException ex) {
+            System.out.println("\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+        }
     }
 
     private int listRepositoryLocalStatus(File cachePath) {
-	try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
-	    try (Git git = new Git(gitRepo)) {
-		System.out.print("\t[i] Status of branch '" + gitRepo.getBranch() + "': ");
-		Status status = git.status().call();
-		if (status.isClean()) {
-		    System.out.println("nothing to commit, working tree clean");
-		} else {
-		    if (status.hasUncommittedChanges()) {
-			System.out.print("has uncommitted changes");
-		    }
-		    System.out.println();
-		    listModifiedFiles("Added", status.getAdded());
-		    listModifiedFiles("Changed", status.getChanged());
-		    listModifiedFiles("Conflicting", status.getConflicting());
-		    listModifiedFiles("IgnoredNotInIndex", status.getIgnoredNotInIndex());
-		    listModifiedFiles("Missing", status.getMissing());
-		    listModifiedFiles("Modified", status.getModified());
-		    listModifiedFiles("Removed", status.getRemoved());
-		    listModifiedFiles("Untracked", status.getUntracked());
-		    listModifiedFiles("UntrackedFolders", status.getUntrackedFolders());
-		}
-		return listBranchTrackingStatus(gitRepo, gitRepo.getBranch());
-	    } catch (GitAPIException ex) {
-		System.out.println("\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
-	    }
-	} catch (IOException ex) {
-	    System.out.println("\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
-	}
-	return 0;
+        try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
+            try (Git git = new Git(gitRepo)) {
+                System.out.print("\t[i] Status of branch '" + gitRepo.getBranch() + "': ");
+                Status status = git.status().call();
+                if (status.isClean()) {
+                    System.out.println("nothing to commit, working tree clean");
+                } else {
+                    if (status.hasUncommittedChanges()) {
+                        System.out.print("has uncommitted changes");
+                    }
+                    System.out.println();
+                    listModifiedFiles("Added", status.getAdded());
+                    listModifiedFiles("Changed", status.getChanged());
+                    listModifiedFiles("Conflicting", status.getConflicting());
+                    listModifiedFiles("IgnoredNotInIndex", status.getIgnoredNotInIndex());
+                    listModifiedFiles("Missing", status.getMissing());
+                    listModifiedFiles("Modified", status.getModified());
+                    listModifiedFiles("Removed", status.getRemoved());
+                    listModifiedFiles("Untracked", status.getUntracked());
+                    listModifiedFiles("UntrackedFolders", status.getUntrackedFolders());
+                }
+                return listBranchTrackingStatus(gitRepo, gitRepo.getBranch());
+            } catch (GitAPIException ex) {
+                System.out.println("\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            }
+        } catch (IOException ex) {
+            System.out.println("\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+        }
+        return 0;
     }
 
     private void listModifiedFiles(String title, Set<String> files) {
-	if (files.size() > 0) {
-	    System.out.println("\t\t" + title + ": (" + files.size() + ")");
-	    files.forEach((file) -> {
-		System.out.println("\t\t\t" + file);
-	    });
-	}
+        if (files.size() > 0) {
+            System.out.println("\t\t" + title + ": (" + files.size() + ")");
+            files.forEach((file) -> {
+                System.out.println("\t\t\t" + file);
+            });
+        }
     }
 
     private int listBranchTrackingStatus(Repository repository, String branchName) throws IOException {
-	int[] status = getTrackingStatus(repository, branchName);
-	if (status != null && (status[0] > 0 || status[1] > 0)) {
-	    System.out.println("\t[i] Branch '" + branchName + "' is now (" + status[0] + ") commits ahead, (" + status[1] + ") commits behind.");
-	    return status[1];
-	}
-	return 0;
+        int[] status = getTrackingStatus(repository, branchName);
+        if (status != null && (status[0] > 0 || status[1] > 0)) {
+            System.out.println("\t[i] Branch '" + branchName + "' is now (" + status[0] + ") commits ahead, (" + status[1] + ") commits behind.");
+            return status[1];
+        }
+        return 0;
     }
 
     private int[] getTrackingStatus(Repository repository, String branchName) throws IOException {
-	BranchTrackingStatus trackingStatus = BranchTrackingStatus.of(repository, branchName);
-	if (trackingStatus != null) {
-	    int[] counts = new int[2];
-	    counts[0] = trackingStatus.getAheadCount();
-	    counts[1] = trackingStatus.getBehindCount();
-	    return counts;
-	}
-	return null;
+        BranchTrackingStatus trackingStatus = BranchTrackingStatus.of(repository, branchName);
+        if (trackingStatus != null) {
+            int[] counts = new int[2];
+            counts[0] = trackingStatus.getAheadCount();
+            counts[1] = trackingStatus.getBehindCount();
+            return counts;
+        }
+        return null;
     }
 
     private boolean pullCurrentBranchOnRepository(File cachePath) {
-	System.out.println("\t[*] Pulling remote changes ...");
-	try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
-	    try (Git git = new Git(gitRepo)) {
-		PullCommand pull = git.pull();
-		pull.setCredentialsProvider(credentialsProvider);
-		pull.setTransportConfigCallback(transportConfigCallback);
-		pull.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)));
-		PullResult result = pull.call();
-		if (result.isSuccessful()) {
-		    FetchResult fetchResult = result.getFetchResult();
-		    if (!StringUtils.isBlank(fetchResult.getMessages())) {
-			System.out.println("\t[i] Messages: " + fetchResult.getMessages());
-		    }
-		    MergeResult mergeResult = result.getMergeResult();
-		    if (mergeResult.getMergeStatus().isSuccessful()) {
-			System.out.println("\t[✓] Git pull completed.");
-			return true;
-		    }
-		}
-	    } catch (GitAPIException ex) {
-		System.out.println("\t[e] Git fetch failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
-	    }
-	} catch (IOException ex) {
-	    System.out.println("\t[e] Git fetch failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
-	}
-	return false;
+        System.out.println("\t[*] Pulling remote changes ...");
+        try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
+            try (Git git = new Git(gitRepo)) {
+                PullCommand pull = git.pull();
+                pull.setCredentialsProvider(credentialsProvider);
+                pull.setTransportConfigCallback(transportConfigCallback);
+                pull.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)));
+                PullResult result = pull.call();
+                if (result.isSuccessful()) {
+                    FetchResult fetchResult = result.getFetchResult();
+                    if (!StringUtils.isBlank(fetchResult.getMessages())) {
+                        System.out.println("\t[i] Messages: " + fetchResult.getMessages());
+                    }
+                    MergeResult mergeResult = result.getMergeResult();
+                    if (mergeResult.getMergeStatus().isSuccessful()) {
+                        System.out.println("\t[✓] Git pull completed.");
+                        return true;
+                    }
+                }
+            } catch (GitAPIException ex) {
+                System.out.println("\t[e] Git fetch failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            }
+        } catch (IOException ex) {
+            System.out.println("\t[e] Git fetch failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+        }
+        return false;
     }
-    
+
     private String getProject(Properties prop) {
         return new File(trimRight(getParameterString(prop, PARAMETER_GIT_REPOSITORY, false), "/")).getName().replace(".git", "");
+    }
+
+    private File getLocalBranch(Properties prop) {
+        File localBranch = new File(trimRight(getParameterString(prop, PARAMETER_WORKSPACE_PATH, false), "/") + "/i" + issue.getId());
+        System.out.println("\t[i] Local branch folder: " + localBranch);
+        System.out.println("\t[*] Checking whether local branch folder exists ...");
+        boolean pathExists = true;
+        if (!localBranch.exists()) {
+            pathExists = createFolder(localBranch.getAbsolutePath());
+        }
+        if (pathExists) {
+            System.out.println("\t\t[✓] Local branch folder is ok.");
+            return localBranch;
+        }
+        System.out.println("\t\t[e] Local branch folder couldn't be found in workspace!");
+        return null;
     }
 }
