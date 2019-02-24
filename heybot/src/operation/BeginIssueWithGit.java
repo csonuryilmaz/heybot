@@ -77,6 +77,9 @@ public class BeginIssueWithGit extends Operation
     private CredentialsProvider credentialsProvider;
     private TransportConfigCallback transportConfigCallback;
     private String repository;
+    private String project;
+    private boolean hasRemoteBranch;
+    private Issue issue;
 
     public BeginIssueWithGit() {
 	super(new String[]{
@@ -91,7 +94,6 @@ public class BeginIssueWithGit extends Operation
 	    String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
 	    redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
 
-	    Issue issue;
 	    if ((issue = getIssue(redmineManager, getParameterInt(prop, PARAMETER_ISSUE, 0))) == null) {
 		return;
 	    }
@@ -99,7 +101,7 @@ public class BeginIssueWithGit extends Operation
 	    if (!isIssueAssigneeOk(issue, prop) || !isGitCredentialsOk(prop)) {
 		return;
 	    }
-	    createBranch(issue, prop);
+	    createBranch(prop);
 	}
     }
 
@@ -131,7 +133,8 @@ public class BeginIssueWithGit extends Operation
 	    System.out.println("[i] Supported protocols: " + String.join(",", SUPPORTED_PROTOCOLS));
 	    return false;
 	}
-	repository = getRepository(trimRight(getParameterString(prop, PARAMETER_GIT_REPOSITORY, false), "/"), protocol);
+	repository = getRepository(prop, protocol);
+        project = getProject(prop);
 	setCredentials(prop, protocol);
 	try {
 	    LsRemoteCommand lsRemote = new LsRemoteCommand(null);
@@ -141,6 +144,7 @@ public class BeginIssueWithGit extends Operation
 	    lsRemote.setHeads(true);
 	    Collection<Ref> refs = lsRemote.call();
 	    System.out.println("\t[i] " + refs.size() + " remote (head) refs found.");
+            hasRemoteBranch = findIfRemoteBranchExists(refs);
 	    System.out.println("\t[✓] Git credentials are ok.");
 	    // https://github.com/centic9/jgit-cookbook/blob/master/src/main/java/org/dstadler/jgit/porcelain/ListRemotes.java
 	    return true;
@@ -149,8 +153,19 @@ public class BeginIssueWithGit extends Operation
 	}
 	return false;
     }
+    
+    private boolean findIfRemoteBranchExists(Collection<Ref> refs) {
+        for (Ref ref : refs) {
+            if (ref.getName().equals("refs/heads/i" + issue.getId() + "/" + project)) {
+                System.out.println("\t\t[i] " + ref.getName() + " is found on remote repository.");
+                return true;
+            }
+        }
+        return false;
+    }
 
-    private String getRepository(String repository, String protocol) {
+    private String getRepository(Properties prop, String protocol) {
+        String repository = trimRight(getParameterString(prop, PARAMETER_GIT_REPOSITORY, false), "/");
 	int indexOfColonWithDoubleSlash;
 	if ((indexOfColonWithDoubleSlash = repository.indexOf("://")) > -1) {
 	    repository = repository.substring(indexOfColonWithDoubleSlash + 3);
@@ -202,7 +217,7 @@ public class BeginIssueWithGit extends Operation
 	return sshPrivateKey;
     }
 
-    private boolean createBranch(Issue issue, Properties prop) {
+    private boolean createBranch(Properties prop) {
 	System.out.println("[*] Creating branch ...");
 	String cacheDir = getWorkingDirectory() + "/" + "cache/git-data/repositories";
 	if (!createFolder(cacheDir)) {
@@ -387,5 +402,9 @@ public class BeginIssueWithGit extends Operation
 	    System.out.println("\t[e] Git fetch failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
 	}
 	return false;
+    }
+    
+    private String getProject(Properties prop) {
+        return new File(trimRight(getParameterString(prop, PARAMETER_GIT_REPOSITORY, false), "/")).getName().replace(".git", "");
     }
 }
