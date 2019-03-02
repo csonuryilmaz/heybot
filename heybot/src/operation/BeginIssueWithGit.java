@@ -43,8 +43,7 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.eclipse.jgit.util.FS;
 import utilities.Properties;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import model.Command;
 import static org.apache.http.util.TextUtils.isEmpty;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
@@ -258,6 +257,7 @@ public class BeginIssueWithGit extends Operation
                     if (checkoutBranch(localBranch)) {
                         issueIsBegun(prop);
                         executeRemote(prop);
+                        openIDE(prop, localBranch);
                     }
                 }
             }
@@ -646,6 +646,28 @@ public class BeginIssueWithGit extends Operation
                     session.disconnect();
                 } catch (JSchException | IOException | InterruptedException ex) {
                     System.out.println("\t[e] Remote execution failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+                }
+            }
+        }
+    }
+    
+    private void openIDE(Properties prop, File project) {
+        String idePath = getParameterString(prop, PARAMETER_IDE_PATH, false);
+        String workspacePath = trimRight(getParameterString(prop, PARAMETER_WORKSPACE_PATH, false), "/");
+        if (!isEmpty(idePath) && !isEmpty(workspacePath)) {
+            Scanner scanner = new Scanner(System.in);
+            System.out.print("[?] Would you like open to IDE for development? (Y/N) ");
+            String answer = scanner.next();
+            if (!isEmpty(answer) && (answer.charAt(0) == 'Y' || answer.charAt(0) == 'y')) {
+                if (project.exists()) {
+                    Command cmd = new Command(idePath.contains("%s") ? String.format(idePath, project.getAbsolutePath())
+                            : idePath + " " + project.getAbsolutePath());
+                    System.out.println("[*] Opening IDE ...");
+                    System.out.println(cmd.getCommandString());
+                    cmd.executeNoWait();
+                    System.out.println("[✓] IDE will be open in a few seconds. Happy coding. \\o/");
+                } else {
+                    System.out.print("\t[w] Project not found in path:" + project.getAbsolutePath());
                 }
             }
         }
