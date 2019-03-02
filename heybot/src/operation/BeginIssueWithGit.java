@@ -44,7 +44,10 @@ import static org.apache.http.util.TextUtils.isEmpty;
 import org.eclipse.jgit.api.MergeResult;
 import org.eclipse.jgit.api.PullCommand;
 import org.eclipse.jgit.api.PullResult;
+import org.eclipse.jgit.api.PushCommand;
 import org.eclipse.jgit.lib.BranchTrackingStatus;
+import org.eclipse.jgit.transport.PushResult;
+import org.eclipse.jgit.transport.RefSpec;
 
 public class BeginIssueWithGit extends Operation
 {
@@ -261,6 +264,7 @@ public class BeginIssueWithGit extends Operation
         try (Git result = Git.cloneRepository()
                 .setURI(repository)
                 .setCredentialsProvider(credentialsProvider)
+                .setTransportConfigCallback(transportConfigCallback)
                 .setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)))
                 .setDirectory(cachePath)
                 .call()) {
@@ -502,9 +506,29 @@ public class BeginIssueWithGit extends Operation
                 }
                 System.out.print("\t\t" + ref.getName());
                 Optional.ofNullable(ref.getObjectId()).ifPresent(objectId -> System.out.println(" " + objectId.getName()));
-                
+                if (!hasRemoteBranch) {
+                    PushCommand pushCommand = git.push();
+                    pushCommand.setCredentialsProvider(credentialsProvider);
+                    pushCommand.setTransportConfigCallback(transportConfigCallback);
+                    pushCommand.setRemote("origin");
+                    pushCommand.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)));
+                    pushCommand.setRefSpecs(new RefSpec(name + ":" + name));
+                    Iterable<PushResult> resultIterable = pushCommand.call();
+                    PushResult result = resultIterable.iterator().next();
+                    if (!StringUtils.isBlank(result.getMessages())) {
+                        System.out.print("\t\t[i] Messages: " + result.getMessages());
+                    }
+                    CreateBranchCommand updateBranch = git.branchCreate();
+                    updateBranch.setName(name);
+                    updateBranch.setStartPoint("origin/" + name);
+                    updateBranch.setUpstreamMode(CreateBranchCommand.SetupUpstreamMode.TRACK);
+                    updateBranch.setForce(true);
+                    updateBranch.call();
+                }
                 CheckoutCommand checkout = git.checkout();
                 checkout.setName(name);
+                checkout.setStartPoint("origin/" + name);
+                checkout.setUpstreamMode(CreateBranchCommand.SetupUpstreamMode.TRACK);
                 checkout.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)));
                 checkout.call();
                 System.out.println("\t\t[✓] Git checkout ok.");
