@@ -765,17 +765,18 @@ public abstract class Operation
 	return null;
     }
 
-    protected void updateIssueStatus(RedmineManager redmineManager, Issue issue, int statusId) throws Exception
-    {
-	if (issue.getStatusId() != statusId)
-	{
-	    issue.setStatusId(statusId);
-	    redmineManager.getIssueManager().update(issue);
-	    if (!isIssueStatusUpdated(redmineManager, issue.getId(), statusId))
-	    {
-		throw new Exception("Could not update issue status! Please check your redmine workflow or configuration!");
-	    }
-	}
+    protected Issue updateIssueStatus(RedmineManager redmineManager, Issue issue, int statusId) throws Exception {
+        if (issue.getStatusId() != statusId) {
+            issue.setStatusId(statusId);
+            redmineManager.getIssueManager().update(issue);
+            Issue uptodateIssue = redmineManager.getIssueManager().getIssueById(issue.getId());
+            if (uptodateIssue.getStatusId() == statusId) {
+                return uptodateIssue;
+            } else {
+                throw new Exception("Could not update issue status! Please check your redmine workflow or configuration!");
+            }
+        }
+        return issue;
     }
 
     private boolean isIssueStatusUpdated(RedmineManager redmineManager, int issueId, int statusId) throws RedmineException

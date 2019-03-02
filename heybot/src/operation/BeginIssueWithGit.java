@@ -40,6 +40,8 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.eclipse.jgit.util.FS;
 import utilities.Properties;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import static org.apache.http.util.TextUtils.isEmpty;
 import org.eclipse.jgit.api.MergeResult;
 import org.eclipse.jgit.api.PullCommand;
@@ -66,7 +68,7 @@ public class BeginIssueWithGit extends Operation
     private final static String PARAMETER_SSH_PRIVATE_KEY = "SSH_PRIVATE_KEY";
 
     // optional
-    private final static String PARAMETER_BEGAN_STATUS = "BEGAN_STATUS";
+    private final static String PARAMETER_BEGUN_STATUS = "BEGUN_STATUS";
     private final static String PARAMETER_ASSIGNEE_ID = "ASSIGNEE_ID";
 
     private final static String PARAMETER_WORKSPACE_PATH = "WORKSPACE_PATH";
@@ -249,7 +251,7 @@ public class BeginIssueWithGit extends Operation
                 localBranch = new File(localBranch.getAbsolutePath() + "/" + project);
                 if (createOrReuseLocalBranchIfExists(cachePath, localBranch)) {
                     if (checkoutBranch(localBranch)) {
-                        System.out.println();
+                        issueIsBegun(prop);
                     }
                 }
             }
@@ -488,7 +490,7 @@ public class BeginIssueWithGit extends Operation
         System.out.println(output[0]);
         return true;
     }
-    
+
     private boolean checkoutBranch(File localBranch) {
         System.out.println("\t[*] Checkout ...");
         try (Repository gitRepo = openRepository(localBranch.getAbsolutePath())) {
@@ -540,5 +542,27 @@ public class BeginIssueWithGit extends Operation
             System.out.println("\t\t[e] Git checkout failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
         }
         return false;
+    }
+    
+    private void issueIsBegun(Properties prop) {
+        String begunStatus = getParameterString(prop, PARAMETER_BEGUN_STATUS, true);
+        if (!isEmpty(begunStatus)) {
+            System.out.println("\t[*] Updating issue status ...");
+            int statusId = tryGetIssueStatusId(redmineManager, begunStatus);
+            System.out.println("\t\t[i] Begun Status: " + begunStatus);
+            if (statusId > 0) {
+                try {
+                    String baseStatus = issue.getStatusName();
+                    issue = updateIssueStatus(redmineManager, issue, statusId);
+                    System.out.println("\t\t[i] Issue status: "
+                            + (!baseStatus.equals(issue.getStatusName()) ? baseStatus + " > " : "") + issue.getStatusName());
+                    System.out.println("\t\t[✓] Issue status is ok.");
+                } catch (Exception ex) {
+                    System.out.println("\t\t[e] Issue status update failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+                }
+            } else {
+                System.out.println("\t\t[w] Begun status has invalid value!");
+            }
+        }
     }
 }
