@@ -18,6 +18,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -779,10 +781,12 @@ public abstract class Operation
         return issue;
     }
 
-    private boolean isIssueStatusUpdated(RedmineManager redmineManager, int issueId, int statusId) throws RedmineException
-    {
-	Issue issue = redmineManager.getIssueManager().getIssueById(issueId);
-	return issue.getStatusId() == statusId;
+    protected String getHostIPAddress(String host) {
+        try {
+            return " [IPv4: " + InetAddress.getByName(host).getHostAddress() + "]";
+        } catch (UnknownHostException ex) {
+            return "";
+        }
     }
 
     protected boolean isSvnPathExists(String svnCommand, String tagPath)

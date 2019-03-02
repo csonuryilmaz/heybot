@@ -548,15 +548,5 @@ public class BeginIssue extends Operation
 	    }
 	}
     }
-    
-    private String getHostIPAddress(String host)
-    {
-	try {
-	    return " (" + InetAddress.getByName(host).getHostAddress() + ")";
-	}
-	catch (UnknownHostException ex) {
-	    return "";
-	}
-    }
 
 }

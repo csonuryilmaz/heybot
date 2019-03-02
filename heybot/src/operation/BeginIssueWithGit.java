@@ -1,5 +1,6 @@
 package operation;
 
+import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
@@ -8,7 +9,9 @@ import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.Issue;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
@@ -43,6 +46,8 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import static org.apache.http.util.TextUtils.isEmpty;
+import org.apache.velocity.VelocityContext;
+import org.apache.velocity.app.Velocity;
 import org.eclipse.jgit.api.MergeResult;
 import org.eclipse.jgit.api.PullCommand;
 import org.eclipse.jgit.api.PullResult;
@@ -252,6 +257,7 @@ public class BeginIssueWithGit extends Operation
                 if (createOrReuseLocalBranchIfExists(cachePath, localBranch)) {
                     if (checkoutBranch(localBranch)) {
                         issueIsBegun(prop);
+                        executeRemote(prop);
                     }
                 }
             }
@@ -562,6 +568,85 @@ public class BeginIssueWithGit extends Operation
                 }
             } else {
                 System.out.println("\t\t[w] Begun status has invalid value!");
+            }
+        }
+    }
+    
+    private void executeRemote(Properties prop) {
+        String sshHost = getParameterString(prop, PARAMETER_REMOTE_HOST, false);
+        String sshUser = getParameterString(prop, PARAMETER_REMOTE_USER, false);
+        String sshPass = getParameterString(prop, PARAMETER_REMOTE_PASS, false);
+        String sshExec = getParameterString(prop, PARAMETER_REMOTE_EXEC, false);
+
+        byte validValueCount = 0;
+        validValueCount += StringUtils.isBlank(sshHost) ? 0 : 1;
+        validValueCount += StringUtils.isBlank(sshUser) ? 0 : 1;
+        validValueCount += StringUtils.isBlank(sshPass) ? 0 : 1;
+        validValueCount += StringUtils.isBlank(sshExec) ? 0 : 1;
+        if (validValueCount > 0) {
+            System.out.println("[*] Executing remote command ...");
+            if (validValueCount < 4) {
+                System.out.println("\t[e] Missing remote parameters! "
+                        + "Please, set all values for REMOTE_HOST, REMOTE_USER, REMOTE_PASS, REMOTE_EXEC parameters.");
+            } else {
+                try {
+                    int sshPort = getParameterInt(prop, PARAMETER_REMOTE_PORT, 22);
+                    System.out.println("\t[i] Host: " + sshHost + getHostIPAddress(sshHost));
+                    System.out.println("\t[i] User: " + sshUser);
+                    System.out.println("\t[i] Port: " + sshPort);
+                    System.out.println("\t[i] Exec: " + sshExec);
+
+                    Velocity.init();
+                    VelocityContext context = new VelocityContext();
+                    context.put("issue", issue.getId());
+                    StringWriter writer = new StringWriter();
+                    Velocity.evaluate(context, writer, "TemplateName", sshExec);
+                    sshExec = writer.toString();
+
+                    JSch jsch = new JSch();
+                    Session session = jsch.getSession(sshUser, sshHost, sshPort);
+                    session.setPassword(sshPass);
+                    java.util.Properties config = new java.util.Properties();
+                    config.put("StrictHostKeyChecking", "no");
+                    session.setConfig(config);
+                    System.out.println("\t[*] Connecting ...");
+                    session.connect();
+                    System.out.println("\t[✓] Connected.");
+
+                    ChannelExec channelExec = (ChannelExec) session.openChannel("exec");
+                    System.out.println("\t[*] Executing command ...");
+                    channelExec.setCommand("exec 2>&1 && " + sshExec);
+                    InputStream stream = channelExec.getInputStream();
+                    channelExec.connect();
+                    byte[] tmp = new byte[1024];
+                    while (true) {
+                        while (stream.available() > 0) {
+                            int i = stream.read(tmp, 0, 1024);
+                            if (i < 0) {
+                                break;
+                            }
+                            System.out.print(new String(tmp, 0, i));
+                        }
+                        if (channelExec.isClosed()) {
+                            if (stream.available() > 0) {
+                                continue;
+                            }
+                            break;
+                        }
+                        Thread.sleep(500);
+                    }
+                    int exitStatus = channelExec.getExitStatus();
+                    System.out.println("\t[i] Command exit with " + exitStatus + ".");
+                    if (exitStatus == 0) {
+                        System.out.println("\t[✓] Remote execution is ok.");
+                    } else {
+                        System.out.println("\t[w] Remote execution failed! Inspect command logs.");
+                    }
+                    channelExec.disconnect();
+                    session.disconnect();
+                } catch (JSchException | IOException | InterruptedException ex) {
+                    System.out.println("\t[e] Remote execution failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+                }
             }
         }
     }
