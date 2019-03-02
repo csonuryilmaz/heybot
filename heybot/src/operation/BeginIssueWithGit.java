@@ -16,12 +16,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
 import org.apache.commons.lang3.StringUtils;
+import org.eclipse.jgit.api.CheckoutCommand;
+import org.eclipse.jgit.api.CreateBranchCommand;
 import org.eclipse.jgit.api.FetchCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ListBranchCommand;
 import org.eclipse.jgit.api.LsRemoteCommand;
 import org.eclipse.jgit.api.TransportConfigCallback;
-import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.api.errors.*;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.api.Status;
@@ -243,7 +245,9 @@ public class BeginIssueWithGit extends Operation
             if ((localBranch = getLocalBranch(prop)) != null) {
                 localBranch = new File(localBranch.getAbsolutePath() + "/" + project);
                 if (createOrReuseLocalBranchIfExists(cachePath, localBranch)) {
-                    System.out.println();
+                    if (checkoutBranch(localBranch)) {
+                        System.out.println();
+                    }
                 }
             }
         }
@@ -252,7 +256,8 @@ public class BeginIssueWithGit extends Operation
     }
 
     private boolean cloneRepository(File cachePath) {
-        System.out.println("\t[*] Locally cached repository not found. Cloning once ...");
+        System.out.println("\t[i] Locally cached repository not found.");
+        System.out.println("\t[*] Cloning once for cache ...");
         try (Git result = Git.cloneRepository()
                 .setURI(repository)
                 .setCredentialsProvider(credentialsProvider)
@@ -268,7 +273,8 @@ public class BeginIssueWithGit extends Operation
     }
 
     private boolean fetchRepository(File cachePath) {
-        System.out.println("\t[*] Locally cached repository exists. Updating remote refs ...");
+        System.out.println("\t[i] Locally cached repository exists.");
+        System.out.println("\t[*] Updating remote refs ...");
         try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
             try (Git git = new Git(gitRepo)) {
                 FetchCommand fetch = git.fetch();
@@ -279,9 +285,9 @@ public class BeginIssueWithGit extends Operation
                 fetch.setRemoveDeletedRefs(true);
                 FetchResult result = fetch.call();
                 if (!StringUtils.isBlank(result.getMessages())) {
-                    System.out.println("\t[i] Messages: " + result.getMessages());
+                    System.out.print("\t[i] Messages: " + result.getMessages());
                 }
-                System.out.println("\t[✓] Git fetch completed.");
+                System.out.println("\t[✓] Git fetch ok.");
                 return true;
             } catch (GitAPIException ex) {
                 System.out.println("\t[e] Git fetch failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
@@ -307,26 +313,26 @@ public class BeginIssueWithGit extends Operation
                 ListBranchCommand branchList = git.branchList();
                 List<Ref> refs = branchList.call();
                 if (refs.size() > 0) {
-                    System.out.println("\t[i] Branch list of repository: ");
+                    System.out.println("\t\t[i] Branches: ");
                     refs.forEach((ref) -> {
-                        System.out.print("\t\t" + ref.getName());
+                        System.out.print("\t\t\t" + ref.getName());
                         Optional.ofNullable(ref.getObjectId()).ifPresent(objectId -> System.out.print(" " + objectId.getName()));
                         System.out.println();
                     });
                 }
-                System.out.println("\t[i] You're currently on branch '" + gitRepo.getBranch() + "'.");
+                System.out.println("\t\t[i] @branch '" + gitRepo.getBranch() + "'.");
             } catch (GitAPIException ex) {
-                System.out.println("\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+                System.out.println("\t\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
             }
         } catch (IOException ex) {
-            System.out.println("\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            System.out.println("\t\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
         }
     }
 
     private int listRepositoryLocalStatus(File cachePath) {
         try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
             try (Git git = new Git(gitRepo)) {
-                System.out.print("\t[i] Status of branch '" + gitRepo.getBranch() + "': ");
+                System.out.print("\t\t[i] Status of branch '" + gitRepo.getBranch() + "': ");
                 Status status = git.status().call();
                 if (status.isClean()) {
                     System.out.println("nothing to commit, working tree clean");
@@ -347,10 +353,10 @@ public class BeginIssueWithGit extends Operation
                 }
                 return listBranchTrackingStatus(gitRepo, gitRepo.getBranch());
             } catch (GitAPIException ex) {
-                System.out.println("\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+                System.out.println("\t\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
             }
         } catch (IOException ex) {
-            System.out.println("\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            System.out.println("\t\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
         }
         return 0;
     }
@@ -367,7 +373,7 @@ public class BeginIssueWithGit extends Operation
     private int listBranchTrackingStatus(Repository repository, String branchName) throws IOException {
         int[] status = getTrackingStatus(repository, branchName);
         if (status != null && (status[0] > 0 || status[1] > 0)) {
-            System.out.println("\t[i] Branch '" + branchName + "' is now (" + status[0] + ") commits ahead, (" + status[1] + ") commits behind.");
+            System.out.println("\t\t[i] Branch '" + branchName + "' is now (" + status[0] + ") commits ahead, (" + status[1] + ") commits behind.");
             return status[1];
         }
         return 0;
@@ -396,19 +402,19 @@ public class BeginIssueWithGit extends Operation
                 if (result.isSuccessful()) {
                     FetchResult fetchResult = result.getFetchResult();
                     if (!StringUtils.isBlank(fetchResult.getMessages())) {
-                        System.out.println("\t[i] Messages: " + fetchResult.getMessages());
+                        System.out.print("\t[i] Messages: " + fetchResult.getMessages());
                     }
                     MergeResult mergeResult = result.getMergeResult();
                     if (mergeResult.getMergeStatus().isSuccessful()) {
-                        System.out.println("\t[✓] Git pull completed.");
+                        System.out.println("\t[✓] Git pull ok.");
                         return true;
                     }
                 }
             } catch (GitAPIException ex) {
-                System.out.println("\t[e] Git fetch failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+                System.out.println("\t[e] Git pull failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
             }
         } catch (IOException ex) {
-            System.out.println("\t[e] Git fetch failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            System.out.println("\t[e] Git pull failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
         }
         return false;
     }
@@ -477,5 +483,38 @@ public class BeginIssueWithGit extends Operation
 
         System.out.println(output[0]);
         return true;
+    }
+    
+    private boolean checkoutBranch(File localBranch) {
+        System.out.println("\t[*] Checkout ...");
+        try (Repository gitRepo = openRepository(localBranch.getAbsolutePath())) {
+            try (Git git = new Git(gitRepo)) {
+                String name = "i" + issue.getId() + "/" + project;
+                Ref ref = gitRepo.exactRef("refs/heads/" + name);
+                if (ref == null) {
+                    CreateBranchCommand createBranch = git.branchCreate();
+                    createBranch.setName(name);
+                    if (hasRemoteBranch) {
+                        createBranch.setStartPoint("origin/" + name);
+                        createBranch.setUpstreamMode(CreateBranchCommand.SetupUpstreamMode.TRACK);
+                    }
+                    ref = createBranch.call();
+                }
+                System.out.print("\t\t" + ref.getName());
+                Optional.ofNullable(ref.getObjectId()).ifPresent(objectId -> System.out.println(" " + objectId.getName()));
+                
+                CheckoutCommand checkout = git.checkout();
+                checkout.setName(name);
+                checkout.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)));
+                checkout.call();
+                System.out.println("\t\t[✓] Git checkout ok.");
+                return true;
+            } catch (GitAPIException ex) {
+                System.out.println("\t\t[e] Git checkout failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            }
+        } catch (IOException ex) {
+            System.out.println("\t\t[e] Git checkout failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+        }
+        return false;
     }
 }
