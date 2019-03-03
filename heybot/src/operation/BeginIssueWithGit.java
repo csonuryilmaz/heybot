@@ -574,21 +574,21 @@ public class BeginIssueWithGit extends Operation
     private void issueIsBegun(Properties prop) {
         String begunStatus = getParameterString(prop, PARAMETER_BEGUN_STATUS, true);
         if (!isEmpty(begunStatus)) {
-            System.out.println("\t[*] Updating issue status ...");
+            System.out.println("[*] Updating issue status ...");
             int statusId = tryGetIssueStatusId(redmineManager, begunStatus);
-            System.out.println("\t\t[i] Begun Status: " + begunStatus);
+            System.out.println("\t[i] Begun Status: " + begunStatus);
             if (statusId > 0) {
                 try {
                     String baseStatus = issue.getStatusName();
                     issue = updateIssueStatus(redmineManager, issue, statusId);
-                    System.out.println("\t\t[i] Issue status: "
+                    System.out.println("\t[i] Issue status: "
                             + (!baseStatus.equals(issue.getStatusName()) ? baseStatus + " > " : "") + issue.getStatusName());
-                    System.out.println("\t\t[✓] Issue status is ok.");
+                    System.out.println("\t[✓] Issue status is ok.");
                 } catch (Exception ex) {
-                    System.out.println("\t\t[e] Issue status update failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+                    System.out.println("\t[e] Issue status update failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
                 }
             } else {
-                System.out.println("\t\t[w] Begun status has invalid value!");
+                System.out.println("\t[w] Begun status has invalid value!");
             }
         }
     }
