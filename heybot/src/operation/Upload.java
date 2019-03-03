@@ -99,18 +99,6 @@ public class Upload extends Operation
 	    upload(changes, sftpHost, sftpUser, sftpPass, sftpTargetDir, sftpSourceDir);
 	}
     }
-    
-    private String getHostIPAddress(String host)
-    {
-	try
-	{
-	    return " (" + InetAddress.getByName(host).getHostAddress() + ")";
-	}
-	catch (UnknownHostException ex)
-	{
-	    return "";
-	}
-    }
 
     private void upload(String changes, String sftpHost, String sftpUser, String sftpPass, String sftpTargetDir, String sftSourceDir)
     {

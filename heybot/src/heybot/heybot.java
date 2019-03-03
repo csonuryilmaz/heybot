@@ -175,9 +175,20 @@ public class heybot
 	}
 	catch (Exception ex)
 	{
-	    System.err.println("Ooops! An error occurred while executing [" + operation + "]"
-		    + NEWLINE + " " + ex.getMessage() + " ");
+	    System.err.println("Ooops! An error occurred while executing [" + operation + "]");
+            printException(ex);
+            if (ex.getCause() != null) {
+                System.err.println(NEWLINE+"It has a cause. See below for details.");
+                printException(ex.getCause());
+            }
 	}
+    }
+    
+    private static void printException(Throwable exception) {
+        System.err.println("Exception:\t" + exception.getClass().getCanonicalName());
+        System.err.println("Message:\t" + exception.getMessage());
+        System.err.println("StackTrace:");
+        exception.printStackTrace();
     }
 
     private static String getFileName(String arg)

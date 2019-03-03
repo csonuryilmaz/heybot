@@ -75,16 +75,6 @@ public class UploadFile extends Operation
 	}
     }
 
-    private String getHostIPAddress(String host)
-    {
-	try {
-	    return " (" + InetAddress.getByName(host).getHostAddress() + ")";
-	}
-	catch (UnknownHostException ex) {
-	    return "";
-	}
-    }
-
     private void uploadFile(String sftpHost, String sftpUser, String sftpPass, int sftpPort, File sourceFile, File remoteFile) throws JSchException, SftpException, FileNotFoundException
     {
 	JSch jsch = new JSch();

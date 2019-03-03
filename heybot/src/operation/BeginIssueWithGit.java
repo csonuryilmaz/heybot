@@ -51,7 +51,14 @@ import org.eclipse.jgit.api.MergeResult;
 import org.eclipse.jgit.api.PullCommand;
 import org.eclipse.jgit.api.PullResult;
 import org.eclipse.jgit.api.PushCommand;
+import org.eclipse.jgit.api.RebaseCommand;
+import org.eclipse.jgit.api.RebaseResult;
+import org.eclipse.jgit.api.StashApplyCommand;
+import org.eclipse.jgit.api.StashCreateCommand;
+import org.eclipse.jgit.api.StashDropCommand;
 import org.eclipse.jgit.lib.BranchTrackingStatus;
+import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.transport.PushResult;
 import org.eclipse.jgit.transport.RefSpec;
 
@@ -92,6 +99,7 @@ public class BeginIssueWithGit extends Operation
     private String repository;
     private String project;
     private boolean hasRemoteBranch;
+    private boolean isFreshCheckout;
     private Issue issue;
 
     public BeginIssueWithGit() {
@@ -247,7 +255,7 @@ public class BeginIssueWithGit extends Operation
         }
         if (isCacheReady) {
             listRepositoryLocalBranches(cachePath);
-            if (listRepositoryLocalStatus(cachePath) > 0) {
+            if (listRepositoryLocalStatus(cachePath).isBehindRemote()) {
                 pullCurrentBranchOnRepository(cachePath);
             }
             File localBranch;
@@ -255,6 +263,15 @@ public class BeginIssueWithGit extends Operation
                 localBranch = new File(localBranch.getAbsolutePath() + "/" + project);
                 if (createOrReuseLocalBranchIfExists(cachePath, localBranch)) {
                     if (checkoutBranch(localBranch)) {
+                        if (!isFreshCheckout) {
+                            pullCurrentBranchOnRepository(localBranch);
+                            RepositoryStatus status = listRepositoryLocalStatus(localBranch);
+                            if (status.isBehindRemote() && status.hasLocalChanges()) {
+                                fastForwardBranch(localBranch);
+                                System.out.println("\t[*] After fast-forward ...");
+                                listRepositoryLocalStatus(localBranch);
+                            }
+                        }
                         issueIsBegun(prop);
                         executeRemote(prop);
                         openIDE(prop, localBranch);
@@ -341,8 +358,8 @@ public class BeginIssueWithGit extends Operation
         }
     }
 
-    private int listRepositoryLocalStatus(File cachePath) {
-        try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
+    private RepositoryStatus listRepositoryLocalStatus(File repoPath) {
+        try (Repository gitRepo = openRepository(repoPath.getAbsolutePath())) {
             try (Git git = new Git(gitRepo)) {
                 System.out.print("\t\t[i] Status of branch '" + gitRepo.getBranch() + "': ");
                 Status status = git.status().call();
@@ -363,14 +380,15 @@ public class BeginIssueWithGit extends Operation
                     listModifiedFiles("Untracked", status.getUntracked());
                     listModifiedFiles("UntrackedFolders", status.getUntrackedFolders());
                 }
-                return listBranchTrackingStatus(gitRepo, gitRepo.getBranch());
+                int[] trackingStatus = listBranchTrackingStatus(gitRepo, gitRepo.getBranch());
+                return new RepositoryStatus(trackingStatus, status);
             } catch (GitAPIException ex) {
-                System.out.println("\t\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+                System.out.println("\t\t[e] Git status failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
             }
         } catch (IOException ex) {
-            System.out.println("\t\t[e] Git listing local branches failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            System.out.println("\t\t[e] Git status failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
         }
-        return 0;
+        return new RepositoryStatus();
     }
 
     private void listModifiedFiles(String title, Set<String> files) {
@@ -382,13 +400,12 @@ public class BeginIssueWithGit extends Operation
         }
     }
 
-    private int listBranchTrackingStatus(Repository repository, String branchName) throws IOException {
+    private int[] listBranchTrackingStatus(Repository repository, String branchName) throws IOException {
         int[] status = getTrackingStatus(repository, branchName);
-        if (status != null && (status[0] > 0 || status[1] > 0)) {
+        if (status[0] > 0 || status[1] > 0) {
             System.out.println("\t\t[i] Branch '" + branchName + "' is now (" + status[0] + ") commits ahead, (" + status[1] + ") commits behind.");
-            return status[1];
         }
-        return 0;
+        return status;
     }
 
     private int[] getTrackingStatus(Repository repository, String branchName) throws IOException {
@@ -399,7 +416,7 @@ public class BeginIssueWithGit extends Operation
             counts[1] = trackingStatus.getBehindCount();
             return counts;
         }
-        return null;
+        return new int[]{0, 0};
     }
 
     private boolean pullCurrentBranchOnRepository(File cachePath) {
@@ -407,6 +424,7 @@ public class BeginIssueWithGit extends Operation
         try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
             try (Git git = new Git(gitRepo)) {
                 PullCommand pull = git.pull();
+                pull.setRebase(true);
                 pull.setCredentialsProvider(credentialsProvider);
                 pull.setTransportConfigCallback(transportConfigCallback);
                 pull.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)));
@@ -417,10 +435,11 @@ public class BeginIssueWithGit extends Operation
                         System.out.print("\t[i] Messages: " + fetchResult.getMessages());
                     }
                     MergeResult mergeResult = result.getMergeResult();
-                    if (mergeResult.getMergeStatus().isSuccessful()) {
-                        System.out.println("\t[✓] Git pull ok.");
-                        return true;
+                    if (mergeResult != null && mergeResult.getMergeStatus().isSuccessful()) {
+                        System.out.println("\t[✓] Pull merge status is successful.");
                     }
+                    System.out.println("\t[✓] Git pull ok.");
+                    return true;
                 }
             } catch (GitAPIException ex) {
                 System.out.println("\t[e] Git pull failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
@@ -465,6 +484,7 @@ public class BeginIssueWithGit extends Operation
                 });
                 if (copy(cachedBranch.getAbsolutePath(), localBranch.getAbsolutePath())) {
                     System.out.println("\t\t[✓] Ok, working copy is deleted and created.");
+                    isFreshCheckout = true;
                     isReady = true;
                 }
             } else {
@@ -474,6 +494,7 @@ public class BeginIssueWithGit extends Operation
         } else {
             if (copy(cachedBranch.getAbsolutePath(), localBranch.getAbsolutePath())) {
                 System.out.println("\t\t[✓] Ok, working copy is created.");
+                isFreshCheckout = true;
                 isReady = true;
             }
         }
@@ -671,5 +692,79 @@ public class BeginIssueWithGit extends Operation
                 }
             }
         }
+    }
+    
+    private class RepositoryStatus
+    {
+
+        private final boolean behindRemote;
+        private final boolean localChanges;
+
+        RepositoryStatus() {
+            behindRemote = false;
+            localChanges = false;
+        }
+
+        RepositoryStatus(int[] trackingStatus, Status status) {
+            behindRemote = trackingStatus[1] > 0;
+            localChanges = status.hasUncommittedChanges() || status.getUntracked().size() > 0 || status.getUntrackedFolders().size() > 0;
+        }
+
+        private boolean isBehindRemote() {
+            return behindRemote;
+        }
+
+        private boolean hasLocalChanges() {
+            return localChanges;
+        }
+    }
+    
+    private boolean fastForwardBranch(File repoPath) {
+        System.out.println("\t[*] Fast-forwading branch ...");
+        try (Repository gitRepo = openRepository(repoPath.getAbsolutePath())) {
+            try (Git git = new Git(gitRepo)) {
+                System.out.println("\t\t[*] Creating stash for changes ...");
+                StashCreateCommand stashCreate = git.stashCreate();
+                stashCreate.setIncludeUntracked(true);
+                RevCommit stash = stashCreate.call();
+                System.out.println("\t\t[i] " + stash.getFullMessage());
+                System.out.println("\t\t[✓] Created stash: " + stash.getName());
+                System.out.println("\t\t[*] Rebasing ...");
+                RebaseCommand rebase = git.rebase();
+                rebase.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)));
+                rebase.setUpstream("origin/" + "i" + issue.getId() + "/" + project);
+                RebaseResult rebaseResult = rebase.call();
+                if (rebaseResult.getStatus().isSuccessful()) {
+                    System.out.println("\t\t[✓] Rebase ok.");
+                } else {
+                    System.out.println("\t\t[w] Rebase failed!");
+                }
+                System.out.println("\t\t[*] Applying stash after rebase ...");
+                StashApplyCommand stashApply = git.stashApply();
+                stashApply.setStashRef(stash.getName());
+                ObjectId applied = stashApply.call();
+                System.out.println("\t\t[✓] Stash applied: " + applied);
+                System.out.println("\t\t[*] Dropping applied stash ...");
+                int ref = 0;
+                Collection<RevCommit> stashes = git.stashList().call();
+                for (RevCommit rev : stashes) {
+                    if (rev.getFullMessage().equals(stash.getFullMessage())
+                            && rev.getName().equals(stash.getName())) {
+                        break;
+                    }
+                    ref++;
+                }
+                StashDropCommand stashDrop = git.stashDrop();
+                stashDrop.setStashRef(ref);
+                stashDrop.call();
+                System.out.println("\t\t[i] Stash count: " + stashes.size() + " > " + git.stashList().call().size());
+                System.out.println("\t\t[✓] Stash dropped. ");
+            } catch (GitAPIException ex) {
+                System.out.println("\t\t[e] Fast-forward failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            }
+        } catch (IOException ex) {
+            System.out.println("\t\t[e] Fast-forward failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+        }
+        return false;
     }
 }
