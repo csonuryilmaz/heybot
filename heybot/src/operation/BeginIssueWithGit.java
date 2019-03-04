@@ -58,6 +58,7 @@ import org.eclipse.jgit.api.StashCreateCommand;
 import org.eclipse.jgit.api.StashDropCommand;
 import org.eclipse.jgit.lib.BranchTrackingStatus;
 import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.StoredConfig;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.transport.PushResult;
 import org.eclipse.jgit.transport.RefSpec;
@@ -90,6 +91,9 @@ public class BeginIssueWithGit extends Operation
     private final static String PARAMETER_REMOTE_PASS = "REMOTE_PASS";
     private final static String PARAMETER_REMOTE_EXEC = "REMOTE_EXEC";
     private final static String PARAMETER_REMOTE_PORT = "REMOTE_PORT";
+
+    private final static String PARAMETER_GIT_CONFIG_USER_NAME = "GIT_CONFIG_USER_NAME";
+    private final static String PARAMETER_GIT_CONFIG_USER_EMAIL = "GIT_CONFIG_USER_EMAIL";
 
     private RedmineManager redmineManager;
 
@@ -272,6 +276,7 @@ public class BeginIssueWithGit extends Operation
                                 listRepositoryLocalStatus(localBranch);
                             }
                         }
+                        configProject(prop, localBranch);
                         issueIsBegun(prop);
                         executeRemote(prop);
                         openIDE(prop, localBranch);
@@ -570,7 +575,7 @@ public class BeginIssueWithGit extends Operation
         }
         return false;
     }
-    
+
     private void issueIsBegun(Properties prop) {
         String begunStatus = getParameterString(prop, PARAMETER_BEGUN_STATUS, true);
         if (!isEmpty(begunStatus)) {
@@ -592,7 +597,7 @@ public class BeginIssueWithGit extends Operation
             }
         }
     }
-    
+
     private void executeRemote(Properties prop) {
         String sshHost = getParameterString(prop, PARAMETER_REMOTE_HOST, false);
         String sshUser = getParameterString(prop, PARAMETER_REMOTE_USER, false);
@@ -671,7 +676,7 @@ public class BeginIssueWithGit extends Operation
             }
         }
     }
-    
+
     private void openIDE(Properties prop, File project) {
         String idePath = getParameterString(prop, PARAMETER_IDE_PATH, false);
         String workspacePath = trimRight(getParameterString(prop, PARAMETER_WORKSPACE_PATH, false), "/");
@@ -693,7 +698,44 @@ public class BeginIssueWithGit extends Operation
             }
         }
     }
-    
+
+    private void configProject(Properties prop, File localBranch) {
+        String userName = getParameterString(prop, PARAMETER_GIT_CONFIG_USER_NAME, false);
+        String userEmail = getParameterString(prop, PARAMETER_GIT_CONFIG_USER_EMAIL, false);
+        if (!StringUtils.isBlank(userName) || !StringUtils.isBlank(userEmail)) {
+            System.out.println("[*] Config project ...");
+            try (Repository gitRepo = openRepository(localBranch.getAbsolutePath())) {
+                StoredConfig config = gitRepo.getConfig();
+                boolean isModified = false;
+
+                String localUserName = config.getString("user", null, "name");
+                System.out.println("\t[i] --local user.name: " + localUserName);
+                if (!userName.equals(localUserName)) {
+                    config.setString("user", null, "name", userName);
+                    System.out.println("\t[✓] Modified as: " + userName);
+                    isModified = true;
+                } else {
+                    System.out.println("\t[✓] user.name is ok. ");
+                }
+                String localUserEmail = config.getString("user", null, "email");
+                System.out.println("\t[i] --local user.email: " + localUserEmail);
+                if (!userEmail.equals(localUserEmail)) {
+                    config.setString("user", null, "email", userEmail);
+                    System.out.println("\t[✓] Modified as: " + userEmail);
+                    isModified = true;
+                } else {
+                    System.out.println("\t[✓] user.email is ok. ");
+                }
+                if (isModified) {
+                    config.save();
+                    System.out.println("\t[✓] Modifications saved. ");
+                }
+            } catch (IOException ex) {
+                System.out.println("\t\t[e] Git config failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            }
+        }
+    }
+
     private class RepositoryStatus
     {
 
@@ -718,7 +760,7 @@ public class BeginIssueWithGit extends Operation
             return localChanges;
         }
     }
-    
+
     private boolean fastForwardBranch(File repoPath) {
         System.out.println("\t[*] Fast-forwading branch ...");
         try (Repository gitRepo = openRepository(repoPath.getAbsolutePath())) {
