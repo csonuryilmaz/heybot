@@ -1,6 +1,6 @@
 # heybot
 
-[![GitHub stars](https://img.shields.io/github/stars/csonuryilmaz/heybot.svg?style=social&label=Star)](http://bit.ly/2ROXHzb)   [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)   [![Issues](https://img.shields.io/github/issues/csonuryilmaz/heybot.svg)](https://github.com/csonuryilmaz/heybot/issues)   [![Latest](https://img.shields.io/badge/release-v1.32.0.0-red.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)   [![GitHub Releases](https://img.shields.io/github/downloads/csonuryilmaz/heybot/latest/total.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)
+[![GitHub stars](https://img.shields.io/github/stars/csonuryilmaz/heybot.svg?style=social&label=Star)](http://bit.ly/2ROXHzb)   [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)   [![Issues](https://img.shields.io/github/issues/csonuryilmaz/heybot.svg)](https://github.com/csonuryilmaz/heybot/issues)   [![Latest](https://img.shields.io/badge/release-v2.0.0.0-red.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)   [![GitHub Releases](https://img.shields.io/github/downloads/csonuryilmaz/heybot/latest/total.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)
 
 ## Table of Contents
 
@@ -16,17 +16,18 @@
         - [4. Usage](#4-usage)
         - [5. Operations](#5-operations)
             - [5.1. Begin-Issue](#51-begin-issue)
-            - [5.2. Upload](#52-upload)
-            - [5.3. Upload File](#53-upload-file)
-                - [5.3.1 Example Configuration for PhpStorm File Watcher](#531-example-configuration-for-phpstorm-file-watcher)
-            - [5.4. Cleanup](#54-cleanup)
-            - [5.5. Cleanup-Svn](#55-cleanup-svn)
-            - [5.6. Review](#56-review)
-            - [5.7. Check-New](#57-check-new)
-            - [5.8. Sync-Issue](#58-sync-issue)
-            - [5.9. Next-Version](#59-next-version)
-            - [5.10. Release](#510-release)
-            - [5.11. Snapshot](#511-snapshot)
+            - [5.2. Begin-Issue-With-Git](#52-begin-issue-with-git)
+            - [5.3. Upload](#53-upload)
+            - [5.4. Upload File](#54-upload-file)
+                - [5.4.1 Example Configuration for PhpStorm File Watcher](#541-example-configuration-for-phpstorm-file-watcher)
+            - [5.5. Cleanup](#55-cleanup)
+            - [5.6. Cleanup-Svn](#56-cleanup-svn)
+            - [5.7. Review](#57-review)
+            - [5.8. Check-New](#58-check-new)
+            - [5.9. Sync-Issue](#59-sync-issue)
+            - [5.10. Next-Version](#510-next-version)
+            - [5.11. Release](#511-release)
+            - [5.12. Snapshot](#512-snapshot)
         - [6. Notes](#6-notes)
             - [6.1. How to obtain slack incoming webhook URL](#61-how-to-obtain-slack-incoming-webhook-url)
         - [Test Platforms](#test-platforms)
@@ -49,13 +50,15 @@ Happy coding! :coffee:
 
 **heybot** is mainly designed to work in
 
-- **Subversion**
 - **Redmine**
 - **Slack**
+- **Svn** or **Git**
 
-environment. If you use [redmine](http://www.redmine.org/) as project management/issue tracking application, [subversion](https://subversion.apache.org/) as version control system and [slack](https://slack.com/) and *conventional* e-mail as communication environment then **heybot** can help you.
+environment. If you use [redmine](http://www.redmine.org/) as project management and issue tracking application, [svn](https://subversion.apache.org/) or [git](https://git-scm.com/) as version control system, [slack](https://slack.com/) and *conventional* e-mail as communication environment then **heybot** can help you.
 
-For other ecosystems, you can fork the project or contribute directly to this project. All feedbacks and [contributions](https://github.com/csonuryilmaz/heybot/blob/master/CONTRIBUTING.md) are welcome. Source code is a java project which is developed in Netbeans IDE.
+**Note:** `git` support is brand new in `v2.*` of heybot. So, not all operations have `git` support. We're working on the issue, follow new releases for more `git` support.
+
+For other ecosystems, you can fork the project or contribute directly to this project. All feedbacks and [contributions](https://github.com/csonuryilmaz/heybot/blob/master/CONTRIBUTING.md) are welcome. Source code is a java project which is developed in [Netbeans](https://netbeans.apache.org/) IDE.
 
 ### 3. Installation
 
@@ -72,12 +75,12 @@ After handling Java dependency, simply;
 
 - download latest version of **heybot** from [latest release](https://github.com/csonuryilmaz/heybot/releases/latest)
 - extract archive
-- execute installtion script
+- execute installation script
 
 ```bash
-wget https://github.com/csonuryilmaz/heybot/releases/download/1.32.0.0/heybot-1.32.0.0.tar.gz
-tar -zxvf heybot-1.32.0.0.tar.gz
-cd heybot-1.32.0.0
+wget https://github.com/csonuryilmaz/heybot/releases/download/2.0.0.0/heybot-2.0.0.0.tar.gz
+tar -zxvf heybot-2.0.0.0.tar.gz
+cd heybot-2.0.0.0
 chmod a+x install.sh
 ./install.sh
 ```
@@ -87,10 +90,10 @@ Above command will downlod **heybot** archive into current directory.
 In order to download into different directory, for example `~/Downloads`
 
 ```bash
-wget https://github.com/csonuryilmaz/heybot/releases/download/1.32.0.0/heybot-1.32.0.0.tar.gz -P ~/Downloads
-tar -zxvf ~/Downloads/heybot-1.32.0.0.tar.gz
-chmod a+x heybot-1.32.0.0/install.sh
-heybot-1.32.0.0/install.sh
+wget https://github.com/csonuryilmaz/heybot/releases/download/2.0.0.0/heybot-2.0.0.0.tar.gz -P ~/Downloads
+tar -zxvf ~/Downloads/heybot-2.0.0.0.tar.gz
+chmod a+x heybot-2.0.0.0/install.sh
+heybot-2.0.0.0/install.sh
 ```
 
 It will ask for sudo permission at installation process, so your user should be a sudoer. (Or maybe you can run installation script as root, but it's not recommended.)
@@ -104,7 +107,7 @@ $ heybot -v
  |_|_|___|_  |___|___|_|
          |___|
 
- 1.32.0.0
+ 2.0.0.0
 
 Copyright (c) 2017 Onur Yılmaz
 MIT License: <https://github.com/csonuryilmaz/heybot/blob/master/LICENSE.txt>
@@ -122,7 +125,7 @@ $ heybot
  |_|_|___|_  |___|___|_|
          |___|
 
- 1.32.0.0
+ 2.0.0.0
 
 usage: heybot -d <arg> [-h] [-v] [-l] [-lp <arg>] [-i <arg>] [-s <arg>]
        [-o <arg>] [-r <arg>] [-e <arg>] [-c <arg>]
@@ -188,6 +191,8 @@ heybot begin-issue-1293
 ```
 
 In [templates](https://github.com/csonuryilmaz/heybot/tree/master/heybot/templates) folder you can find example **.hb** templates for each operation. You can copy them, and define your own operation by filling parameters.
+
+**Note:** :no_entry_sign: :memo: @todo **templates** Will be reviewed and updated!
 
 Let's dive into some details and explain them with examples.
 
@@ -280,7 +285,9 @@ REMOTE_EXEC=php create-issue/app.php $issue
 REMOTE_PORT=
 ```
 
-#### 5.2. Upload
+#### 5.2. Begin-Issue-With-Git
+
+#### 5.3. Upload
 
 It uploads local changes in the working copy (output of `svn st` command) to a remote server by SFTP protocol.
 
@@ -318,7 +325,7 @@ REMOTE_PATH=/var/www/html/myproject/
 SOURCE_PATH=/Users/smith/NetBeansProjects/myproject/
 ```
 
-#### 5.3. Upload File
+#### 5.4. Upload File
 
 It's designed to work with IDE file watchers. File watcher allows you to automatically run a command-line tool like compilers, formatters, or linters when you change or save a file in the IDE. If you want to upload saved or modified file to remote server, you can use upload file operation. Its one file processing logic, is more efficient than above upload operation which uploads all changes when triggered. File watcher doesn't trigger when a file or directory is deleted because after delete there is no file to work on. As similar, file watcher don't trigger when an empty directory is created, because it's not a file. But don't worry! When you add a new file into that empty directory it'll be triggered and when you create a new file with the same name, which was previously deleted, but probably has different content, it'll be triggered. On both cases you'll have the ability to upload meaningful (up-to-date) changes to server although server has some additional changes that you don't have. But those are redundant, mostly passive changes.
 
@@ -370,7 +377,7 @@ Example scenario about given example .hb file:
 
 Heybot assumes the same folder structure between local and remote host, so it replaces *source workspace path* with *remote workspace path*. By means of this assumption, you don't need any modification to hb file between different projects. You can use the same file watcher globally for all projects.
 
-##### 5.3.1 Example Configuration for PhpStorm File Watcher
+##### 5.4.1 Example Configuration for PhpStorm File Watcher
 
 Open `File > Settings > Tools > File Watchers`. You will see list of file watchers. Heybot upload-file operation can be used both `Global` level or `Project` level.
 
@@ -418,7 +425,7 @@ Below is exported xml of above file watcher:
 </TaskOptions>
 ```
 
-#### 5.4. Cleanup
+#### 5.5. Cleanup
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -454,7 +461,7 @@ LIMIT=10
 
 ```
 
-#### 5.5. Cleanup-Svn
+#### 5.6. Cleanup-Svn
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -490,7 +497,7 @@ LIMIT=10
 
 ```
 
-#### 5.6. Review
+#### 5.7. Review
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -530,7 +537,7 @@ ISSUE_STATUS_SHOULD_BE=Resolved
 
 ```
 
-#### 5.7. Check-New
+#### 5.8. Check-New
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -581,7 +588,7 @@ Also you can schedule this operation with a crontab entry. For example, below en
 */5 * * * * /usr/local/bin/heybot -d check_new.hb 1> /dev/null 2> /var/www/html/heybot.log
 ```
 
-#### 5.8. Sync-Issue
+#### 5.9. Sync-Issue
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -654,7 +661,7 @@ REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
 LAST_CHECK_TIME=Sat Nov 19 15:45:11 EET 2016
 ```
 
-#### 5.9. Next-Version
+#### 5.10. Next-Version
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -701,11 +708,11 @@ Internal Parameters:
 
 **todo:** Example and notes will be added for *next-version* .
 
-#### 5.10. Release
+#### 5.11. Release
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
-#### 5.11. Snapshot
+#### 5.12. Snapshot
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
