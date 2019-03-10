@@ -287,6 +287,64 @@ REMOTE_PORT=
 
 #### 5.2. Begin-Issue-With-Git
 
+This operation usually is used when you begin a new Redmine development issue. (feature, bug fix vs.) Although some parameters are optional, if you use all of them, `heybot` provides below features:
+
+- Checks whether issue is assigned to developer for possible mistakes
+- Checks whether `git` credentials are valid for other `git` operations
+- Supports `ssh` public key or `http(s)` authentication for remote `git` operations
+- To eliminate possible repository failures, uses internal cache for repository, so clones repository from remote once, and on every new issue provides you fresh consistent branch fastly
+- Creates new branch on local workspace, switches to that branch and if the branch doesn't exist on remote, pushes the branch
+- If branch exists on local workspace, pulls new updates to branch and if the branch is behind, for example you've pushed some new commits from another machine or your colleague pushed some new commmits, pulls new commits with rebase and fast-forward the branch
+- Supports and uses `git stash` feature when fast-forward the branch if the branch has local uncommitted modifications
+- Makes `git config` modifications on the branch which doesn't affect your global git configuration, supports `git config` *user.name* and *user.email* modifications
+- Updates Redmine issue status to defined status, for example `in progress`
+- If defined, executes remote commands using `ssh` connection on a remote machine, for example used when application under development needs some configuration for runtime
+- Triggers your favorite IDE with ready branch, and from now on you can begin working on the issue
+
+Required parameters:
+
+- REDMINE_URL= Redmine API URL which is, most of the time, root URL of your redmine installation.
+- REDMINE_TOKEN= Redmine API access key taken from [my account page](http://www.redmine.org/projects/redmine/wiki/RedmineAccounts).
+- ISSUE= Redmine issue number which will be developed. `integer`
+- GIT_PROTOCOL= Used protocol for remote git operations. `ssh || https || http`
+- GIT_REPOSITORY= Repository URL for master branch. Don't need to prefix with `ssh` or `http(s)` because of GIT_PROTOCOL parameter. But repository URL must be compatible with GIT_PROTOCOL.
+- If GIT_PROTOCOL == `https || http` then
+  - GIT_USERNAME= Git user, username to authenticate `git`.
+  - GIT_PASSWORD= Git user, password to authenticate `git`.
+- If GIT_PROTOCOL == `ssh` then
+  - SSH_PRIVATE_KEY= `ssh` key file path on local machine, to authenticate `git`. To generate your `ssh` public key, follow `git` server's instructions, for example [gitlab](https://docs.gitlab.com/ee/ssh/)
+- WORKSPACE_PATH= Location on your machine which keeps local branches. `heybot` creates a new branch folder with ISSUE number for every begun issue and every branch is isolated from each other on local workspace.
+
+Optional parameters:
+
+- ASSIGNEE_ID= Redmine `user_id` which identifies Redmine user. `integer`
+  - If parameter is filled, `heybot` checks whether issue is assigned to user so prevents developer from mistakenly begining another developer's issue.
+  - After you logged in Redmine, click on your username on the left-hand side to open your activity page. Redmine `user_id` is the number at the end of the URL. For example, if URL is `http://www.example.com/users/5` then `5` is your Redmine `user_id`.
+- BEGUN_STATUS= Redmine issue status which will be updated to, for example, `in progress` for a started issue.
+  - If parameter is filled, `heybot` tries to update issue status. If the issue status is already in given status, it won't be a problem. In order to be successful, Redmine workflow configuration must be compatible with update, otherwise the issue status will remain as is.
+- IDE_PATH= Local path of IDE executable file.
+  - If parameter is filled, used as a last step when the local branch is ready. IDE is triggered with the local branch parameter so you can start working immediately on the issue.
+  - Parameter can be used in two ways:
+    - When only IDE executable path is given, for example like this `/home/onur/netbeans-8.2/bin/netbeans`, the local branch folder will be appended at the end of the parameter and the result command'll be executed.
+    - When a command is given with an insertion mask about the local branch folder, `%s` syntax is used for example like this `open %s/Kitapyurdu.xcodeproj/`, `%s` will be replaced with the local branch folder and the result command'll be executed.
+- GIT_CONFIG_USER_NAME= Git `user.name` configuration on the local branch.
+  - If parameter is filled, `heybot` makes `git config` to modify `user.name` on the local branch.
+  - It won't affect other branches, `git` projects or your global `git` configuration.
+  - If desired, this configuration can be made by developer manually with `git config` at a later time, or global config can be used.
+- GIT_CONFIG_USER_EMAIL= Git `user.email` configuration on the local branch.
+  - If parameter is filled, `heybot` makes `git config` to modify `user.email` on the local branch.
+  - It won't affect other branches, `git` projects or your global `git` configuration.
+  - If desired, this configuration can be made by developer manually with `git config` at a later time, or global config can be used.
+
+If you need to execute some commands when the local branch is ready, use below optional parameters for `ssh` connection and remote command execution.
+
+- REMOTE_HOST= Hostname or IP of remote machine which has an eligible `ssh` access with username and password.
+- REMOTE_USER= `ssh` user's username.
+- REMOTE_PASS= `ssh` user's password.
+- REMOTE_PORT= If empty, default port 22 is assumed. Fill in `integer` value if the `ssh` server has custom port for `ssh` connections.
+- REMOTE_EXEC= Fill in any bash command. It may be a simple executable bash file or a combination of piped commands. Internally when `heybot` connected to host with `ssh`, current working directory is user's home directory. For example, `/home/onur/`. So, for successful execution, test your command and be sure it's working on remote host's user home directory. Then it'll work in heybot without any problem.
+  - If the command contains **$issue** keyword, all occurences will be replaced with the value of ISSUE parameter.
+
 #### 5.3. Upload
 
 It uploads local changes in the working copy (output of `svn st` command) to a remote server by SFTP protocol.
