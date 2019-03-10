@@ -345,6 +345,105 @@ If you need to execute some commands when the local branch is ready, use below o
 - REMOTE_EXEC= Fill in any bash command. It may be a simple executable bash file or a combination of piped commands. Internally when `heybot` connected to host with `ssh`, current working directory is user's home directory. For example, `/home/onur/`. So, for successful execution, test your command and be sure it's working on remote host's user home directory. Then it'll work in heybot without any problem.
   - If the command contains **$issue** keyword, all occurences will be replaced with the value of ISSUE parameter.
 
+Example: `http` || `https` Git Credentials
+
+```properties
+# File: begin-aws-task.hb
+
+OPERATION=begin-issue-with-git
+
+# ************
+# * required *
+# ************
+
+# credentials (redmine)
+REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
+REDMINE_TOKEN=abab3a53c34f66b92fg5cdcbb3bb95a3c78d862e
+
+# issue
+ISSUE=5214
+
+# git repo
+GIT_PROTOCOL=https
+GIT_REPOSITORY=gitlab.example.com/root/project1.git
+GIT_USERNAME=onur.yilmaz
+GIT_PASSWORD=pwdT03js
+
+# location which keeps local branches
+WORKSPACE_PATH=/home/awesomedev/projects
+
+# ************
+# * optional *
+# ************
+
+# git config
+GIT_CONFIG_USER_NAME=awesome.dev
+GIT_CONFIG_USER_EMAIL=awesome.dev@example.com
+
+# issue
+BEGUN_STATUS=in progress
+ASSIGNEE_ID=23
+
+# open ide to start development
+IDE_PATH=/opt/netbeans/bin/netbeans
+
+# remote command execution
+REMOTE_HOST=192.10.10.12
+REMOTE_USER=AwesomeDev
+REMOTE_PASS=pwdT03js
+REMOTE_EXEC=php create-issue/app.php $issue
+REMOTE_PORT=
+```
+
+Example: `ssh` Git Credentials
+
+```properties
+# File: begin-aws-task.hb
+
+OPERATION=begin-issue-with-git
+
+# ************
+# * required *
+# ************
+
+# credentials (redmine)
+REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
+REDMINE_TOKEN=abab3a53c34f66b92fg5cdcbb3bb95a3c78d862e
+
+# issue
+ISSUE=5214
+
+# git repo
+GIT_PROTOCOL=ssh
+GIT_REPOSITORY=git@gitlab.example.com:root/project1.git
+SSH_PRIVATE_KEY=~/.ssh/id_rsa
+
+# location which keeps local branches
+WORKSPACE_PATH=/home/awesomedev/projects
+
+# ************
+# * optional *
+# ************
+
+# git config
+GIT_CONFIG_USER_NAME=awesome.dev
+GIT_CONFIG_USER_EMAIL=awesome.dev@example.com
+
+# issue
+BEGUN_STATUS=in progress
+ASSIGNEE_ID=23
+
+# open ide to start development
+IDE_PATH=/opt/netbeans/bin/netbeans
+
+# remote command execution
+REMOTE_HOST=192.10.10.12
+REMOTE_USER=AwesomeDev
+REMOTE_PASS=pwdT03js
+REMOTE_EXEC=php create-issue/app.php $issue
+REMOTE_PORT=
+```
+
 #### 5.3. Upload
 
 It uploads local changes in the working copy (output of `svn st` command) to a remote server by SFTP protocol.
