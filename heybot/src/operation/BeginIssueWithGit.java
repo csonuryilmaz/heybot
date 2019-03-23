@@ -86,6 +86,8 @@ public class BeginIssueWithGit extends Operation
     private final static String PARAMETER_WORKSPACE_PATH = "WORKSPACE_PATH";
     private final static String PARAMETER_IDE_PATH = "IDE_PATH";
 
+    private final static String PARAMETER_PROJECT_NAME = "PROJECT_NAME";
+
     private final static String PARAMETER_REMOTE_HOST = "REMOTE_HOST";
     private final static String PARAMETER_REMOTE_USER = "REMOTE_USER";
     private final static String PARAMETER_REMOTE_PASS = "REMOTE_PASS";
@@ -456,6 +458,10 @@ public class BeginIssueWithGit extends Operation
     }
 
     private String getProject(Properties prop) {
+        String projectName = getParameterString(prop, PARAMETER_PROJECT_NAME, false);
+        if (!StringUtils.isBlank(projectName)) {
+            return projectName;
+        }
         return new File(trimRight(getParameterString(prop, PARAMETER_GIT_REPOSITORY, false), "/")).getName().replace(".git", "");
     }
 
