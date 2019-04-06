@@ -603,9 +603,15 @@ public class BeginIssueWithGit extends Operation
             }
         }
     }
-
+    
     private void executeRemote(Properties prop) {
-        String sshHost = getParameterString(prop, PARAMETER_REMOTE_HOST, false);
+        String[] sshHosts = getParameterStringArray(prop, PARAMETER_REMOTE_HOST, false);
+        for (String sshHost : sshHosts) {
+            executeRemote(prop, sshHost);
+        }
+    }
+
+    private void executeRemote(Properties prop, String sshHost) {
         String sshUser = getParameterString(prop, PARAMETER_REMOTE_USER, false);
         String sshPass = getParameterString(prop, PARAMETER_REMOTE_PASS, false);
         String sshExec = getParameterString(prop, PARAMETER_REMOTE_EXEC, false);
