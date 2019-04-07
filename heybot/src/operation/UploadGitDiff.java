@@ -119,6 +119,7 @@ public class UploadGitDiff extends Operation
     }
 
     private void executeInP2PMode(Properties prop) {
+        System.out.println("[i] MODE: p2p (path to path)");
         File sftpSourceDir = getSftpSourceDirInP2PMode(prop);
         if (!sftpSourceDir.exists()) {
             System.out.println("[e] Couldn't find or detect any existing SOURCE_PATH to upload!");
@@ -127,20 +128,29 @@ public class UploadGitDiff extends Operation
         System.out.println("[i] Source Path: " + sftpSourceDir.getAbsolutePath());
         if (hasLocalWorkingCopyChanges(sftpSourceDir)) {
             File sftpRemoteDir = getSftpRemoteDirInP2PMode(prop);
-            upload(prop, sftpSourceDir, sftpRemoteDir);
+            if (sftpRemoteDir != null) {
+                upload(prop, sftpSourceDir, sftpRemoteDir);
+            } else {
+                System.out.println("[e] Couldn't find any REMOTE_PATH to upload!");
+            }
         }
     }
 
     private File getSftpSourceDirInP2PMode(Properties prop) {
         String sourcePath = getParameterString(prop, PARAMETER_SOURCE_PATH, false);
         if (StringUtils.isBlank(sourcePath)) {
+            System.out.println("[*] Auto detecting source path ...");
             sourcePath = System.getProperty("user.dir");
         }
         return new File(sourcePath);
     }
 
     private File getSftpRemoteDirInP2PMode(Properties prop) {
-        return new File(getParameterString(prop, PARAMETER_REMOTE_PATH, false));
+        String remotePath = getParameterString(prop, PARAMETER_REMOTE_PATH, false);
+        if (!StringUtils.isBlank(remotePath)) {
+            return new File(remotePath);
+        }
+        return null;
     }
 
     private void upload(Properties prop, File sftpSourceDir, File sftpRemoteDir) {
@@ -158,22 +168,25 @@ public class UploadGitDiff extends Operation
     }
 
     private void upload(File sftpSourceDir, File sftpRemoteDir, String sftpHost, int sftpPort, String sftpUser, String sftpPass) {
+        ChannelSftp channelSftp = null;
+        Channel channel = null;
+        Session session = null;
         try {
             System.out.println("\t==========================[ FTP ]==========================");
             System.out.println("\t[i] Host: " + sftpHost + getHostIPAddress(sftpHost));
             System.out.println("\t[*] Connecting ...");
             JSch jsch = new JSch();
-            Session session = jsch.getSession(sftpUser, sftpHost, sftpPort);
+            session = jsch.getSession(sftpUser, sftpHost, sftpPort);
             session.setPassword(sftpPass);
             java.util.Properties config = new java.util.Properties();
             config.put("StrictHostKeyChecking", "no");
             session.setConfig(config);
             session.connect();
-            Channel channel = session.openChannel("sftp");
+            channel = session.openChannel("sftp");
             channel.connect();
             System.out.println("\t[✓] Ok.");
             System.out.println("\t[*] Changing path ...");
-            ChannelSftp channelSftp = (ChannelSftp) channel;
+            channelSftp = (ChannelSftp) channel;
             channelSftp.cd(sftpRemoteDir.getAbsolutePath());
             System.out.println("\t[✓] Path: " + sftpRemoteDir.getAbsolutePath());
 
@@ -189,13 +202,20 @@ public class UploadGitDiff extends Operation
             }
 
             System.out.println("\t[✓] All changes are uploaded. \\o/ ");
-            System.out.println("\t[*] Disconnecting ...");
-            channelSftp.disconnect();
-            channel.disconnect();
-            session.disconnect();
-            System.out.println("\t[✓] Ok.");
         } catch (JSchException | SftpException | FileNotFoundException ex) {
             System.out.println("\t[e] Upload failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+        } finally {
+            System.out.println("\t[*] Disconnecting ...");
+            if (channelSftp != null) {
+                channelSftp.disconnect();
+            }
+            if (channel != null) {
+                channel.disconnect();
+            }
+            if (session != null) {
+                session.disconnect();
+            }
+            System.out.println("\t[✓] Ok.");
         }
     }
 

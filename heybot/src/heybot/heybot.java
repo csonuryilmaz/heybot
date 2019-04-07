@@ -225,7 +225,11 @@ public class heybot
 		if ((value = parseIssue(parameters[0])).length() > 0) {
 		    insertParameter("ISSUE=" + value, prop);
 		}
-	    }
+	    } else if (operation instanceof UploadGitDiff) {
+                if ((value = parseIssue(parameters[0])).length() > 0) {
+                    insertParameter("ISSUE=" + value, prop);
+                }
+            }
 	}
     }
 
