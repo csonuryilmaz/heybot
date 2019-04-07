@@ -228,6 +228,8 @@ public class heybot
 	    } else if (operation instanceof UploadGitDiff) {
                 if ((value = parseIssue(parameters[0])).length() > 0) {
                     insertParameter("ISSUE=" + value, prop);
+                } else {
+                    System.out.println("[w] ISSUE parameter will be used from .hb file. Can't override.");
                 }
             }
 	}

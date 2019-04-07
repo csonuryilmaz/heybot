@@ -6,17 +6,19 @@ import com.jcraft.jsch.ChannelSftp.LsEntry;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
-import com.jcraft.jsch.SftpATTRS;
 import com.jcraft.jsch.SftpException;
 import com.jcraft.jsch.SftpProgressMonitor;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.StringWriter;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Vector;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.velocity.VelocityContext;
+import org.apache.velocity.app.Velocity;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -323,7 +325,76 @@ public class UploadGitDiff extends Operation
     }
 
     private void executeInW2WMode(Properties prop) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        System.out.println("[i] MODE: w2w (workspace to workspace)");
+
+        int issue = getParameterInt(prop, PARAMETER_ISSUE, 0);
+        System.out.println("[i] Issue: " + issue);
+        if (issue == 0) {
+            System.out.println("[e] ISSUE parameter can't be blank in w2w working mode!");
+            return;
+        }
+
+        String projectPath = getProjectPath(prop, issue);
+        System.out.println("[i] Project Path: " + projectPath);
+        if (StringUtils.isBlank(projectPath)) {
+            System.out.println("[e] PROJECT_PATH parameter can't be blank in w2w working mode!");
+            return;
+        }
+
+        File sftpSourceDir = getSftpSourceDirInW2WMode(prop, projectPath);
+        System.out.print("[i] Source Path: ");
+        if (StringUtils.isBlank(sftpSourceDir.getPath())) {
+            System.out.println("\n[e] Couldn't find any existing project in SOURCE_WORKSPACE to upload!");
+            return;
+        }
+        System.out.println(sftpSourceDir.getAbsolutePath());
+        if (!sftpSourceDir.exists()) {
+            System.out.println("[e] Couldn't find any existing project in SOURCE_WORKSPACE to upload!");
+            return;
+        }
+
+        if (hasLocalWorkingCopyChanges(sftpSourceDir)) {
+            File sftpRemoteDir = getSftpRemoteDirInW2WMode(prop, projectPath);
+            System.out.print("[i] Remote Path: ");
+            if (StringUtils.isBlank(sftpRemoteDir.getPath())) {
+                System.out.println("\n[e] Couldn't find any REMOTE_WORKSPACE to upload!");
+                return;
+            }
+            System.out.println(sftpRemoteDir.getAbsolutePath());
+            upload(prop, sftpSourceDir, sftpRemoteDir);
+        }
+    }
+
+    private String getProjectPath(Properties prop, int issue) {
+        String projectPath = getParameterString(prop, PARAMETER_PROJECT_PATH, false);
+        if (!StringUtils.isBlank(projectPath)) {
+            Velocity.init();
+            VelocityContext context = new VelocityContext();
+            context.put("issue", issue);
+            StringWriter writer = new StringWriter();
+            Velocity.evaluate(context, writer, "TemplateName", projectPath);
+            projectPath = writer.toString();
+            projectPath = StringUtils.strip(projectPath, "/");
+        }
+        return projectPath;
+    }
+
+    private File getSftpSourceDirInW2WMode(Properties prop, String projectPath) {
+        String sourceWorkspace = getParameterString(prop, PARAMETER_SOURCE_WORKSPACE, false);
+        System.out.println("[i] Source Workspace: " + sourceWorkspace);
+        if (!StringUtils.isBlank(sourceWorkspace)) {
+            return new File(sourceWorkspace + "/" + projectPath);
+        }
+        return new File("");
+    }
+
+    private File getSftpRemoteDirInW2WMode(Properties prop, String projectPath) {
+        String remoteWorkspace = getParameterString(prop, PARAMETER_REMOTE_WORKSPACE, false);
+        System.out.println("[i] Remote Workspace: " + remoteWorkspace);
+        if (!StringUtils.isBlank(remoteWorkspace)) {
+            return new File(remoteWorkspace + "/" + projectPath);
+        }
+        return new File("");
     }
 
     public class UploadProgressMonitor implements SftpProgressMonitor
