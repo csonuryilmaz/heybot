@@ -1,6 +1,20 @@
 #!/bin/bash
 
-VERSION="2.2.0.0"
+DIRECTORY=`dirname $0`
+if [[ -d "$DIRECTORY" ]]; then
+  cd "$DIRECTORY"
+else 
+  cd "$(dirname "$DIRECTORY")"
+fi
+echo "[i] ROOTDIR: $(/bin/pwd)";
+
+VERSION=`grep -in "version.*=.*;$" ../src/heybot/heybot.java | cut -d "\"" -f 2 | tr -d '[:space:]'`
+if [ -z "$VERSION" ]; then
+  echo "[e] Version not found in heybot.java file!";
+  exit -1;
+fi
+echo "[i] VERSION: $VERSION";
+
 RELEASE_PATH="../release/heybot-$VERSION"
 
 if [ -d "$RELEASE_PATH" ]; then
