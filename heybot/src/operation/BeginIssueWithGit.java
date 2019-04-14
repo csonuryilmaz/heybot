@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.ProcessBuilder.Redirect;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
@@ -43,6 +44,8 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.eclipse.jgit.util.FS;
 import utilities.Properties;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import model.Command;
 import static org.apache.http.util.TextUtils.isEmpty;
 import org.apache.velocity.VelocityContext;
@@ -96,6 +99,8 @@ public class BeginIssueWithGit extends Operation
 
     private final static String PARAMETER_GIT_CONFIG_USER_NAME = "GIT_CONFIG_USER_NAME";
     private final static String PARAMETER_GIT_CONFIG_USER_EMAIL = "GIT_CONFIG_USER_EMAIL";
+
+    private final static String PARAMETER_LOCAL_EXEC = "LOCAL_EXEC";
 
     private RedmineManager redmineManager;
 
@@ -281,6 +286,7 @@ public class BeginIssueWithGit extends Operation
                         configProject(prop, localBranch);
                         issueIsBegun(prop);
                         executeRemote(prop);
+                        executeLocal(prop, localBranch);
                         openIDE(prop, localBranch);
                     }
                 }
@@ -603,7 +609,7 @@ public class BeginIssueWithGit extends Operation
             }
         }
     }
-    
+
     private void executeRemote(Properties prop) {
         String[] sshHosts = getParameterStringArray(prop, PARAMETER_REMOTE_HOST, false);
         for (String sshHost : sshHosts) {
@@ -685,6 +691,32 @@ public class BeginIssueWithGit extends Operation
                 } catch (JSchException | IOException | InterruptedException ex) {
                     System.out.println("\t[e] Remote execution failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
                 }
+            }
+        }
+    }
+
+    private void executeLocal(Properties prop, File localBranch) {
+        String localExec = getParameterString(prop, PARAMETER_LOCAL_EXEC, false);
+        if (!StringUtils.isBlank(localExec)) {
+            System.out.println("[*] Executing local command ...");
+            
+            Velocity.init();
+            VelocityContext context = new VelocityContext();
+            context.put("issue", issue.getId());
+            StringWriter writer = new StringWriter();
+            Velocity.evaluate(context, writer, "TemplateName", localExec);
+            localExec = writer.toString();
+            System.out.println("[i] " + localExec);
+
+            ProcessBuilder p = new ProcessBuilder(new String[]{"bash", "-c", localExec});
+            p.directory(localBranch);
+            p.redirectInput(Redirect.INHERIT);
+            p.redirectOutput(Redirect.INHERIT);
+            p.redirectError(Redirect.INHERIT);
+            try {
+                p.start().waitFor();
+            } catch (IOException | InterruptedException ex) {
+                System.out.println("[e] Local execution failed!" + ex.getClass().getCanonicalName() + " " + ex.getMessage());
             }
         }
     }
