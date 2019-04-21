@@ -44,18 +44,18 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.eclipse.jgit.util.FS;
 import utilities.Properties;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import model.Command;
 import static org.apache.http.util.TextUtils.isEmpty;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
+import org.eclipse.jgit.api.CleanCommand;
 import org.eclipse.jgit.api.MergeResult;
 import org.eclipse.jgit.api.PullCommand;
 import org.eclipse.jgit.api.PullResult;
 import org.eclipse.jgit.api.PushCommand;
 import org.eclipse.jgit.api.RebaseCommand;
 import org.eclipse.jgit.api.RebaseResult;
+import org.eclipse.jgit.api.ResetCommand;
 import org.eclipse.jgit.api.StashApplyCommand;
 import org.eclipse.jgit.api.StashCreateCommand;
 import org.eclipse.jgit.api.StashDropCommand;
@@ -266,7 +266,11 @@ public class BeginIssueWithGit extends Operation
         }
         if (isCacheReady) {
             listRepositoryLocalBranches(cachePath);
-            if (listRepositoryLocalStatus(cachePath).isBehindRemote()) {
+            RepositoryStatus cacheStatus = listRepositoryLocalStatus(cachePath);
+            if (cacheStatus.hasLocalChanges()) {
+                revertLocalBranch(cachePath);
+            }
+            if (cacheStatus.isBehindRemote()) {
                 pullCurrentBranchOnRepository(cachePath);
             }
             File localBranch;
@@ -699,7 +703,7 @@ public class BeginIssueWithGit extends Operation
         String localExec = getParameterString(prop, PARAMETER_LOCAL_EXEC, false);
         if (!StringUtils.isBlank(localExec)) {
             System.out.println("[*] Executing local command ...");
-            
+
             Velocity.init();
             VelocityContext context = new VelocityContext();
             context.put("issue", issue.getId());
@@ -852,5 +856,32 @@ public class BeginIssueWithGit extends Operation
             System.out.println("\t\t[e] Fast-forward failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
         }
         return false;
+    }
+
+    private void revertLocalBranch(File repoPath) {
+        System.out.println("\t[*] Reverting local changes ...");
+        try (Repository gitRepo = openRepository(repoPath.getAbsolutePath())) {
+            try (Git git = new Git(gitRepo)) {
+                ResetCommand reset = git.reset();
+                reset.setMode(ResetCommand.ResetType.HARD);
+                reset.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)));
+                Ref ref = reset.call();
+                if (ref != null) {
+                    System.out.println("\t[i] Reset hard to ref: " + ref.getName());
+                }
+                CleanCommand clean = git.clean();
+                clean.setCleanDirectories(true);
+                Set<String> removed = clean.call();
+                removed.forEach((item) -> {
+                    System.out.println("\t[i] Removed: " + item);
+                });
+                System.out.println("\t[i] Removed untracked " + removed.size() + " items.");
+                System.out.println("\t[✓] Revert local changes ok.");
+            } catch (GitAPIException ex) {
+                System.out.println("\t[e] Revert local changes failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            }
+        } catch (IOException ex) {
+            System.out.println("\t[e] Revert local changes failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+        }
     }
 }

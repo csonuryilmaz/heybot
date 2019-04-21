@@ -25,7 +25,7 @@ import utilities.Open;
 public class heybot
 {
 
-    private final static String VERSION = "2.4.1.3";
+    private final static String VERSION = "2.5.1.3";
     private static final String NEWLINE = System.getProperty("line.separator");
     public static final String WORKSPACE = System.getProperty("user.home") + "/.heybot/workspace";
 
