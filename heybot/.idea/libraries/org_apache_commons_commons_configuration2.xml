@@ -1,0 +1,23 @@
+<component name="libraryTable">
+  <library name="org.apache.commons:commons-configuration2" type="repository">
+    <properties maven-id="org.apache.commons:commons-configuration2:2.4" />
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/commons-configuration2-2.4.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-lang3-3.8.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-text-1.6.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-logging-1.2.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$PROJECT_DIR$/lib/commons-configuration2-2.4-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-lang3-3.8.1-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-text-1.6-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-logging-1.2-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/lib/commons-configuration2-2.4-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-lang3-3.8.1-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-text-1.6-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-logging-1.2-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

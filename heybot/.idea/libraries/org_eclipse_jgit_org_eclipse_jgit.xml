@@ -1,0 +1,35 @@
+<component name="libraryTable">
+  <library name="org.eclipse.jgit:org.eclipse.jgit" type="repository">
+    <properties maven-id="org.eclipse.jgit:org.eclipse.jgit:5.3.0.201903130848-r" />
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/org.eclipse.jgit-5.3.0.201903130848-r.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/jsch-0.1.54.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/jzlib-1.1.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/JavaEWAH-1.1.6.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/slf4j-api-1.7.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/bcpg-jdk15on-1.60.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/bcprov-jdk15on-1.60.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/bcpkix-jdk15on-1.60.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$PROJECT_DIR$/lib/org.eclipse.jgit-5.3.0.201903130848-r-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/jsch-0.1.54-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/jzlib-1.1.1-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/JavaEWAH-1.1.6-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/slf4j-api-1.7.2-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/bcpg-jdk15on-1.60-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/bcprov-jdk15on-1.60-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/bcpkix-jdk15on-1.60-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/lib/org.eclipse.jgit-5.3.0.201903130848-r-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/jsch-0.1.54-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/jzlib-1.1.1-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/JavaEWAH-1.1.6-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/slf4j-api-1.7.2-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/bcpg-jdk15on-1.60-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/bcprov-jdk15on-1.60-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/bcpkix-jdk15on-1.60-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

@@ -1,0 +1,26 @@
+<component name="libraryTable">
+  <library name="com.github.seratch:jslack" type="repository">
+    <properties maven-id="com.github.seratch:jslack:1.5.1" />
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/jslack-1.5.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/okhttp-3.14.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/okio-1.17.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/gson-2.8.5.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/slf4j-api-1.7.26.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$PROJECT_DIR$/lib/jslack-1.5.1-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/okhttp-3.14.1-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/okio-1.17.2-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/gson-2.8.5-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/slf4j-api-1.7.26-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/lib/jslack-1.5.1-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/okhttp-3.14.1-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/okio-1.17.2-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/gson-2.8.5-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/slf4j-api-1.7.26-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

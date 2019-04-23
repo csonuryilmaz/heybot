@@ -1,0 +1,20 @@
+<component name="libraryTable">
+  <library name="org.apache.velocity:velocity-engine-core" type="repository">
+    <properties maven-id="org.apache.velocity:velocity-engine-core:2.1" />
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/velocity-engine-core-2.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-lang3-3.8.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/slf4j-api-1.7.26.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$PROJECT_DIR$/lib/velocity-engine-core-2.1-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-lang3-3.8.1-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/slf4j-api-1.7.26-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/lib/velocity-engine-core-2.1-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-lang3-3.8.1-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/slf4j-api-1.7.26-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

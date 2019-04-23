@@ -7,10 +7,15 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="libs" level="project" />
-    <orderEntry type="library" name="jcdp" level="project" />
-    <orderEntry type="library" name="jslack-lib" level="project" />
-    <orderEntry type="library" name="httpclient" level="project" />
-    <orderEntry type="library" name="jgit" level="project" />
+    <orderEntry type="library" name="commons-cli:commons-cli" level="project" />
+    <orderEntry type="library" name="org.apache.httpcomponents:fluent-hc" level="project" />
+    <orderEntry type="library" name="com.taskadapter:redmine-java-api" level="project" />
+    <orderEntry type="library" name="org.eclipse.jgit:org.eclipse.jgit" level="project" />
+    <orderEntry type="library" name="commons-io:commons-io" level="project" />
+    <orderEntry type="library" name="org.apache.commons:commons-configuration2" level="project" />
+    <orderEntry type="library" name="com.github.seratch:jslack" level="project" />
+    <orderEntry type="library" name="com.sun.mail:javax.mail" level="project" />
+    <orderEntry type="library" name="com.diogonunes:JCDP" level="project" />
+    <orderEntry type="library" name="org.apache.velocity:velocity-engine-core" level="project" />
   </component>
 </module>
