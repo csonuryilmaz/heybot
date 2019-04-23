@@ -7,6 +7,7 @@ import com.jcraft.jsch.Session;
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.Issue;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,6 +20,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
+
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jgit.api.CheckoutCommand;
 import org.eclipse.jgit.api.CreateBranchCommand;
@@ -43,9 +45,13 @@ import org.eclipse.jgit.transport.Transport;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.eclipse.jgit.util.FS;
 import utilities.Properties;
+
 import java.util.Set;
+
 import model.Command;
+
 import static org.apache.http.util.TextUtils.isEmpty;
+
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
 import org.eclipse.jgit.api.CleanCommand;
@@ -115,7 +121,9 @@ public class BeginIssueWithGit extends Operation
 
     public BeginIssueWithGit() {
         super(new String[]{
-            PARAMETER_ISSUE, PARAMETER_REDMINE_TOKEN, PARAMETER_REDMINE_URL, PARAMETER_GIT_REPOSITORY, PARAMETER_GIT_PROTOCOL, PARAMETER_WORKSPACE_PATH
+            PARAMETER_ISSUE, PARAMETER_REDMINE_TOKEN, PARAMETER_REDMINE_URL,
+            PARAMETER_GIT_REPOSITORY, PARAMETER_GIT_PROTOCOL,
+            PARAMETER_WORKSPACE_PATH
         });
     }
 
@@ -257,7 +265,7 @@ public class BeginIssueWithGit extends Operation
             return false;
         }
         File cachePath = new File(cacheDir + "/"
-                + new File(trimRight(getParameterString(prop, PARAMETER_GIT_REPOSITORY, false), "/")).getName());
+            + new File(trimRight(getParameterString(prop, PARAMETER_GIT_REPOSITORY, false), "/")).getName());
         boolean isCacheReady;
         if (!cachePath.exists()) {
             isCacheReady = cloneRepository(cachePath);
@@ -304,12 +312,12 @@ public class BeginIssueWithGit extends Operation
         System.out.println("\t[i] Locally cached repository not found.");
         System.out.println("\t[*] Cloning once for cache ...");
         try (Git result = Git.cloneRepository()
-                .setURI(repository)
-                .setCredentialsProvider(credentialsProvider)
-                .setTransportConfigCallback(transportConfigCallback)
-                .setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)))
-                .setDirectory(cachePath)
-                .call()) {
+            .setURI(repository)
+            .setCredentialsProvider(credentialsProvider)
+            .setTransportConfigCallback(transportConfigCallback)
+            .setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)))
+            .setDirectory(cachePath)
+            .call()) {
             System.out.println("\t[✓] Cloned repository: " + result.getRepository().getDirectory());
             return true;
         } catch (GitAPIException gae) {
@@ -349,8 +357,8 @@ public class BeginIssueWithGit extends Operation
         builder.setGitDir(new File(cachePath + "/.git"));
         builder.setMustExist(true);
         return builder
-                .readEnvironment() // scan environment GIT_* variables
-                .build();
+            .readEnvironment() // scan environment GIT_* variables
+            .build();
     }
 
     private void listRepositoryLocalBranches(File cachePath) {
@@ -603,7 +611,7 @@ public class BeginIssueWithGit extends Operation
                     String baseStatus = issue.getStatusName();
                     issue = updateIssueStatus(redmineManager, issue, statusId);
                     System.out.println("\t[i] Issue status: "
-                            + (!baseStatus.equals(issue.getStatusName()) ? baseStatus + " > " : "") + issue.getStatusName());
+                        + (!baseStatus.equals(issue.getStatusName()) ? baseStatus + " > " : "") + issue.getStatusName());
                     System.out.println("\t[✓] Issue status is ok.");
                 } catch (Exception ex) {
                     System.out.println("\t[e] Issue status update failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
@@ -635,7 +643,7 @@ public class BeginIssueWithGit extends Operation
             System.out.println("[*] Executing remote command ...");
             if (validValueCount < 4) {
                 System.out.println("\t[e] Missing remote parameters! "
-                        + "Please, set all values for REMOTE_HOST, REMOTE_USER, REMOTE_PASS, REMOTE_EXEC parameters.");
+                    + "Please, set all values for REMOTE_HOST, REMOTE_USER, REMOTE_PASS, REMOTE_EXEC parameters.");
             } else {
                 try {
                     int sshPort = getParameterInt(prop, PARAMETER_REMOTE_PORT, 22);
@@ -735,7 +743,7 @@ public class BeginIssueWithGit extends Operation
             if (!isEmpty(answer) && (answer.charAt(0) == 'Y' || answer.charAt(0) == 'y')) {
                 if (project.exists()) {
                     Command cmd = new Command(idePath.contains("%s") ? String.format(idePath, project.getAbsolutePath())
-                            : idePath + " " + project.getAbsolutePath());
+                        : idePath + " " + project.getAbsolutePath());
                     System.out.println("[*] Opening IDE ...");
                     System.out.println(cmd.getCommandString());
                     cmd.executeNoWait();
@@ -839,7 +847,7 @@ public class BeginIssueWithGit extends Operation
                 Collection<RevCommit> stashes = git.stashList().call();
                 for (RevCommit rev : stashes) {
                     if (rev.getFullMessage().equals(stash.getFullMessage())
-                            && rev.getName().equals(stash.getName())) {
+                        && rev.getName().equals(stash.getName())) {
                         break;
                     }
                     ref++;
