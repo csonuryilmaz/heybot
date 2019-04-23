@@ -17,5 +17,7 @@
     <orderEntry type="library" name="com.sun.mail:javax.mail" level="project" />
     <orderEntry type="library" name="com.diogonunes:JCDP" level="project" />
     <orderEntry type="library" name="org.apache.velocity:velocity-engine-core" level="project" />
+    <orderEntry type="library" name="commons-beanutils:commons-beanutils" level="project" />
+    <orderEntry type="library" name="org.slf4j:slf4j-nop" level="project" />
   </component>
 </module>
