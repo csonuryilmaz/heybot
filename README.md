@@ -334,10 +334,10 @@ Optional parameters:
   - It won't affect other branches, `git` projects or your global `git` configuration.
   - If desired, this configuration can be made by developer manually with `git config` at a later time, or global config can be used.
 - PROJECT_NAME= If you need to override project name for some reason, which is extracted from repository url, you can use this optional parameter. Project name is also used in branch naming. By default, when heybot creates local working copy (or in other words, local branch), it uses last token from repository URL as project name. For example;
-  - When `GIT_REPOSITORY=git@gitlab.kitapyurdu.com:root/cronjob.git` then
-    - created local branch is `$WORKSPACE_PATH/i$ISSUE/cronjob`, checkout branch name is `i$ISSUE/cronjob`
-  - If `PROJECT_NAME=CronJob` is given as project name in this case, then
-    - created local branch is `$WORKSPACE_PATH/i$ISSUE/CronJob`, checkout branch name is `i$ISSUE/CronJob`
+  - When `GIT_REPOSITORY=git@gitlab.example.com:root/foobarproj.git` then
+    - created local branch is `$WORKSPACE_PATH/i$ISSUE/foobarproj`, checkout branch name is `i$ISSUE/foobarproj`
+  - If `PROJECT_NAME=FooBarProj` is given as project name in this case, then
+    - created local branch is `$WORKSPACE_PATH/i$ISSUE/FooBarProj`, checkout branch name is `i$ISSUE/FooBarProj`
 
 If you need to execute some commands when the local branch is ready, use below optional parameters for `ssh` connection and remote command execution.
 
@@ -378,6 +378,9 @@ WORKSPACE_PATH=/home/awesomedev/projects
 # ************
 # * optional *
 # ************
+
+# project/branch naming
+PROJECT_NAME=Project1
 
 # git config
 GIT_CONFIG_USER_NAME=awesome.dev
@@ -427,6 +430,9 @@ WORKSPACE_PATH=/home/awesomedev/projects
 # ************
 # * optional *
 # ************
+
+# project/branch naming
+PROJECT_NAME=Project1
 
 # git config
 GIT_CONFIG_USER_NAME=awesome.dev
