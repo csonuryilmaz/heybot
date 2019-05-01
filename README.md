@@ -1,6 +1,6 @@
 # heybot
 
-[![GitHub stars](https://img.shields.io/github/stars/csonuryilmaz/heybot.svg?style=social&label=Star)](http://bit.ly/2ROXHzb)   [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)   [![Issues](https://img.shields.io/github/issues/csonuryilmaz/heybot.svg)](https://github.com/csonuryilmaz/heybot/issues)   [![Latest](https://img.shields.io/badge/release-v2.0.0.0-red.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)   [![GitHub Releases](https://img.shields.io/github/downloads/csonuryilmaz/heybot/latest/total.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)
+[![GitHub stars](https://img.shields.io/github/stars/csonuryilmaz/heybot.svg?style=social&label=Star)](http://bit.ly/2ROXHzb) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![GitHub Latest Release](https://img.shields.io/github/downloads/csonuryilmaz/heybot/latest/total.svg)](https://github.com/csonuryilmaz/heybot/releases/latest) [![Latest](https://img.shields.io/badge/release-v2.7.2.6-red.svg)](https://github.com/csonuryilmaz/heybot/releases/latest) [![Issues](https://img.shields.io/github/issues/csonuryilmaz/heybot.svg)](https://github.com/csonuryilmaz/heybot/issues) [![GitHub Releases](https://img.shields.io/github/downloads/csonuryilmaz/heybot/total.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)
 
 ## Table of Contents
 
@@ -33,8 +33,6 @@
         - [Test Platforms](#test-platforms)
         - [License](#license)
         - [Authors](#authors)
-
-<!-- /TOC -->
 
 <!-- markdownlint-enable -->
 
@@ -78,9 +76,9 @@ After handling Java dependency, simply;
 - execute installation script
 
 ```bash
-wget https://github.com/csonuryilmaz/heybot/releases/download/2.0.0.0/heybot-2.0.0.0.tar.gz
-tar -zxvf heybot-2.0.0.0.tar.gz
-cd heybot-2.0.0.0
+wget https://github.com/csonuryilmaz/heybot/releases/download/2.7.2.6/heybot-2.7.2.6.tar.gz
+tar -zxvf heybot-2.7.2.6.tar.gz
+cd heybot-2.7.2.6
 chmod a+x install.sh
 ./install.sh
 ```
@@ -90,10 +88,10 @@ Above command will downlod **heybot** archive into current directory.
 In order to download into different directory, for example `~/Downloads`
 
 ```bash
-wget https://github.com/csonuryilmaz/heybot/releases/download/2.0.0.0/heybot-2.0.0.0.tar.gz -P ~/Downloads
-tar -zxvf ~/Downloads/heybot-2.0.0.0.tar.gz
-chmod a+x heybot-2.0.0.0/install.sh
-heybot-2.0.0.0/install.sh
+wget https://github.com/csonuryilmaz/heybot/releases/download/2.7.2.6/heybot-2.7.2.6.tar.gz -P ~/Downloads
+tar -zxvf ~/Downloads/heybot-2.7.2.6.tar.gz
+chmod a+x heybot-2.7.2.6/install.sh
+heybot-2.7.2.6/install.sh
 ```
 
 It will ask for sudo permission at installation process, so your user should be a sudoer. (Or maybe you can run installation script as root, but it's not recommended.)
@@ -107,7 +105,7 @@ $ heybot -v
  |_|_|___|_  |___|___|_|
          |___|
 
- 2.0.0.0
+ 2.7.2.6
 
 Copyright (c) 2017 Onur Yılmaz
 MIT License: <https://github.com/csonuryilmaz/heybot/blob/master/LICENSE.txt>
@@ -125,7 +123,7 @@ $ heybot
  |_|_|___|_  |___|___|_|
          |___|
 
- 2.0.0.0
+ 2.7.2.6
 
 usage: heybot -d <arg> [-h] [-v] [-l] [-lp <arg>] [-i <arg>] [-s <arg>]
        [-o <arg>] [-r <arg>] [-e <arg>] [-c <arg>]
@@ -335,6 +333,11 @@ Optional parameters:
   - If parameter is filled, `heybot` makes `git config` to modify `user.email` on the local branch.
   - It won't affect other branches, `git` projects or your global `git` configuration.
   - If desired, this configuration can be made by developer manually with `git config` at a later time, or global config can be used.
+- PROJECT_NAME= If you need to override project name for some reason, which is extracted from repository url, you can use this optional parameter. Project name is also used in branch naming. By default, when heybot creates local working copy (or in other words, local branch), it uses last token from repository URL as project name. For example;
+  - When `GIT_REPOSITORY=git@gitlab.kitapyurdu.com:root/cronjob.git` then
+    - created local branch is `$WORKSPACE_PATH/i$ISSUE/cronjob`, checkout branch name is `i$ISSUE/cronjob`
+  - If `PROJECT_NAME=CronJob` is given as project name in this case, then
+    - created local branch is `$WORKSPACE_PATH/i$ISSUE/CronJob`, checkout branch name is `i$ISSUE/CronJob`
 
 If you need to execute some commands when the local branch is ready, use below optional parameters for `ssh` connection and remote command execution.
 
