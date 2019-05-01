@@ -18,16 +18,17 @@
             - [5.1. Begin-Issue](#51-begin-issue)
             - [5.2. Begin-Issue-With-Git](#52-begin-issue-with-git)
             - [5.3. Upload](#53-upload)
-            - [5.4. Upload File](#54-upload-file)
-                - [5.4.1 Example Configuration for PhpStorm File Watcher](#541-example-configuration-for-phpstorm-file-watcher)
-            - [5.5. Cleanup](#55-cleanup)
-            - [5.6. Cleanup-Svn](#56-cleanup-svn)
-            - [5.7. Review](#57-review)
-            - [5.8. Check-New](#58-check-new)
-            - [5.9. Sync-Issue](#59-sync-issue)
-            - [5.10. Next-Version](#510-next-version)
-            - [5.11. Release](#511-release)
-            - [5.12. Snapshot](#512-snapshot)
+            - [5.4. Upload Git Diff](#54-upload-git-diff)
+            - [5.5. Upload File](#55-upload-file)
+                - [5.5.1 Example Configuration for PhpStorm File Watcher](#551-example-configuration-for-phpstorm-file-watcher)
+            - [5.6. Cleanup](#56-cleanup)
+            - [5.7. Cleanup-Svn](#57-cleanup-svn)
+            - [5.8. Review](#58-review)
+            - [5.9. Check-New](#59-check-new)
+            - [5.10. Sync-Issue](#510-sync-issue)
+            - [5.11. Next-Version](#511-next-version)
+            - [5.12. Release](#512-release)
+            - [5.13. Snapshot](#513-snapshot)
         - [6. Notes](#6-notes)
             - [6.1. How to obtain slack incoming webhook URL](#61-how-to-obtain-slack-incoming-webhook-url)
         - [Test Platforms](#test-platforms)
@@ -341,12 +342,20 @@ Optional parameters:
 
 If you need to execute some commands when the local branch is ready, use below optional parameters for `ssh` connection and remote command execution.
 
-- REMOTE_HOST= Hostname or IP of remote machine which has an eligible `ssh` access with username and password.
+- REMOTE_HOST= Hostname or IP of remote machine(s) which has an eligible `ssh` access with username and password.
+  - Comma seperated multiple machines are accepted. Remote command exection will be done in order, one by one.
 - REMOTE_USER= `ssh` user's username.
 - REMOTE_PASS= `ssh` user's password.
 - REMOTE_PORT= If empty, default port 22 is assumed. Fill in `integer` value if the `ssh` server has custom port for `ssh` connections.
 - REMOTE_EXEC= Fill in any bash command. It may be a simple executable bash file or a combination of piped commands. Internally when `heybot` connected to host with `ssh`, current working directory is user's home directory. For example, `/home/onur/`. So, for successful execution, test your command and be sure it's working on remote host's user home directory. Then it'll work in heybot without any problem.
   - If the command contains **$issue** keyword, all occurences will be replaced with the value of ISSUE parameter.
+
+If you need to execute some **local** commands when the local branch is ready, use below optional parameter. Its purpose is to trigger some post operations after local branch checkout. For example, `composer` or `maven` updates.
+
+- LOCAL_EXEC= Fill in any bash command. It may be a simple executable bash file or a combination of piped commands.
+  - `heybot` executes given command at local, in local branch folder directory. So, for successful execution, test your command and be sure it's working in project folder.
+
+**Note:** For some reason git pull can make local (uncommitted) modifications which may cause branch checkout failure. (`git pull`=`git fetch + git merge`) Cache is designed to be used by `heybot` for internal purposes. It should not contain any local changes, made by `git` or **user**. So, if cache contains uncommitted or untracked changes, heybot cleans local working copy before `git pull` and branch checkout. In other words, to increase success of git pull, we make sure our working area is clean before doing the pull.
 
 Example: `http` || `https` Git Credentials
 
@@ -491,7 +500,92 @@ REMOTE_PATH=/var/www/html/myproject/
 SOURCE_PATH=/Users/smith/NetBeansProjects/myproject/
 ```
 
-#### 5.4. Upload File
+#### 5.4. Upload Git Diff
+
+It uploads `git diff` changes in the local working copy to a remote server by SFTP protocol. It's more powerful and functional when compared to `upload` operation. With optional parameters, `upload-git-diff` operation responds to various cases described with below examples.
+
+Required parameters:
+
+- REMOTE_HOST= Hostname or IP of remote machine which has an eligible SFTP access with username and password. (Comma seperated multiple servers are accepted.)
+- REMOTE_USER= SFTP user's username.
+- REMOTE_PASS= SFTP user's password.
+- MODE= Value is either `P2P` or `W2W`
+  - `P2P`: Path-to-path working mode. Used for uploading changes from one local path to one remote path. No need to be logical relation between local path and remote path. For example, you're working on a branch and while developing you upload local changes to `test` or `preprod` environment to make some tests.
+  - `W2W`: Workspace-to-workspace working mode. Used for uploading local branch changes to remote deployed branch. It's meaningful when used with `begin-with-git` operation. You can configure local workspace and remote workspace once, and then only by modifying (on-the-fly) `ISSUE` parameter you can upload any branch's changes to its remote equivalent.
+
+Optional parameters:
+
+- REMOTE_PORT= If empty, default 22 is assumed. Enter `integer` value if server has custom port for SFTP connections.
+- When `MODE` is **W2W**:
+  - ISSUE= Redmine issue number which is in progress or being developed. `integer`
+  - SOURCE_WORKSPACE= It's the path (parent folder) where you keep all the branches in your localhost. Root directory which contains different branches.
+  - REMOTE_WORKSPACE= It's the equivalent root path of local workspace directory on remote host. For example, it's the folder where you keep all the branches on remote host.
+  - PROJECT_PATH= Identifies the project folder structure in **workspace**. For example, `SOURCE_WORKSPACE` is `/home/onur/awesomeProjs` and we have two branches related with two different `Redmine` issues: `i100/aProj` and `i200/aProj`. In this case, `PROJECT_PATH` should be `i$issue/aProj`. `$issue` marker will be replaced with `ISSUE` value at runtime.
+- When `MODE` is **P2P**:
+  - SOURCE_PATH= Local working directory to take changes (`git diff`) from.  If not given or empty, **current working directory** (where `heybot` is triggered) is assumed. (`pwd`)
+  - REMOTE_PATH= Remote working directory to send/upload changes.
+
+Example:
+
+```properties
+# File: send-git-diff-to-test.hb
+
+OPERATION=upload-git-diff
+
+# ************
+# * required *
+# ************
+
+# working mode
+MODE=P2P
+
+# remote (ssh)
+REMOTE_HOST=192.168.2.1,testWeb
+REMOTE_USER=smith
+REMOTE_PASS=gsg727s
+
+# ************
+# * optional *
+# ************
+
+SOURCE_PATH=/Users/smith/NetBeansProjects/aProj
+REMOTE_PATH=/var/www/html/test/aProj
+```
+
+When you run `heybot send-git-diff-to-test`, `heybot` will upload `git diff` of local `/Users/smith/NetBeansProjects/aProj` to `/var/www/html/test/aProj`. 
+
+If you remove `SOURCE_PATH`, you can run the operation from any project folder. Current working directory will be set as `SOURCE_PATH` automatically. It's useful when working with different branches at the same time. You can upload local `branch 1` or `branch 2` with the same configuration file to same remote path.
+
+```properties
+# File: send-git-diff.hb
+
+OPERATION=upload-git-diff
+
+# ************
+# * required *
+# ************
+
+# working mode
+MODE=W2W
+
+# remote (ssh)
+REMOTE_HOST=192.168.2.1,testWeb
+REMOTE_USER=smith
+REMOTE_PASS=gsg727s
+
+# ************
+# * optional *
+# ************
+
+SOURCE_WORKSPACE=/Users/smith/gitlab/branches
+REMOTE_WORKSPACE=/var/www/html/branches
+PROJECT_PATH=i$issue/aProj
+ISSUE=3714
+```
+
+When you run `heybot send-git-diff 100`, `heybot` will upload `git diff` of local `/Users/smith/gitlab/branches/i100/aProj` to remote `/var/www/html/branches/i100/aProj`. With same configuration file, only updating ISSUE on-the-fly parameter, you can upload several different branches to their remote equivalents.
+
+#### 5.5. Upload File
 
 It's designed to work with IDE file watchers. File watcher allows you to automatically run a command-line tool like compilers, formatters, or linters when you change or save a file in the IDE. If you want to upload saved or modified file to remote server, you can use upload file operation. Its one file processing logic, is more efficient than above upload operation which uploads all changes when triggered. File watcher doesn't trigger when a file or directory is deleted because after delete there is no file to work on. As similar, file watcher don't trigger when an empty directory is created, because it's not a file. But don't worry! When you add a new file into that empty directory it'll be triggered and when you create a new file with the same name, which was previously deleted, but probably has different content, it'll be triggered. On both cases you'll have the ability to upload meaningful (up-to-date) changes to server although server has some additional changes that you don't have. But those are redundant, mostly passive changes.
 
@@ -543,7 +637,7 @@ Example scenario about given example .hb file:
 
 Heybot assumes the same folder structure between local and remote host, so it replaces *source workspace path* with *remote workspace path*. By means of this assumption, you don't need any modification to hb file between different projects. You can use the same file watcher globally for all projects.
 
-##### 5.4.1 Example Configuration for PhpStorm File Watcher
+##### 5.5.1 Example Configuration for PhpStorm File Watcher
 
 Open `File > Settings > Tools > File Watchers`. You will see list of file watchers. Heybot upload-file operation can be used both `Global` level or `Project` level.
 
@@ -591,7 +685,7 @@ Below is exported xml of above file watcher:
 </TaskOptions>
 ```
 
-#### 5.5. Cleanup
+#### 5.6. Cleanup
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -627,7 +721,7 @@ LIMIT=10
 
 ```
 
-#### 5.6. Cleanup-Svn
+#### 5.7. Cleanup-Svn
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -663,7 +757,7 @@ LIMIT=10
 
 ```
 
-#### 5.7. Review
+#### 5.8. Review
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -703,7 +797,7 @@ ISSUE_STATUS_SHOULD_BE=Resolved
 
 ```
 
-#### 5.8. Check-New
+#### 5.9. Check-New
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -754,7 +848,7 @@ Also you can schedule this operation with a crontab entry. For example, below en
 */5 * * * * /usr/local/bin/heybot -d check_new.hb 1> /dev/null 2> /var/www/html/heybot.log
 ```
 
-#### 5.9. Sync-Issue
+#### 5.10. Sync-Issue
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -827,7 +921,7 @@ REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
 LAST_CHECK_TIME=Sat Nov 19 15:45:11 EET 2016
 ```
 
-#### 5.10. Next-Version
+#### 5.11. Next-Version
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -874,11 +968,11 @@ Internal Parameters:
 
 **todo:** Example and notes will be added for *next-version* .
 
-#### 5.11. Release
+#### 5.12. Release
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
-#### 5.12. Snapshot
+#### 5.13. Snapshot
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
