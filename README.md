@@ -61,7 +61,9 @@ For other ecosystems, you can fork the project or contribute directly to this pr
 
 ### 3. Installation
 
-Heybot is tested and works on Mac OS X and Gnu/Linux distributions. Java 1.8+ (jre/jdk) have to be installed before **heybot**. You can check whether it's installed and version is sufficient by
+Heybot is tested and works on Mac OS X and Gnu/Linux distributions. The most important dependency is Java Runtime Environment for `heybot`.
+
+Java 1.8+ (jre/jdk) have to be installed before **heybot** installation. You can check whether it's installed and version is sufficient by,
 
 ```bash
 $ java -version
@@ -70,7 +72,19 @@ Java(TM) SE Runtime Environment (build 1.8.0_65-b17)
 Java HotSpot(TM) 64-Bit Server VM (build 25.65-b01, mixed mode)
 ```
 
-After handling Java dependency, simply;
+To **install** or **update** `heybot` easily, you can use the [install.sh](https://raw.githubusercontent.com/csonuryilmaz/heybot/master/install.sh) script using `cURL`:
+
+```bash
+curl -o- https://raw.githubusercontent.com/csonuryilmaz/heybot/master/install.sh | bash
+```
+
+or `wget`:
+
+```bash
+wget -qO- https://raw.githubusercontent.com/csonuryilmaz/heybot/master/install.sh | bash
+```
+
+If `cURL` or `wget` method doesn't work for you, you can follow below steps manually;
 
 - download latest version of **heybot** from [latest release](https://github.com/csonuryilmaz/heybot/releases/latest)
 - extract archive
