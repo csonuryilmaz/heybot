@@ -566,7 +566,7 @@ SOURCE_PATH=/Users/smith/NetBeansProjects/aProj
 REMOTE_PATH=/var/www/html/test/aProj
 ```
 
-When you run `heybot send-git-diff-to-test`, `heybot` will upload `git diff` of local `/Users/smith/NetBeansProjects/aProj` to `/var/www/html/test/aProj`. 
+When you run `heybot send-git-diff-to-test`, `heybot` will upload `git diff` of local `/Users/smith/NetBeansProjects/aProj` to `/var/www/html/test/aProj`.
 
 If you remove `SOURCE_PATH`, you can run the operation from any project folder. Current working directory will be set as `SOURCE_PATH` automatically. It's useful when working with different branches at the same time. You can upload local `branch 1` or `branch 2` with the same configuration file to same remote path.
 
