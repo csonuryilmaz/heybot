@@ -75,13 +75,13 @@ Java HotSpot(TM) 64-Bit Server VM (build 25.65-b01, mixed mode)
 To **install** or **update** `heybot` easily, you can use the [install.sh](https://raw.githubusercontent.com/csonuryilmaz/heybot/master/install.sh) script using `cURL`:
 
 ```bash
-curl -o- https://raw.githubusercontent.com/csonuryilmaz/heybot/master/install.sh | bash
+bash -c "$(curl -sSL https://raw.githubusercontent.com/csonuryilmaz/heybot/master/install.sh)"
 ```
 
 or `wget`:
 
 ```bash
-wget -qO- https://raw.githubusercontent.com/csonuryilmaz/heybot/master/install.sh | bash
+bash -c "$(wget -qO- https://raw.githubusercontent.com/csonuryilmaz/heybot/master/install.sh)"
 ```
 
 If `cURL` or `wget` method doesn't work for you, you can follow below steps manually;
