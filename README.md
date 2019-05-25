@@ -1,6 +1,6 @@
 # heybot
 
-[![GitHub stars](https://img.shields.io/github/stars/csonuryilmaz/heybot.svg?style=social&label=Star)](http://bit.ly/2ROXHzb) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![GitHub Latest Release](https://img.shields.io/github/downloads/csonuryilmaz/heybot/latest/total.svg)](https://github.com/csonuryilmaz/heybot/releases/latest) [![Latest](https://img.shields.io/badge/release-v2.7.2.6-red.svg)](https://github.com/csonuryilmaz/heybot/releases/latest) [![Issues](https://img.shields.io/github/issues/csonuryilmaz/heybot.svg)](https://github.com/csonuryilmaz/heybot/issues) [![GitHub Releases](https://img.shields.io/github/downloads/csonuryilmaz/heybot/total.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)
+[![GitHub stars](https://img.shields.io/github/stars/csonuryilmaz/heybot.svg?style=social&label=Star)](http://bit.ly/2ROXHzb) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![GitHub Latest Release](https://img.shields.io/github/downloads/csonuryilmaz/heybot/latest/total.svg)](https://github.com/csonuryilmaz/heybot/releases/latest) [![Latest](https://img.shields.io/badge/release-v2.7.2.7-red.svg)](https://github.com/csonuryilmaz/heybot/releases/latest) [![Issues](https://img.shields.io/github/issues/csonuryilmaz/heybot.svg)](https://github.com/csonuryilmaz/heybot/issues) [![GitHub Releases](https://img.shields.io/github/downloads/csonuryilmaz/heybot/total.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)
 
 ## Table of Contents
 
@@ -77,9 +77,9 @@ After handling Java dependency, simply;
 - execute installation script
 
 ```bash
-wget https://github.com/csonuryilmaz/heybot/releases/download/2.7.2.6/heybot-2.7.2.6.tar.gz
-tar -zxvf heybot-2.7.2.6.tar.gz
-cd heybot-2.7.2.6
+wget https://github.com/csonuryilmaz/heybot/releases/download/2.7.2.7/heybot-2.7.2.7.tar.gz
+tar -zxvf heybot-2.7.2.7.tar.gz
+cd heybot-2.7.2.7
 chmod a+x install.sh
 ./install.sh
 ```
@@ -89,10 +89,10 @@ Above command will downlod **heybot** archive into current directory.
 In order to download into different directory, for example `~/Downloads`
 
 ```bash
-wget https://github.com/csonuryilmaz/heybot/releases/download/2.7.2.6/heybot-2.7.2.6.tar.gz -P ~/Downloads
-tar -zxvf ~/Downloads/heybot-2.7.2.6.tar.gz
-chmod a+x heybot-2.7.2.6/install.sh
-heybot-2.7.2.6/install.sh
+wget https://github.com/csonuryilmaz/heybot/releases/download/2.7.2.7/heybot-2.7.2.7.tar.gz -P ~/Downloads
+tar -zxvf ~/Downloads/heybot-2.7.2.7.tar.gz
+chmod a+x heybot-2.7.2.7/install.sh
+heybot-2.7.2.7/install.sh
 ```
 
 It will ask for sudo permission at installation process, so your user should be a sudoer. (Or maybe you can run installation script as root, but it's not recommended.)
@@ -106,7 +106,7 @@ $ heybot -v
  |_|_|___|_  |___|___|_|
          |___|
 
- 2.7.2.6
+ 2.7.2.7
 
 Copyright (c) 2017 Onur Yılmaz
 MIT License: <https://github.com/csonuryilmaz/heybot/blob/master/LICENSE.txt>
@@ -124,7 +124,7 @@ $ heybot
  |_|_|___|_  |___|___|_|
          |___|
 
- 2.7.2.6
+ 2.7.2.7
 
 usage: heybot -d <arg> [-h] [-v] [-l] [-lp <arg>] [-i <arg>] [-s <arg>]
        [-o <arg>] [-r <arg>] [-e <arg>] [-c <arg>]
@@ -687,36 +687,44 @@ Below is exported xml of above file watcher:
 
 #### 5.6. Cleanup
 
-:no_entry_sign: :memo: @todo Will be reviewed and updated!
+It deletes issues (branches) which is **closed**, **deployed**, **merged** or any status you defined, from local workspace. Redmine issue statuses are completely configurable. By using `cleanup` operation, you can get rid of stale branches and save some disk space.
 
-It deletes issues (branches) which is *closed*,*deployed* or any status you defined, from local working directory. By deleting passive branches it saves your disk space. It is meaningful when you use *one issue is resolved in one branch* paradigm.
+It is most useful, when using seperate folders for different issues. This is the default behaviour of `begin-issue-with-git`. It creates new folder specific to issue for each began issue. If you 're using one local repository and switch between issues by switching branches, you don't need this function since you have one folder for all branches.
 
 Required parameters:
 
-- LOCAL_PATH= Branch local working directory used as workspace.
-- STATUS= Status/Statuses to check for cleanup operation.(comma seperated)
+- REDMINE_URL= Redmine API URL which is, most of the time, root URL of your redmine installation.
 - REDMINE_TOKEN= Redmine API access key taken from [my account page](http://www.redmine.org/projects/redmine/wiki/RedmineAccounts).
-- REDMINE_URL= Redmine API url. (most of the time this is root url of your redmine installation)
+- REDMINE_STATUS= Redmine issue status which denotes a stale issue (or branch). One or more string, *comma seperated* values are accepted. When issue status is one of the given values, its local branch will be deleted from disk.
+- WORKSPACE_PATH= Location on your machine which keeps local branches. `heybot` detects issues automatically from workspace, checks Redmine statuses and deletes if compatible with `REDMINE_STATUS` values.
 
 Optional parameters:
 
-- LIMIT= Maximum count to delete branches. If not given or empty, *unlimited* is assumed.
+- LIMIT= Maximum count to delete branches. If not given or empty, *unlimited* is assumed. For example, when `2` is given then `heybot` runs until `2` local branches are deleted. When it reaches `2` deleted branch count, it terminates.
+- DELETE_WHEN_ISSUE_NOT_FOUND= Indicates that if issue is not found on Redmine, `heybot` will delete local branch or not. Boolean value `true | false`. It's useful when issue is deleted from Redmine instead of updating its status.
 
 Example:
 
 ```properties
 # File: delete_closed_branches.hb
 
-# operation
 OPERATION=cleanup
 
-# required parameters
-LOCAL_PATH=/Users/smith/NetBeansProjects/web/branch
-STATUS=Closed,Deployed
-REDMINE_TOKEN=abab3a53c34f66b92fg5cdcbb3bb95a3c78d862e
-REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
+# ************
+# * required *
+# ************
 
-# optional parameters
+REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
+REDMINE_TOKEN=abab3a53c34f66b92fg5cdcbb3bb95a3c78d862e
+REDMINE_STATUS=closed,deployed,canceled,merged
+
+WORKSPACE_PATH=/Users/smith/NetBeansProjects
+
+# ************
+# * optional *
+# ************
+
+DELETE_WHEN_ISSUE_NOT_FOUND=true
 LIMIT=10
 
 ```
