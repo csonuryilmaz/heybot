@@ -1,10 +1,14 @@
 package utilities;
 
 import model.Command;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Scanner;
 
 public class Open
@@ -91,7 +95,7 @@ public class Open
         this.operationFilePath = operationFilePath;
     }
 
-    public void run() {
+    public void run() throws IOException {
         System.out.println("[*] Opening operation file with editor...");
         System.out.println("[i] OpFile: " + operationFilePath);
         System.out.println("[i] Editor: " + editorFilePath);
@@ -99,11 +103,26 @@ public class Open
         Command shC = new Command(new String[]{"sh", "-c", cmd});
         System.out.println("[*] " + shC.getCommandStringWithNoEscapeWhitespace()
             .replace(cmd, "\"" + cmd + "\""));
+        String md5BeforeExec = "";
+        try (InputStream is = Files.newInputStream(Paths.get(operationFilePath))) {
+            md5BeforeExec = DigestUtils.md5Hex(is);
+        }
         if (shC.execute()) {
             if (!StringUtils.isBlank(shC.toString())) {
                 System.out.println(shC.toString());
             }
-            System.out.println("[✓] Edited.");
+            try (InputStream is = Files.newInputStream(Paths.get(operationFilePath))) {
+                System.out.println("[✓] File Status: ");
+                if (md5BeforeExec.length() > 0) {
+                    if (DigestUtils.md5Hex(is).equalsIgnoreCase(md5BeforeExec)) {
+                        System.out.println("No change.");
+                    } else {
+                        System.out.println("Modified.");
+                    }
+                } else {
+                    System.out.println("Unknown.");
+                }
+            }
         }
     }
 
