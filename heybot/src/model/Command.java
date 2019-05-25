@@ -134,15 +134,25 @@ public class Command
 	return result;
     }
 
-    public String getCommandString()
-    {
-	StringBuilder buffer = new StringBuilder();
-	for (String token : command)
-	{
-	    buffer.append(" ");
-	    buffer.append(token.replace(" ", "\\ "));
-	}
+    public String getCommandString() {
+        return getCommandString(true);
+    }
 
-	return buffer.toString();
+    public String getCommandStringWithNoEscapeWhitespace() {
+        return getCommandString(false);
+    }
+
+    private String getCommandString(boolean escapeWhitespace) {
+        StringBuilder buffer = new StringBuilder();
+        for (String token : command) {
+            buffer.append(" ");
+            if (escapeWhitespace) {
+                buffer.append(token.replace(" ", "\\ "));
+            } else {
+                buffer.append(token);
+            }
+        }
+
+        return buffer.substring(1).toString();
     }
 }
