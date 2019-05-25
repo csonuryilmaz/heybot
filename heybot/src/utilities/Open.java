@@ -99,6 +99,9 @@ public class Open
         System.out.println("[*] Opening operation file with editor...");
         System.out.println("[i] OpFile: " + operationFilePath);
         System.out.println("[i] Editor: " + editorFilePath);
+        if (editorFilePath.endsWith("/code")) {
+            editorFilePath += " --wait";
+        }
         String cmd = editorFilePath + " " + operationFilePath + " " + "</dev/tty" + " " + ">/dev/tty";
         Command shC = new Command(new String[]{"sh", "-c", cmd});
         System.out.println("[*] " + shC.getCommandStringWithNoEscapeWhitespace()
@@ -112,7 +115,7 @@ public class Open
                 System.out.println(shC.toString());
             }
             try (InputStream is = Files.newInputStream(Paths.get(operationFilePath))) {
-                System.out.println("[✓] File Status: ");
+                System.out.print("[✓] File Status: ");
                 if (md5BeforeExec.length() > 0) {
                     if (DigestUtils.md5Hex(is).equalsIgnoreCase(md5BeforeExec)) {
                         System.out.println("No change.");
