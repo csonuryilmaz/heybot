@@ -24,66 +24,54 @@ public class Open
 
     private void setEditorFilePath(String workspace) throws Exception {
         String config = workspace + "/config.properties";
-        createConfigIfNotExists(config);
+        if (!doesConfigExist(config)) {
+            System.out.println("[e] Default editor not set yet! Please, use -e,--editor option to set your favorite editor.");
+            throw new Exception("");
+        }
 
         Properties prop = new Properties();
         prop.load(config);
 
         String editor = prop.getProperty("EDITOR");
         if (StringUtils.isBlank(editor)) {
-            editor = getEditorFilePath(getEditorInteractive());
-        } else {
-            editor = getEditorFilePath(editor.trim());
+            System.out.println("[e] Default editor not set yet! Please, use -e,--editor option to set your favorite editor.");
+            throw new Exception("");
+        }
+        editor = editor.trim();
+
+        if (!isAlive(getEditorWithoutAnyOption(editor))) {
+            System.out.println("[e] Default editor not working! Please, use -e,--editor option to fix your favorite editor.");
+            throw new Exception("");
         }
 
-        editorFilePath = isEditorAlive(editor) ? editor : "";
-        prop.setProperty("EDITOR", new File(editorFilePath).getName());
+        editorFilePath = editor;
     }
 
-    private void createConfigIfNotExists(String path) throws IOException {
+    private boolean doesConfigExist(String path) {
         File config = new File(path);
-        if (!config.exists()) {
-            if (!config.createNewFile()) {
-                throw new IOException("Ooops! Global config.properties could not be created. \n"
-                    + config.getAbsolutePath());
+        return config.exists();
+    }
+
+    private String getEditorWithoutAnyOption(String editor) {
+        int i = editor.indexOf(" --");
+        if (i > 0) {
+            return editor.substring(0, i);
+        }
+        return editor;
+    }
+
+    private boolean isAlive(String editor) {
+        try {
+            Process process = Runtime.getRuntime().exec(editor);
+            if (process.isAlive()) {
+                process.destroy();
+                return true;
             }
-        }
-    }
-
-    private String getEditorFilePath(String editor) throws Exception {
-        Command cmd = new Command(new String[]
-            {
-                "which", editor
-            });
-        if (cmd.execute() && !StringUtils.isBlank(cmd.toString())) {
-            return cmd.toString();
-        } else {
-            throw new Exception("Ooops! Could not find editor " + editor + " in global path! \n"
-                + "Failed: " + cmd.getCommandString());
-        }
-    }
-
-    private boolean isEditorAlive(String editor) throws IOException {
-        Process process = Runtime.getRuntime().exec(editor);
-        if (process.isAlive()) {
-            process.destroy();
-            return true;
-        } else {
-            throw new IOException("Ooops! Editor could not be triggered. Please check whether command is executable. \n"
-                + editor);
-        }
-    }
-
-    private String getEditorInteractive() throws Exception {
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("[w] Heybot default editor is not configured yet.");
-        System.out.print("[?] What is your favorite editor to use with heybot? ");
-        String answer = scanner.next();
-        if (StringUtils.isBlank(answer)) {
-            throw new Exception("Ooops! Heybot default editor is not configured.");
+        } catch (IOException e) {
+            System.out.println("[e] " + e.getMessage());
         }
 
-        return answer;
+        return false;
     }
 
     private void setOperationFilePath(String operationFilePath) throws Exception {
@@ -99,9 +87,6 @@ public class Open
         System.out.println("[*] Opening operation file with editor...");
         System.out.println("[i] OpFile: " + operationFilePath);
         System.out.println("[i] Editor: " + editorFilePath);
-        if (editorFilePath.endsWith("/code")) {
-            editorFilePath += " --wait";
-        }
         String cmd = editorFilePath + " " + operationFilePath + " " + "</dev/tty" + " " + ">/dev/tty";
         Command shC = new Command(new String[]{"sh", "-c", cmd});
         System.out.println("[*] " + shC.getCommandStringWithNoEscapeWhitespace()
