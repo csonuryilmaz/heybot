@@ -9,15 +9,16 @@ fi
 echo "[i] ROOTDIR: $(/bin/pwd)";
 
 VERSION=`grep -in "version.*=.*;$" ../src/heybot/heybot.java | cut -d "\"" -f 2 | tr -d '[:space:]'`
-if [ -z "$VERSION" ]; then
+if [[ -z "$VERSION" ]]; then
   echo "[e] Version not found in heybot.java file!";
   exit -1;
 fi
 echo "[i] VERSION: $VERSION";
 
 RELEASE_PATH="../release/heybot-$VERSION"
+sed -i 's/LATEST="*.*.*.*"/LATEST="'"$VERSION"'"/' ../../install.sh
 
-if [ -d "$RELEASE_PATH" ]; then
+if [[ -d "$RELEASE_PATH" ]]; then
   rm -Rf "$RELEASE_PATH"
   rm -f "$RELEASE_PATH.tar.gz"
 fi
