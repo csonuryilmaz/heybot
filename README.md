@@ -1,6 +1,6 @@
 # heybot
 
-[![GitHub stars](https://img.shields.io/github/stars/csonuryilmaz/heybot.svg?style=social&label=Star)](http://bit.ly/2ROXHzb) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![GitHub Latest Release](https://img.shields.io/github/downloads/csonuryilmaz/heybot/latest/total.svg)](https://github.com/csonuryilmaz/heybot/releases/latest) [![Latest](https://img.shields.io/badge/release-v2.7.2.8-red.svg)](https://github.com/csonuryilmaz/heybot/releases/latest) [![Issues](https://img.shields.io/github/issues/csonuryilmaz/heybot.svg)](https://github.com/csonuryilmaz/heybot/issues) [![GitHub Releases](https://img.shields.io/github/downloads/csonuryilmaz/heybot/total.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)
+[![GitHub stars](https://img.shields.io/github/stars/csonuryilmaz/heybot.svg?style=social&label=Star)](http://bit.ly/2ROXHzb) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![GitHub Latest Release](https://img.shields.io/github/downloads/csonuryilmaz/heybot/latest/total.svg)](https://github.com/csonuryilmaz/heybot/releases/latest) [![Latest](https://img.shields.io/badge/release-v2.7.2.9-red.svg)](https://github.com/csonuryilmaz/heybot/releases/latest) [![Issues](https://img.shields.io/github/issues/csonuryilmaz/heybot.svg)](https://github.com/csonuryilmaz/heybot/issues) [![GitHub Releases](https://img.shields.io/github/downloads/csonuryilmaz/heybot/total.svg)](https://github.com/csonuryilmaz/heybot/releases/latest)
 
 ## Table of Contents
 
@@ -22,7 +22,7 @@
             - [5.5. Upload File](#55-upload-file)
                 - [5.5.1 Example Configuration for PhpStorm File Watcher](#551-example-configuration-for-phpstorm-file-watcher)
             - [5.6. Cleanup](#56-cleanup)
-            - [5.7. Cleanup-Svn](#57-cleanup-svn)
+            - [5.7. Cleanup-Git](#57-cleanup-git)
             - [5.8. Review](#58-review)
             - [5.9. Check-New](#59-check-new)
             - [5.10. Sync-Issue](#510-sync-issue)
@@ -91,9 +91,9 @@ If `cURL` or `wget` method doesn't work for you, you can follow below steps manu
 - execute installation script
 
 ```bash
-wget https://github.com/csonuryilmaz/heybot/releases/download/2.7.2.8/heybot-2.7.2.8.tar.gz
-tar -zxvf heybot-2.7.2.8.tar.gz
-cd heybot-2.7.2.8
+wget https://github.com/csonuryilmaz/heybot/releases/download/2.7.2.9/heybot-2.7.2.9.tar.gz
+tar -zxvf heybot-2.7.2.9.tar.gz
+cd heybot-2.7.2.9
 chmod a+x install.sh
 ./install.sh
 ```
@@ -103,10 +103,10 @@ Above command will downlod **heybot** archive into current directory.
 In order to download into different directory, for example `~/Downloads`
 
 ```bash
-wget https://github.com/csonuryilmaz/heybot/releases/download/2.7.2.8/heybot-2.7.2.8.tar.gz -P ~/Downloads
-tar -zxvf ~/Downloads/heybot-2.7.2.8.tar.gz
-chmod a+x heybot-2.7.2.8/install.sh
-heybot-2.7.2.8/install.sh
+wget https://github.com/csonuryilmaz/heybot/releases/download/2.7.2.9/heybot-2.7.2.9.tar.gz -P ~/Downloads
+tar -zxvf ~/Downloads/heybot-2.7.2.9.tar.gz
+chmod a+x heybot-2.7.2.9/install.sh
+heybot-2.7.2.9/install.sh
 ```
 
 It will ask for sudo permission at installation process, so your user should be a sudoer. (Or maybe you can run installation script as root, but it's not recommended.)
@@ -120,7 +120,7 @@ $ heybot -v
  |_|_|___|_  |___|___|_|
          |___|
 
- 2.7.2.8
+ 2.7.2.9
 
 Copyright (c) 2017 Onur Yılmaz
 MIT License: <https://github.com/csonuryilmaz/heybot/blob/master/LICENSE.txt>
@@ -138,7 +138,7 @@ $ heybot
  |_|_|___|_  |___|___|_|
          |___|
 
- 2.7.2.8
+ 2.7.2.9
 
 usage: heybot -d <arg> [-h] [-v] [-l] [-lp <arg>] [-i <arg>] [-s <arg>]
        [-o <arg>] [-r <arg>] [-e <arg>] [-c <arg>]
@@ -743,38 +743,62 @@ LIMIT=10
 
 ```
 
-#### 5.7. Cleanup-Svn
+#### 5.7. Cleanup-Git
 
-:no_entry_sign: :memo: @todo Will be reviewed and updated!
+It deletes issues (branches) which is **closed**, **deployed**, **merged** or any status you defined, from remote `git` repository. Redmine issue statuses are completely configurable. By using `cleanup-git` operation, you can get rid of stale branches and save some disk space on VCS server.
 
-It deletes issues which is *closed*,*deployed* or any status you defined, from subversion branches path. By deleting passive branches it removes some garbage from your subversion. It is meaningful when you use *one issue is resolved in one branch* paradigm.
+This operation uses cached `git` repository which is also used by `begin-issue-with-git`. If cache is empty, it clones repository for the first time. If cache has repository, it fetches remote ref updates. It not only deletes remote branch but also deletes local branch ref from cached repository.
 
 Required parameters:
 
-- BRANCH_PATH= Subversion branch path that you keep your branches.
-- STATUS= Status/Statuses to check for cleanup operation.(comma seperated)
+- REDMINE_URL= Redmine API URL which is, most of the time, root URL of your redmine installation.
 - REDMINE_TOKEN= Redmine API access key taken from [my account page](http://www.redmine.org/projects/redmine/wiki/RedmineAccounts).
-- REDMINE_URL= Redmine API url. (most of the time this is root url of your redmine installation)
+- REDMINE_STATUS= Redmine issue status which denotes a stale issue (or branch). One or more string, *comma seperated* values are accepted. When issue status is one of the given values, its remote branch will be deleted from `git`.
+  - There are two special values that you can add to redmine statuses:
+    - `404`: When issue is not found on Redmine, `heybot` will delete `git` branch.
+    - `403`: For any reason when not authorized to get status, `heybot` will delete `git` branch.
+- GIT_PROTOCOL= Used protocol for remote git operations. `ssh || https || http`
+- GIT_REPOSITORY= Repository URL for master branch. Don't need to prefix with `ssh` or `http(s)` because of GIT_PROTOCOL parameter. But repository URL must be compatible with GIT_PROTOCOL.
+- If GIT_PROTOCOL == `https || http` then
+  - GIT_USERNAME= Git user, username to authenticate `git`.
+  - GIT_PASSWORD= Git user, password to authenticate `git`.
+- If GIT_PROTOCOL == `ssh` then
+  - SSH_PRIVATE_KEY= `ssh` key file path on local machine, to authenticate `git`. To generate your `ssh` public key, follow `git` server's instructions, for example [gitlab](https://docs.gitlab.com/ee/ssh/)
 
 Optional parameters:
 
-- LIMIT= Maximum count to delete branches. If not given or empty, *unlimited* is assumed.
+- LIMIT= Maximum count to delete branches. If not given or empty, *unlimited* is assumed. For example, when `2` is given then `heybot` runs until `2` remote branches are deleted. When it reaches `2` deleted branch count, it terminates.
+- GIT_CONFIG_USER_NAME= Git `user.name` configuration on repository.
+  - If parameter is filled, `heybot` makes `git config` to modify `user.name` on cached git repository.
+- GIT_CONFIG_USER_EMAIL= Git `user.email` configuration on repository.
+  - If parameter is filled, `heybot` makes `git config` to modify `user.email` on cached git repository.
 
 Example:
 
 ```properties
 # File: remove_done_branches.hb
 
-# operation
-OPERATION=cleanup
+OPERATION=cleanup-git
 
-# required parameters
-BRANCH_PATH=https://test.sourcerepo.com/test/web/branch
-STATUS=Closed,Deployed
+# ************
+# * required *
+# ************
+
+REDMINE_URL=https\://kyrepo-apps.sourcerepo.com/redmine/test
 REDMINE_TOKEN=abab3a53c34f66b92fg5cdcbb3bb95a3c78d862e
-REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
+REDMINE_STATUS=closed,deployed,canceled,merged,404
 
-# optional parameters
+GIT_PROTOCOL=ssh
+GIT_REPOSITORY=git@gitlab.example.com:root/project1.git
+SSH_PRIVATE_KEY=~/.ssh/id_rsa
+
+# ************
+# * optional *
+# ************
+
+GIT_CONFIG_USER_NAME=awesome.dev
+GIT_CONFIG_USER_EMAIL=awesome.dev@example.com
+
 LIMIT=10
 
 ```
