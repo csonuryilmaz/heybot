@@ -25,7 +25,7 @@ import utilities.Open;
 public class heybot
 {
 
-    private final static String VERSION = "2.7.2.8";
+    private final static String VERSION = "2.7.2.9";
     private static final String NEWLINE = System.getProperty("line.separator");
     public static final String WORKSPACE = System.getProperty("user.home") + "/.heybot/workspace";
 
@@ -272,8 +272,8 @@ public class heybot
 		    return new Review();
 		case "check-new":
 		    return new CheckNew();
-		case "cleanup-svn":
-		    return new CleanupSvn();
+		case "cleanup-git":
+		    return new CleanupGit();
 		case "sync-issue":
 		    return new SyncIssue();
 		case "next-version":
