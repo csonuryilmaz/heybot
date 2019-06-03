@@ -19,5 +19,6 @@
     <orderEntry type="library" name="org.apache.velocity:velocity-engine-core" level="project" />
     <orderEntry type="library" name="commons-beanutils:commons-beanutils" level="project" />
     <orderEntry type="library" name="org.slf4j:slf4j-nop" level="project" />
+    <orderEntry type="library" name="versioncompare-1.3.2" level="project" />
   </component>
 </module>
