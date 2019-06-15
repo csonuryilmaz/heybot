@@ -23,23 +23,30 @@ if [[ -d "$RELEASE_PATH" ]]; then
   rm -f "$RELEASE_PATH.tar.gz"
 fi
 mkdir -p "$RELEASE_PATH"
-echo "[*] Listing ../dist/ directory ... "
-ls -lh ../dist/
-echo "[*] Packaging ... "
-cp -R ../dist/*.jar "$RELEASE_PATH/"
-cp -R ../dist/lib "$RELEASE_PATH/"
+
+ARTIFACT_PATH="../out/artifacts/dist"
+echo "[*] Listing artifacts ... "
+ls -lh "$ARTIFACT_PATH"
+
 #cp -R ../templates "$RELEASE_PATH/" @todo: needs revision
+
+# make jar file runnable with java -jar
+echo "[*] Packaging ... "
+cp -R ${ARTIFACT_PATH}/*.jar "$RELEASE_PATH/"
 cp ./heybot.run "$RELEASE_PATH/"
 cat "$RELEASE_PATH/heybot.run" "$RELEASE_PATH/heybot.jar" > "$RELEASE_PATH/heybot.final" && chmod +x "$RELEASE_PATH/heybot.final"
 rm -f "$RELEASE_PATH/heybot.run"
 rm -f "$RELEASE_PATH/heybot.jar"
 mv "$RELEASE_PATH/heybot.final" "$RELEASE_PATH/heybot.run"
+
+# copy install, uninstall scripts
 cp ./install.sh "$RELEASE_PATH/"
 cp ./uninstall.sh "$RELEASE_PATH/"
+
+# make tgz package
 cd "$RELEASE_PATH/../"
 tar -zcvf "heybot-$VERSION.tar.gz" "heybot-$VERSION"
 rm -Rf "heybot-$VERSION"
-mkdir "heybot-$VERSION"
-mv "heybot-$VERSION.tar.gz" "heybot-$VERSION/"
+
 printf "[\xE2\x9C\x94] Release ready for distribution. \o/"
 echo ""
