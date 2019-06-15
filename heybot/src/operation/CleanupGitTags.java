@@ -7,6 +7,7 @@ import com.jcraft.jsch.Session;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jgit.api.*;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.api.errors.JGitInternalException;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.lib.StoredConfig;
@@ -14,6 +15,8 @@ import org.eclipse.jgit.lib.TextProgressMonitor;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.*;
 import org.eclipse.jgit.util.FS;
+import org.gitlab4j.api.GitLabApi;
+import org.gitlab4j.api.GitLabApiException;
 import utilities.Properties;
 
 import java.io.File;
@@ -43,6 +46,8 @@ public class CleanupGitTags extends Operation
     private final static String PARAMETER_LIMIT = "LIMIT";
     private final static String PARAMETER_GIT_CONFIG_USER_NAME = "GIT_CONFIG_USER_NAME";
     private final static String PARAMETER_GIT_CONFIG_USER_EMAIL = "GIT_CONFIG_USER_EMAIL";
+    private final static String PARAMETER_GITLAB_URL = "GITLAB_URL";
+    private final static String PARAMETER_GITLAB_TOKEN = "GITLAB_TOKEN";
     //</editor-fold>
 
     private final static HashSet<String> SUPPORTED_PROTOCOLS = new HashSet<>(Arrays.asList("http", "https", "ssh"));
@@ -302,15 +307,39 @@ public class CleanupGitTags extends Operation
             return;
         }
 
+        GitLabApi gitlabApi = tryGetGitlabApi(prop);
+
         int max = getParameterInt(prop, PARAMETER_LIMIT, Integer.MAX_VALUE);
         String staleVersion = getParameterString(prop, PARAMETER_VERSION, true);
         int cnt = 0;
         for (GitTag gitTag : gitTags) {
-            if (gitTag.deleteIfStale(repoPath, lowerThan, isEqual, staleVersion) && ++cnt == max) {
+            if (gitTag.deleteIfStale(repoPath, lowerThan, isEqual, staleVersion, gitlabApi) && ++cnt == max) {
                 break; // limit reached!
             }
         }
         System.out.println("\t[i] Total: " + cnt + " tag(s) deleted.");
+    }
+
+    private GitLabApi tryGetGitlabApi(Properties prop) {
+        String gitlabUrl = getParameterString(prop, PARAMETER_GITLAB_URL, false);
+        String gitlabToken = getParameterString(prop, PARAMETER_GITLAB_TOKEN, false);
+        if (StringUtils.isBlank(gitlabUrl) || StringUtils.isBlank(gitlabToken)) {
+            System.out.println("\t[w] Gitlab API credentials is empty or insufficient. (GITLAB_*)");
+            System.out.println("\t[i] If tag is protected, it can't be made unprotected and deleted.");
+            return null;
+        }
+        GitLabApi api = new GitLabApi(gitlabUrl, gitlabToken);
+        try {
+            org.gitlab4j.api.models.Version version = api.getVersion();
+            System.out.println("\t[i] Gitlab: " + version.getVersion() + "(" + version.getRevision() + ")");
+        } catch (GitLabApiException e) {
+            System.out.println("\t[w] Gitlab API credentials is misconfigured or server is unreachable. (GITLAB_*)");
+            System.out.println("\t[w] " + e.getMessage() + " " + e.getReason());
+            System.out.println("\t[i] If tag is protected, it can't be made unprotected and deleted.");
+            return null;
+        }
+
+        return api;
     }
 
     class GitTag
@@ -331,54 +360,92 @@ public class CleanupGitTags extends Operation
             return name + " " + tag.getObjectId().getName();
         }
 
-        boolean deleteIfStale(File repoPath, boolean lowerThan, boolean isEqual, String staleVersion) {
+        boolean deleteIfStale(File repoPath, boolean lowerThan, boolean isEqual, String staleVersion, GitLabApi gitlabApi) {
             if (isEqual && version.isEqual(staleVersion)) {
                 System.out.println("\t\t[*] " + toString());
                 System.out.println("\t\t\t[i] equals to " + staleVersion);
-                return delete(repoPath);
+                return delete(repoPath, gitlabApi);
             }
             if (lowerThan && version.isLowerThan(staleVersion)) {
                 System.out.println("\t\t[*] " + toString());
                 System.out.println("\t\t\t[i] lower than " + staleVersion);
-                return delete(repoPath);
+                return delete(repoPath, gitlabApi);
             }
             return false;
         }
 
-        private boolean delete(File repoPath) {
+        private boolean delete(File repoPath, GitLabApi gitlabApi) {
             System.out.println("\t\t\t[*] Deleting ...");
             try (Repository gitRepo = openRepository(repoPath.getAbsolutePath())) {
                 try (Git git = new Git(gitRepo)) {
                     final List<String> deleted = git.tagDelete().setTags(tag.getName()).call();
                     if (!deleted.isEmpty()) {
-                        RefSpec refSpec = new RefSpec()
-                            .setSource(null)
-                            .setDestination("refs/tags/" + name);
-                        Iterable<PushResult> results = git.push().setRefSpecs(refSpec).setRemote("origin")
-                            .setCredentialsProvider(credentialsProvider)
-                            .setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)))
-                            .call();
-                        for (PushResult result : results) {
-                            Collection<RemoteRefUpdate> remoteUpdates = result.getRemoteUpdates();
-                            for (RemoteRefUpdate refUpdate : remoteUpdates) {
-                                if (refUpdate.getStatus() != RemoteRefUpdate.Status.OK) {
-                                    System.out.println("\t\t\t[e] " + result.getMessages());
-                                    System.out.println("\t\t\t[e] " + refUpdate.getMessage());
-                                    return false;
-                                }
-                            }
+                        GitTagDeleteResult result = deleteRemote(git);
+                        if (result == GitTagDeleteResult.REJECT_REASON_PROTECTED
+                            && gitlabApi != null && unProtectTag(git, gitlabApi)) {
+                            return deleteRemote(git) == GitTagDeleteResult.SUCCESS;
                         }
-                        System.out.println("\t\t\t[✓] Deleted.");
+                        return result == GitTagDeleteResult.SUCCESS;
                     }
                     return true;
-                } catch (GitAPIException ex) {
+                } catch (JGitInternalException | GitAPIException ex) {
                     System.out.println("\t\t\t[e] Git delete failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+                    handleLockFailureIfExists(repoPath, ex);
                 }
             } catch (IOException ex) {
                 System.out.println("\t\t\t[e] Git delete failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
             }
             return false;
         }
+
+        private void handleLockFailureIfExists(File repoPath, Exception ex) {
+            if (ex.getMessage().contains("LOCK_FAILURE")) {
+                File lockFile = new File(repoPath.getAbsolutePath() + "/.git/refs/tags/" + name + ".lock");
+                if (lockFile.exists()) {
+                    System.out.println("\t\t\t[e] Lock file found below. Please delete it manually, and try again:");
+                    System.out.println("\t\t\t[$] rm -rf " + lockFile.getAbsolutePath());
+                }
+            }
+        }
+
+        private boolean unProtectTag(Git git, GitLabApi gitlabApi) {
+            System.out.println("\t\t\t[*] Trying to unprotect tag ...");
+            System.out.println("\t\t\t[w] Not implemented yet!");
+            return false;
+        }
+
+        private GitTagDeleteResult deleteRemote(Git git) throws GitAPIException {
+            RefSpec refSpec = new RefSpec()
+                .setSource(null)
+                .setDestination("refs/tags/" + name);
+            Iterable<PushResult> results = git.push().setRefSpecs(refSpec).setRemote("origin")
+                .setCredentialsProvider(credentialsProvider)
+                .setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)))
+                .call();
+            for (PushResult result : results) {
+                Collection<RemoteRefUpdate> remoteUpdates = result.getRemoteUpdates();
+                for (RemoteRefUpdate refUpdate : remoteUpdates) {
+                    if (refUpdate.getStatus() != RemoteRefUpdate.Status.OK) {
+                        System.out.println("\t\t\t[e] " + result.getMessages());
+                        System.out.println("\t\t\t[e] " + refUpdate.getMessage());
+                        if (result.getMessages().toLowerCase().contains("protected tags cannot be deleted")) {
+                            return GitTagDeleteResult.REJECT_REASON_PROTECTED;
+                        } else {
+                            return GitTagDeleteResult.REJECT_REASON_OTHER;
+                        }
+                    }
+                }
+            }
+            System.out.println("\t\t\t[✓] Deleted.");
+            return GitTagDeleteResult.SUCCESS;
+        }
+    }
+
+    enum GitTagDeleteResult
+    {
+        SUCCESS,
+        REJECT_REASON_PROTECTED,
+        REJECT_REASON_OTHER
     }
 
 }
