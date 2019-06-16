@@ -8,27 +8,44 @@ strIndex()
     [[ "$x" = "$1" ]] && echo -1 || echo "${#x}"
 }
 
-removeOldHeybot()
+removeOldInstallation() {
+    echo "[*] Removing old heybot installation ..."
+    sudo rm -f /usr/local/bin/heybot
+    sudo rm -rf $1
+    if [[ -d "$1" ]]; then
+        echo "[w] Could not be removed!"
+    else
+        printf "[\xE2\x9C\x94] Removed.\n"
+    fi
+}
+
+askUserAndRemoveOldInstallationIfAccepts() {
+    echo "[i] Removing old heybot installation."
+    read -p "[?] Are you sure? (Y/n) " -n 1 -r
+    if [[ $REPLY == '' ]]; then
+        removeOldInstallation $1
+    else
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            removeOldInstallation $1
+        elif [[ $REPLY =~ ^[Nn]$ ]]; then
+            echo "[i] Old installation is kept!"
+        else
+            echo "[e] Unexpected answer!"
+            askUserAndRemoveOldInstallationIfAccepts $1
+        fi
+    fi
+}
+
+findOldInstallationAndTryRemove()
 {
     echo "[*] Finding old heybot installation ..."
     if [[ -e "$HOME/.heybot/installed.path" ]]; then
         HEYBOT_INSTALLED_PATH=$(head -1 $HOME/.heybot/installed.path)
-        echo "[i] "${HEYBOT_INSTALLED_PATH}
-        read -p "[?] Removing old heybot installation. Are you sure? (y/n) " -n 1 -r
-	if [[ $REPLY =~ ^[Yy]$ ]]; then
-	    echo ""
-	    echo "[*] Removing old heybot installation ..."
-	    sudo rm -f /usr/local/bin/heybot
-	    sudo rm -Rf ${HEYBOT_INSTALLED_PATH}
-	    if [[ -d "$HEYBOT_INSTALLED_PATH" ]]; then
-		echo "[w] Could not be removed!"
-	    else
-		printf "[\xE2\x9C\x94] Removed.\n"
-	    fi
-	fi
-	echo ""
+        printf "[\xE2\x9C\x94] ${HEYBOT_INSTALLED_PATH}.\n"
+        askUserAndRemoveOldInstallationIfAccepts ${HEYBOT_INSTALLED_PATH}
     else
-	echo "[i] Not found."
+	    printf "[\xE2\x9C\x94] Not found, clean system.\n"
     fi
 }
 
@@ -47,7 +64,7 @@ install()
 {
     echo "[*] Installing ... "
     setDirectory
-    sudo ln -s ${DIRECTORY}/heybot.run /usr/local/bin/heybot && sudo chmod +x /usr/local/bin/heybot
+    sudo ln -sf ${DIRECTORY}/heybot.run /usr/local/bin/heybot && sudo chmod +x /usr/local/bin/heybot
     LN_RESULT="$?"
     if [[ "$LN_RESULT" -ne 0 ]]; then
         echo "[e] Could not create runnable in /usr/local/bin!"
@@ -75,7 +92,7 @@ install()
     fi
 }
 
-removeOldHeybot
+findOldInstallationAndTryRemove
 
 echo "[*] Checking whether java is installed? ..."
 if type -p java; then
