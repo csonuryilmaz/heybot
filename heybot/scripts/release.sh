@@ -6,7 +6,8 @@ if [[ -d "$DIRECTORY" ]]; then
 else 
   cd "$(dirname "$DIRECTORY")"
 fi
-echo "[i] ROOTDIR: $(/bin/pwd)";
+# Current Working Directory
+echo "[i] CWD: $(/bin/pwd)";
 
 VERSION=`grep -in "version.*=.*;$" ../src/heybot/heybot.java | cut -d "\"" -f 2 | tr -d '[:space:]'`
 if [[ -z "$VERSION" ]]; then
@@ -16,7 +17,12 @@ fi
 echo "[i] VERSION: $VERSION";
 
 RELEASE_PATH="../release/heybot-$VERSION"
+
 sed -i 's/LATEST="*.*.*.*"/LATEST="'"$VERSION"'"/' ../../install.sh
+\cp -rf ../doc/README-draft.md ../doc/README-draft-tmp.md
+sed -i 's/#_LATEST_#/'"$VERSION"'/g' ../doc/README-draft-tmp.md
+\cp -rf ../doc/README-draft-tmp.md ../../README.md
+rm -f ../doc/README-draft-tmp.md
 
 if [[ -d "$RELEASE_PATH" ]]; then
   rm -Rf "$RELEASE_PATH"
