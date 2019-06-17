@@ -17,6 +17,8 @@ import org.eclipse.jgit.transport.*;
 import org.eclipse.jgit.util.FS;
 import org.gitlab4j.api.GitLabApi;
 import org.gitlab4j.api.GitLabApiException;
+import org.gitlab4j.api.TagsApi;
+import org.gitlab4j.api.models.ProtectedTag;
 import utilities.Properties;
 
 import java.io.File;
@@ -48,6 +50,7 @@ public class CleanupGitTags extends Operation
     private final static String PARAMETER_GIT_CONFIG_USER_EMAIL = "GIT_CONFIG_USER_EMAIL";
     private final static String PARAMETER_GITLAB_URL = "GITLAB_URL";
     private final static String PARAMETER_GITLAB_TOKEN = "GITLAB_TOKEN";
+    private final static String PARAMETER_GITLAB_PROJECT_ID = "GITLAB_PROJECT_ID";
     //</editor-fold>
 
     private final static HashSet<String> SUPPORTED_PROTOCOLS = new HashSet<>(Arrays.asList("http", "https", "ssh"));
@@ -308,12 +311,14 @@ public class CleanupGitTags extends Operation
         }
 
         GitLabApi gitlabApi = tryGetGitlabApi(prop);
+        int gitlabProjectId = getParameterInt(prop, PARAMETER_GITLAB_PROJECT_ID, 0);
 
         int max = getParameterInt(prop, PARAMETER_LIMIT, Integer.MAX_VALUE);
         String staleVersion = getParameterString(prop, PARAMETER_VERSION, true);
         int cnt = 0;
         for (GitTag gitTag : gitTags) {
-            if (gitTag.deleteIfStale(repoPath, lowerThan, isEqual, staleVersion, gitlabApi) && ++cnt == max) {
+            if (gitTag.deleteIfStale(repoPath, lowerThan, isEqual, staleVersion, gitlabApi, gitlabProjectId)
+                && ++cnt == max) {
                 break; // limit reached!
             }
         }
@@ -360,21 +365,21 @@ public class CleanupGitTags extends Operation
             return name + " " + tag.getObjectId().getName();
         }
 
-        boolean deleteIfStale(File repoPath, boolean lowerThan, boolean isEqual, String staleVersion, GitLabApi gitlabApi) {
+        boolean deleteIfStale(File repoPath, boolean lowerThan, boolean isEqual, String staleVersion, GitLabApi gitlabApi, int gitlabProjectId) {
             if (isEqual && version.isEqual(staleVersion)) {
                 System.out.println("\t\t[*] " + toString());
                 System.out.println("\t\t\t[i] equals to " + staleVersion);
-                return delete(repoPath, gitlabApi);
+                return delete(repoPath, gitlabApi, gitlabProjectId);
             }
             if (lowerThan && version.isLowerThan(staleVersion)) {
                 System.out.println("\t\t[*] " + toString());
                 System.out.println("\t\t\t[i] lower than " + staleVersion);
-                return delete(repoPath, gitlabApi);
+                return delete(repoPath, gitlabApi, gitlabProjectId);
             }
             return false;
         }
 
-        private boolean delete(File repoPath, GitLabApi gitlabApi) {
+        private boolean delete(File repoPath, GitLabApi gitlabApi, int gitlabProjectId) {
             System.out.println("\t\t\t[*] Deleting ...");
             try (Repository gitRepo = openRepository(repoPath.getAbsolutePath())) {
                 try (Git git = new Git(gitRepo)) {
@@ -382,7 +387,7 @@ public class CleanupGitTags extends Operation
                     if (!deleted.isEmpty()) {
                         GitTagDeleteResult result = deleteRemote(git);
                         if (result == GitTagDeleteResult.REJECT_REASON_PROTECTED
-                            && gitlabApi != null && unProtectTag(git, gitlabApi)) {
+                            && gitlabApi != null && unProtectTag(gitlabApi, gitlabProjectId)) {
                             return deleteRemote(git) == GitTagDeleteResult.SUCCESS;
                         }
                         return result == GitTagDeleteResult.SUCCESS;
@@ -408,9 +413,17 @@ public class CleanupGitTags extends Operation
             }
         }
 
-        private boolean unProtectTag(Git git, GitLabApi gitlabApi) {
+        private boolean unProtectTag(GitLabApi gitlabApi, int gitlabProjectId) {
             System.out.println("\t\t\t[*] Trying to unprotect tag ...");
-            System.out.println("\t\t\t[w] Not implemented yet!");
+            TagsApi tagsApi = gitlabApi.getTagsApi();
+            try {
+                ProtectedTag protectedTag = tagsApi.getProtectedTag(gitlabProjectId, name);
+                gitlabApi.getTagsApi().unprotectTag(gitlabProjectId, protectedTag.getName());
+                System.out.println("\t\t\t[✓] Unprotected.");
+                return true;
+            } catch (GitLabApiException e) {
+                System.out.println("\t\t\t[w] Nothing done! " + e.getMessage());
+            }
             return false;
         }
 
