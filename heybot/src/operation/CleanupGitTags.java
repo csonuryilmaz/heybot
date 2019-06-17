@@ -309,6 +309,7 @@ public class CleanupGitTags extends Operation
             System.out.println("\t\t[e] " + PARAMETER_LOWER_THAN + "," + PARAMETER_IS_EQUAL);
             return;
         }
+        sortGitTagsAsc(gitTags);
 
         GitLabApi gitlabApi = tryGetGitlabApi(prop);
         int gitlabProjectId = getParameterInt(prop, PARAMETER_GITLAB_PROJECT_ID, 0);
@@ -323,6 +324,18 @@ public class CleanupGitTags extends Operation
             }
         }
         System.out.println("\t[i] Total: " + cnt + " tag(s) deleted.");
+    }
+
+    private void sortGitTagsAsc(GitTag[] gitTags) {
+        Arrays.sort(gitTags, (o1, o2) -> {
+            if (o1.isLowerThan(o2)) {
+                return -1;
+            }
+            if (o1.isHigherThan(o2)) {
+                return 1;
+            }
+            return 0;
+        });
     }
 
     private GitLabApi tryGetGitlabApi(Properties prop) {
@@ -451,6 +464,14 @@ public class CleanupGitTags extends Operation
             }
             System.out.println("\t\t\t[✓] Deleted.");
             return GitTagDeleteResult.SUCCESS;
+        }
+
+        boolean isLowerThan(GitTag other) {
+            return this.version.isLowerThan(other.version);
+        }
+
+        boolean isHigherThan(GitTag other) {
+            return this.version.isHigherThan(other.version);
         }
     }
 
