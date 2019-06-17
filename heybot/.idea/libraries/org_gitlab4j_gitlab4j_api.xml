@@ -1,8 +1,8 @@
 <component name="libraryTable">
-  <library name="org.gitlab4j:gitlab4j-api:4.11.8" type="repository">
-    <properties maven-id="org.gitlab4j:gitlab4j-api:4.11.8" />
+  <library name="org.gitlab4j:gitlab4j-api" type="repository">
+    <properties maven-id="org.gitlab4j:gitlab4j-api:4.11.9" />
     <CLASSES>
-      <root url="jar://$PROJECT_DIR$/lib/gitlab4j-api-4.11.8.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/gitlab4j-api-4.11.9.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/jakarta.activation-api-1.2.1.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/jackson-jaxrs-json-provider-2.9.8.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/jackson-jaxrs-base-2.9.8.jar!/" />
@@ -32,7 +32,7 @@
       <root url="jar://$PROJECT_DIR$/lib/jakarta.servlet-api-4.0.2.jar!/" />
     </CLASSES>
     <JAVADOC>
-      <root url="jar://$PROJECT_DIR$/lib/gitlab4j-api-4.11.8-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/gitlab4j-api-4.11.9-javadoc.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/jakarta.activation-api-1.2.1-javadoc.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/jackson-jaxrs-json-provider-2.9.8-javadoc.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/jackson-jaxrs-base-2.9.8-javadoc.jar!/" />
@@ -61,7 +61,7 @@
       <root url="jar://$PROJECT_DIR$/lib/jakarta.servlet-api-4.0.2-javadoc.jar!/" />
     </JAVADOC>
     <SOURCES>
-      <root url="jar://$PROJECT_DIR$/lib/gitlab4j-api-4.11.8-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/gitlab4j-api-4.11.9-sources.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/jakarta.activation-api-1.2.1-sources.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/jackson-jaxrs-json-provider-2.9.8-sources.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/jackson-jaxrs-base-2.9.8-sources.jar!/" />
