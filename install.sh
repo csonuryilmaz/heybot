@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-LATEST="2.8.0.1"
+LATEST="2.8.0.2"
 FOLDER="$HOME/Downloads"
 
 set -e;

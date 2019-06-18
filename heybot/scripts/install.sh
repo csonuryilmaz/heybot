@@ -39,13 +39,17 @@ askUserAndRemoveOldInstallationIfAccepts() {
 
 findOldInstallationAndTryRemove()
 {
-    echo "[*] Finding old heybot installation ..."
     if [[ -e "$HOME/.heybot/installed.path" ]]; then
         HEYBOT_INSTALLED_PATH=$(head -1 $HOME/.heybot/installed.path)
-        printf "[\xE2\x9C\x94] ${HEYBOT_INSTALLED_PATH}.\n"
-        askUserAndRemoveOldInstallationIfAccepts ${HEYBOT_INSTALLED_PATH}
+        echo "[i] Previous: "${HEYBOT_INSTALLED_PATH}
+        echo "[i] Current : "${DIRECTORY}
+        if [[ ${HEYBOT_INSTALLED_PATH} != ${DIRECTORY} ]]; then
+            askUserAndRemoveOldInstallationIfAccepts ${HEYBOT_INSTALLED_PATH}
+        else
+            echo "[i] Re-installation and maintenance will be done."
+        fi
     else
-	    printf "[\xE2\x9C\x94] Not found, clean system.\n"
+	echo "[i] Previous installation not found, clean system."
     fi
 }
 
@@ -63,7 +67,6 @@ setDirectory() {
 install()
 {
     echo "[*] Installing ... "
-    setDirectory
     sudo ln -sf ${DIRECTORY}/heybot.run /usr/local/bin/heybot && sudo chmod +x /usr/local/bin/heybot
     LN_RESULT="$?"
     if [[ "$LN_RESULT" -ne 0 ]]; then
@@ -92,8 +95,6 @@ install()
     fi
 }
 
-findOldInstallationAndTryRemove
-
 echo "[*] Checking whether java is installed? ..."
 if type -p java; then
     echo "Found java executable in PATH."
@@ -120,6 +121,8 @@ if [[ "$JAVA_EXECUTABLE" ]]; then
     version=$("$JAVA_EXECUTABLE" -version 2>&1 | awk -F '"' '/version/ {print $2}')
     echo version "$version"
     if [[ "$version" > "1.8" ]]; then
+        setDirectory
+        findOldInstallationAndTryRemove
         install
     else
         echo "Java version 1.8 or later required!"
