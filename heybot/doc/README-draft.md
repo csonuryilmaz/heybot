@@ -23,12 +23,13 @@
                 - [5.5.1 Example Configuration for PhpStorm File Watcher](#551-example-configuration-for-phpstorm-file-watcher)
             - [5.6. Cleanup](#56-cleanup)
             - [5.7. Cleanup-Git](#57-cleanup-git)
-            - [5.8. Review](#58-review)
-            - [5.9. Check-New](#59-check-new)
-            - [5.10. Sync-Issue](#510-sync-issue)
-            - [5.11. Next-Version](#511-next-version)
-            - [5.12. Release](#512-release)
-            - [5.13. Snapshot](#513-snapshot)
+            - [5.8. Cleanup-Git-Tags](#58-cleanup-git-tags)
+            - [5.9. Review](#58-review)
+            - [5.10. Check-New](#59-check-new)
+            - [5.11. Sync-Issue](#510-sync-issue)
+            - [5.12. Next-Version](#511-next-version)
+            - [5.13. Release](#512-release)
+            - [5.14. Snapshot](#513-snapshot)
         - [6. Notes](#6-notes)
             - [6.1. How to obtain slack incoming webhook URL](#61-how-to-obtain-slack-incoming-webhook-url)
         - [Test Platforms](#test-platforms)
@@ -803,7 +804,80 @@ LIMIT=10
 
 ```
 
-#### 5.8. Review
+#### 5.8. Cleanup-Git-Tags
+
+It deletes `git` tags which are considered to be stale. Tags are useful for versioning your software.
+
+From `git` SCM [docs](https://git-scm.com/book/en/v2/Git-Basics-Tagging);
+
+> .. Like most VCSs, Git has the ability to tag specific points in a repository’s history as being important. Typically, people use this functionality to mark release points (v1.0, v2.0 and so on). ..
+
+As time passes, some tags become obsolete and you don't need to keep them. They are undeployable or impractical to use. By using `cleanup-git-tags` operation, you can get rid of those tags and keep only what matters most. Tags should be named with software version numbers. Defining a version constraint and a comparison operator, you can remove one or more stale tags in a single execution. `Heybot` uses [version compare](https://github.com/G00fY2/version-compare) library for version comparison. For more information about comparison logic about version numbers, see its [docs](https://github.com/G00fY2/version-compare).
+
+This operation uses cached `git` repository which is also used by `begin-issue-with-git`. If cache is empty, it clones repository for the first time. If cache has repository, it fetches remote ref updates. It not only deletes remote tags but also deletes local tags ref from cached repository.
+
+If you're using `gitlab`, it's a common practice to make protected tags. When tags are used for software versioning, a tag has a one-to-one relation with deployed software. So, in order to prevent accidental update or deletion, tags should be protected. If `heybot` can't delete a tag and it's a protected tag, `heybot` can automatically update that tag as unprotected and then delete it. If you don't define any `gitlab` parameter, `heybot` will ignore protected tag and it won't delete it.
+
+Required parameters:
+
+- VERSION= Version string as a constraint. For example, 3.35.0.6 Value is used in `version` comparison. One or both of the below parameters must be given to define comparison operator:
+  - IS_EQUAL= If `true`, tags whose name is equal to `VERSION` value will be deleted. (`true` || `false`)
+  - LOWER_THAN= If `true`, tags whose name is lower than `VERSION` value will be deleted. (`true` || `false`)
+    - Both paramaters may be used at the same time. If both `true`, tags whose name is equal or lower than `VERSION` value will be deleted. Both can't be `false`, it's logically an error case.
+- GIT_PROTOCOL= Used protocol for remote git operations. `ssh || https || http`
+- GIT_REPOSITORY= Repository URL for master branch. Don't need to prefix with `ssh` or `http(s)` because of GIT_PROTOCOL parameter. But repository URL must be compatible with GIT_PROTOCOL.
+- If GIT_PROTOCOL == `https || http` then
+  - GIT_USERNAME= Git user, username to authenticate `git`.
+  - GIT_PASSWORD= Git user, password to authenticate `git`.
+- If GIT_PROTOCOL == `ssh` then
+  - SSH_PRIVATE_KEY= `ssh` key file path on local machine, to authenticate `git`. To generate your `ssh` public key, follow `git` server's instructions, for example [gitlab](https://docs.gitlab.com/ee/ssh/)
+
+Optional parameters:
+
+- GITLAB_URL= URL to your `gitlab` server.
+- GITLAB_TOKEN= Personal access token from your `gitlab` account settings page. See [here](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html#creating-a-personal-access-token).
+- GITLAB_PROJECT_ID= "Project ID" value at project page. (integer)
+- GIT_CONFIG_USER_NAME= Git `user.name` configuration on repository.
+  - If parameter is filled, `heybot` makes `git config` to modify `user.name` on cached git repository.
+- GIT_CONFIG_USER_EMAIL= Git `user.email` configuration on repository.
+  - If parameter is filled, `heybot` makes `git config` to modify `user.email` on cached git repository.
+- LIMIT= Maximum count to delete tags. If not given or empty, *unlimited* is assumed. For example, when `2` is given then `heybot` runs until `2` remote tags are deleted. When it reaches `2` deleted tag count, it terminates.
+
+Example:
+
+```properties
+# File: remove_old_tags.hb
+
+OPERATION=cleanup-git-tags
+
+# ************
+# * required *
+# ************
+
+VERSION=3.35.0.6
+
+IS_EQUAL=false
+LOWER_THAN=true
+
+GIT_PROTOCOL=ssh
+GIT_REPOSITORY=git@gitlab.example.com:root/project1.git
+SSH_PRIVATE_KEY=~/.ssh/id_rsa
+
+# ************
+# * optional *
+# ************
+
+GITLAB_URL=https://gitlab.example.com
+GITLAB_TOKEN=pAaVk4AeRa2FVa7DYNxys
+GITLAB_PROJECT_ID=3
+
+GIT_CONFIG_USER_NAME=awesome.dev
+GIT_CONFIG_USER_EMAIL=awesome.dev@example.com
+
+LIMIT=10
+```
+
+#### 5.9. Review
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -843,7 +917,7 @@ ISSUE_STATUS_SHOULD_BE=Resolved
 
 ```
 
-#### 5.9. Check-New
+#### 5.10. Check-New
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -894,7 +968,7 @@ Also you can schedule this operation with a crontab entry. For example, below en
 */5 * * * * /usr/local/bin/heybot -d check_new.hb 1> /dev/null 2> /var/www/html/heybot.log
 ```
 
-#### 5.10. Sync-Issue
+#### 5.11. Sync-Issue
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -967,7 +1041,7 @@ REDMINE_URL=https://test-apps.sourcerepo.com/redmine/test
 LAST_CHECK_TIME=Sat Nov 19 15:45:11 EET 2016
 ```
 
-#### 5.11. Next-Version
+#### 5.12. Next-Version
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
@@ -1014,11 +1088,11 @@ Internal Parameters:
 
 **todo:** Example and notes will be added for *next-version* .
 
-#### 5.12. Release
+#### 5.13. Release
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
-#### 5.13. Snapshot
+#### 5.14. Snapshot
 
 :no_entry_sign: :memo: @todo Will be reviewed and updated!
 
