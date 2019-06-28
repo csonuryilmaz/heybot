@@ -6,25 +6,16 @@ import com.taskadapter.redmineapi.RedmineManagerFactory;
 import com.taskadapter.redmineapi.bean.Issue;
 import com.taskadapter.redmineapi.bean.Version;
 import com.taskadapter.redmineapi.bean.VersionFactory;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.Scanner;
-
-import utilities.Properties;
 import model.VersionTag;
 import org.apache.commons.lang3.StringUtils;
-
-import static org.apache.http.util.TextUtils.isEmpty;
-
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
+import utilities.Properties;
+
+import java.io.*;
+import java.util.Scanner;
+
+import static org.apache.http.util.TextUtils.isEmpty;
 
 /**
  * @author onuryilmaz
@@ -60,9 +51,6 @@ public class NextVersion extends Operation
     private final static String PARAMETER_PREVIOUS_VERSION_TAG = "PREVIOUS_VERSION_TAG";
     private final static String PARAMETER_VERSION_ID = "VERSION_ID";
 
-    //</editor-fold>
-    private RedmineManager redmineManager;
-
     public NextVersion() {
         super(new String[]
             {
@@ -83,7 +71,8 @@ public class NextVersion extends Operation
             boolean closePreviousVersion = getParameterBoolean(prop, PARAMETER_CLOSE_PREVIOUS);
             boolean appendCurrentVersion = getParameterBoolean(prop, PARAMETER_APPEND_CURRENT);
 
-            redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
+            //</editor-fold>
+            RedmineManager redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
 
             int projectId = tryGetProjectId(redmineManager, filterProject);
             if (projectId > 0) {
@@ -241,7 +230,7 @@ public class NextVersion extends Operation
                 System.out.println("[i] Tag " + version.getName() + " is found in repository:");
                 System.out.println("[i] " + tagPath);
                 Scanner scanner = new Scanner(System.in);
-                System.out.print("[?] Would you like to delete obsolete (possibly undeployed) tag? (Y/N) ");
+                System.out.print("[?] Would you like to delete obsolete (possibly non-deployed) tag? (Y/N) ");
                 String answer = scanner.next();
                 if (!isEmpty(answer) && (answer.charAt(0) == 'Y' || answer.charAt(0) == 'y')) {
                     if (svnDeleteTag(tryExecute("which svn"), tagPath)) {
@@ -264,7 +253,7 @@ public class NextVersion extends Operation
         System.out.println(svnCommand + " delete " + tagPath + " -m \"" + comment + "\"");
         String[] output = execute(command);
         if (output == null || output[1].length() > 0) {
-            System.err.println(output[1]);
+            //System.err.println(output[1]);
             return false;
         }
 
@@ -287,7 +276,7 @@ public class NextVersion extends Operation
                     System.err.println("Ooops! Create SVN tag is enabled but couldn't find SVN command.");
                 }
             } else {
-                System.err.println("Ooops! Create SVN tag is enabled but other helper parameters are empty. Plase check them.");
+                System.err.println("Ooops! Create SVN tag is enabled but other helper parameters are empty. Please check them.");
             }
         }
     }
@@ -379,12 +368,10 @@ public class NextVersion extends Operation
         repositoryPath += "/" + trunkPath;
 
         System.out.println("=== " + "Getting app files into " + localPath);
-        if (delete(new File(localPath)) && svnCheckout(svnCommand, repositoryPath, localPath, true)) {
+        if (delete(new File(localPath)) && svnCheckout(svnCommand, repositoryPath, localPath)) {
             svnCheckout(svnCommand, localPath, files);
-            if (updateAppFile(localPath, files, pattern, replace)
-                && svnCommit(svnCommand, localPath, "App is modified for next release: " + replace)) {
-                return true;
-            }
+            return updateAppFile(localPath, files, pattern, replace)
+                && svnCommit(svnCommand, localPath, "App is modified for next release: " + replace);
         } else {
             System.err.println("Ooops! Checkout " + trunkPath + " could not be done!");
         }
@@ -392,15 +379,13 @@ public class NextVersion extends Operation
         return false;
     }
 
-    private boolean svnCheckout(String svnCommand, String trunkPath, String localPath, boolean isDepthEmpty) {
+    private boolean svnCheckout(String svnCommand, String trunkPath, String localPath) {
         String command = svnCommand + " co " + trunkPath + " " + localPath;
-        if (isDepthEmpty) {
-            command += " --depth empty ";
-        }
+        command += " --depth empty ";
         System.out.println(command);
         String[] output = execute(command);
         if (output == null || output[1].length() > 0) {
-            System.err.println(output[1]);
+            //System.err.println(output[1]);
             return false;
         }
 
@@ -415,17 +400,17 @@ public class NextVersion extends Operation
                 svnUpdate(svnCommand, localPath + "/" + tokens[0], false);
             } else {
                 int i = 0;
-                String buffer = "";
+                StringBuilder buffer = new StringBuilder();
                 for (; i < tokens.length - 1; i++) {
                     svnUpdate(svnCommand, localPath + "/" + buffer + tokens[i], true);
-                    buffer += tokens[i] + "/";
+                    buffer.append(tokens[i]).append("/");
                 }
                 svnUpdate(svnCommand, localPath + "/" + buffer + tokens[i], false);
             }
         }
     }
 
-    private boolean svnUpdate(String svnCommand, String filePath, boolean isDepthEmpty) {
+    private void svnUpdate(String svnCommand, String filePath, boolean isDepthEmpty) {
         String command = svnCommand + " up " + filePath;
         if (isDepthEmpty) {
             command += " --depth empty";
@@ -433,12 +418,11 @@ public class NextVersion extends Operation
         System.out.println(command);
         String[] output = execute(command);
         if (output == null || output[1].length() > 0) {
-            System.err.println(output[1]);
-            return false;
+            //System.err.println(output[1]);
+            return;
         }
 
         System.out.println(output[0]);
-        return true;
     }
 
     private boolean svnCommit(String svnCommand, String workingDirPath, String comment) {
@@ -459,7 +443,7 @@ public class NextVersion extends Operation
             System.out.println(svnCommand + " commit " + workingDirPath + " -m \"" + comment + "\"");
             output = execute(command);
             if (output == null || output[1].length() > 0) {
-                System.err.println(output[1]);
+                //System.err.println(output[1]);
                 return false;
             }
             System.out.println(output[0]);
@@ -512,12 +496,12 @@ public class NextVersion extends Operation
             reader.close();
             writer.close();
 
+            //noinspection ResultOfMethodCallIgnored
             in.delete();
+            //noinspection ResultOfMethodCallIgnored
             out.renameTo(in);
 
             return true;
-        } catch (FileNotFoundException ex) {
-            System.err.println(ex.getMessage());
         } catch (IOException ex) {
             System.err.println(ex.getMessage());
         }
@@ -554,6 +538,7 @@ public class NextVersion extends Operation
         }
 
         if (path.isDirectory()) {
+            //noinspection ConstantConditions
             for (File child : path.listFiles()) {
                 delete(child);
             }
@@ -569,7 +554,7 @@ public class NextVersion extends Operation
         System.out.println(command);
         String[] output = execute(command);
         if (output == null || output[1].length() > 0) {
-            System.err.println(output[1]);
+            //System.err.println(output[1]);
             return 0;
         }
 
@@ -624,15 +609,13 @@ public class NextVersion extends Operation
         repositoryPath += "/" + trunkPath;
 
         System.out.println("=== " + "Getting app files into " + localPath);
-        if (delete(new File(localPath)) && svnCheckout(svnCommand, repositoryPath, localPath, true)) {
+        if (delete(new File(localPath)) && svnCheckout(svnCommand, repositoryPath, localPath)) {
             svnCheckout(svnCommand, localPath, new String[]{file});
             String[] upCmdResult = execute(upCmd);
             System.out.println(upCmdResult[0]);
             System.out.println(upCmdResult[1]);
             System.out.println("Exit Code: " + upCmdResult[2]);
-            if (upCmdResult[2].equals("0") && svnCommit(svnCommand, localPath, "App version/build is modified.")) {
-                return true;
-            }
+            return upCmdResult[2].equals("0") && svnCommit(svnCommand, localPath, "App version/build is modified.");
         } else {
             System.err.println("Ooops! Checkout " + trunkPath + " could not be done!");
         }
