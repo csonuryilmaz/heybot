@@ -50,6 +50,7 @@ public class NextVersion extends Operation
     private final static String PARAMETER_VERSION_TAG = "VERSION_TAG";
     private final static String PARAMETER_PREVIOUS_VERSION_TAG = "PREVIOUS_VERSION_TAG";
     private final static String PARAMETER_VERSION_ID = "VERSION_ID";
+    //</editor-fold>
 
     public NextVersion() {
         super(new String[]
@@ -64,40 +65,40 @@ public class NextVersion extends Operation
         if (areMandatoryParametersNotEmpty(prop)) {
             String redmineAccessToken = getParameterString(prop, PARAMETER_REDMINE_TOKEN, false);
             String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
+            RedmineManager redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
+
             String filterProject = getParameterString(prop, PARAMETER_FILTER_PROJECT, true);
-            String filterQuery = getParameterString(prop, PARAMETER_FILTER_QUERY, true);
-            String versionTitle = getParameterString(prop, PARAMETER_VERSION_TITLE, false);
+            int projectId = tryGetProjectId(redmineManager, filterProject);
+            if (projectId > 0) {
+                maintainRedmineVersion(prop, filterProject, redmineManager, projectId);
+                maintainGitTag(prop, redmineManager, getParameterInt(prop, PARAMETER_VERSION_ID, 0));
+            } else {
+                System.out.println("[e] Couldn't find project. Operation works only on valid redmine project.");
+            }
+        }
+    }
+
+    private void maintainRedmineVersion(Properties prop, String filterProject, RedmineManager redmineManager, int projectId) throws Exception {
+        String filterQuery = getParameterString(prop, PARAMETER_FILTER_QUERY, true);
+        String versionTitle = getParameterString(prop, PARAMETER_VERSION_TITLE, false);
+        Issue[] issues = getReadyUnversionedIssues(redmineManager, filterProject, filterQuery);
+        if (issues.length > 0) {
+            Version version;
+            int versionId = getParameterInt(prop, PARAMETER_VERSION_ID, 0);
 
             boolean closePreviousVersion = getParameterBoolean(prop, PARAMETER_CLOSE_PREVIOUS);
             boolean appendCurrentVersion = getParameterBoolean(prop, PARAMETER_APPEND_CURRENT);
-
-            //</editor-fold>
-            RedmineManager redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
-
-            int projectId = tryGetProjectId(redmineManager, filterProject);
-            if (projectId > 0) {
-                Issue[] issues = getReadyUnversionedIssues(redmineManager, filterProject, filterQuery);
-                if (issues.length > 0) {
-                    Version version;
-                    int versionId = getParameterInt(prop, PARAMETER_VERSION_ID, 0);
-
-                    if (appendCurrentVersion) {
-                        version = appendVersion(redmineManager, prop, issues, versionId, versionTitle);
-                    } else {
-                        if (closePreviousVersion) {
-                            closeVersion(redmineManager, versionId);
-                        }
-
-                        version = createVersion(redmineManager, prop, issues, projectId, versionTitle);
-                    }
-
-                    assignTargetVersion(redmineManager, issues, version);
+            if (appendCurrentVersion) {
+                version = appendVersion(redmineManager, prop, issues, versionId, versionTitle);
+            } else {
+                if (closePreviousVersion) {
+                    closeVersion(redmineManager, versionId);
                 }
 
-                createSubversionTag(prop, redmineManager, getParameterInt(prop, PARAMETER_VERSION_ID, 0));
-            } else {
-                System.err.println("Ooops! Couldn't find project. Next-version operation works only on valid redmine project.");
+                version = createVersion(redmineManager, prop, issues, projectId, versionTitle);
             }
+
+            assignTargetVersion(redmineManager, issues, version);
         }
     }
 
@@ -261,7 +262,7 @@ public class NextVersion extends Operation
         return true;
     }
 
-    private void createSubversionTag(Properties prop, RedmineManager redmineManager, int versionId) {
+    private void maintainGitTag(Properties prop, RedmineManager redmineManager, int versionId) {
         boolean isCreateSubversionTagEnabled = getParameterBoolean(prop, PARAMETER_CREATE_SVN_TAG);
         if (isCreateSubversionTagEnabled) {
             String repositoryPath = trimRight(getParameterString(prop, PARAMETER_REPOSITORY_PATH, false), "/");
@@ -271,7 +272,7 @@ public class NextVersion extends Operation
             if (!isEmpty(repositoryPath) && !isEmpty(trunkPath) && !isEmpty(tagsPath)) {
                 String svnCommand = tryExecute("which svn");
                 if (svnCommand.length() > 0) {
-                    createSubversionTag(prop, svnCommand, getVersion(redmineManager, versionId), repositoryPath, trunkPath, tagsPath);
+                    maintainGitTag(prop, svnCommand, getVersion(redmineManager, versionId), repositoryPath, trunkPath, tagsPath);
                 } else {
                     System.err.println("Ooops! Create SVN tag is enabled but couldn't find SVN command.");
                 }
@@ -281,7 +282,7 @@ public class NextVersion extends Operation
         }
     }
 
-    private void createSubversionTag(Properties prop, String svnCommand, Version version, String repositoryPath, String trunkPath, String tagsPath) {
+    private void maintainGitTag(Properties prop, String svnCommand, Version version, String repositoryPath, String trunkPath, String tagsPath) {
         if (version != null) {
             boolean isAppUpdated = true;
 
@@ -318,7 +319,7 @@ public class NextVersion extends Operation
             }
 
             if (isAppUpdated) {
-                createSubversionTag(svnCommand, version.getName(), repositoryPath, trunkPath, tagsPath);
+                maintainGitTag(svnCommand, version.getName(), repositoryPath, trunkPath, tagsPath);
             } else {
                 System.err.println("Ooops! Couldn't update app version files successfully, so no version tag is created.");
             }
@@ -327,7 +328,7 @@ public class NextVersion extends Operation
         }
     }
 
-    private void createSubversionTag(String svnCommand, String versionName, String repositoryPath, String trunkPath, String tagsPath) {
+    private void maintainGitTag(String svnCommand, String versionName, String repositoryPath, String trunkPath, String tagsPath) {
         String tagPath = repositoryPath + "/" + tagsPath + "/" + versionName;
         String srcPath = repositoryPath + "/" + trunkPath;
         if (!isSvnPathExists(svnCommand, tagPath)) {
