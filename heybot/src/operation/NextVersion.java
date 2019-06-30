@@ -1,5 +1,8 @@
 package operation;
 
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.Session;
 import com.taskadapter.redmineapi.RedmineException;
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
@@ -10,10 +13,17 @@ import model.VersionTag;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
+import org.eclipse.jgit.api.*;
+import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.lib.*;
+import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.transport.*;
+import org.eclipse.jgit.util.FS;
 import utilities.Properties;
 
 import java.io.*;
-import java.util.Scanner;
+import java.util.*;
 
 import static org.apache.http.util.TextUtils.isEmpty;
 
@@ -23,7 +33,6 @@ import static org.apache.http.util.TextUtils.isEmpty;
 public class NextVersion extends Operation
 {
     //<editor-fold defaultstate="collapsed" desc="parameters">
-
     // mandatory
     private final static String PARAMETER_REDMINE_TOKEN = "REDMINE_TOKEN";
     private final static String PARAMETER_REDMINE_URL = "REDMINE_URL";
@@ -36,16 +45,24 @@ public class NextVersion extends Operation
     // optional
     private final static String PARAMETER_CLOSE_PREVIOUS = "CLOSE_PREVIOUS";
     private final static String PARAMETER_APPEND_CURRENT = "APPEND_CURRENT";
-    private final static String PARAMETER_CREATE_SVN_TAG = "CREATE_SVN_TAG";
-    private final static String PARAMETER_REPOSITORY_PATH = "REPOSITORY_PATH";
-    private final static String PARAMETER_TRUNK_PATH = "TRUNK_PATH";
-    private final static String PARAMETER_TAGS_PATH = "TAGS_PATH";
+    private final static String PARAMETER_CREATE_GIT_TAG = "CREATE_GIT_TAG";
+    private final static String PARAMETER_GIT_REPOSITORY = "GIT_REPOSITORY";
+    private final static String PARAMETER_GIT_PROTOCOL = "GIT_PROTOCOL";
+    private final static String PARAMETER_GIT_USERNAME = "GIT_USERNAME";
+    private final static String PARAMETER_GIT_PASSWORD = "GIT_PASSWORD";
+    private final static String PARAMETER_SSH_PRIVATE_KEY = "SSH_PRIVATE_KEY";
+    private final static String PARAMETER_GIT_CONFIG_USER_NAME = "GIT_CONFIG_USER_NAME";
+    private final static String PARAMETER_GIT_CONFIG_USER_EMAIL = "GIT_CONFIG_USER_EMAIL";
     private final static String PARAMETER_APP_VERSION_FILE_PATH = "APP_VERSION_FILE_PATH";
     private final static String PARAMETER_APP_VERSION_FILE_PATTERN = "APP_VERSION_FILE_PATTERN";
     private final static String PARAMETER_APP_VERSION_FILE_UPCMD = "APP_VERSION_FILE_UPCMD";
     private final static String PARAMETER_APP_BUILD_FILE_PATH = "APP_BUILD_FILE_PATH";
     private final static String PARAMETER_APP_BUILD_FILE_PATTERN = "APP_BUILD_FILE_PATTERN";
     private final static String PARAMETER_APP_BUILD_FILE_UPCMD = "APP_BUILD_FILE_UPCMD";
+    private final static String PARAMETER_APP_BUILD_OFFSET = "APP_BUILD_OFFSET";
+    private final static String PARAMETER_GITLAB_URL = "GITLAB_URL";
+    private final static String PARAMETER_GITLAB_TOKEN = "GITLAB_TOKEN";
+    private final static String PARAMETER_GITLAB_PROJECT_ID = "GITLAB_PROJECT_ID";
     // internal
     private final static String PARAMETER_VERSION_TAG = "VERSION_TAG";
     private final static String PARAMETER_PREVIOUS_VERSION_TAG = "PREVIOUS_VERSION_TAG";
@@ -212,7 +229,6 @@ public class NextVersion extends Operation
 
         Version version = getVersion(redmineManager, versionId);
         if (version != null) {
-            deleteVersionTagIfExists(prop, version);
             if (updateVersion(redmineManager, version, versionTitle, versionTag.toString())) {
                 setParameterString(prop, PARAMETER_VERSION_TAG, versionTag.toString());
             }
@@ -221,254 +237,138 @@ public class NextVersion extends Operation
         return version;
     }
 
-    private void deleteVersionTagIfExists(Properties prop, Version version) {
-        String repositoryPath = trimRight(getParameterString(prop, PARAMETER_REPOSITORY_PATH, false), "/");
-        String tagsPath = trimLeft(trimRight(getParameterString(prop, PARAMETER_TAGS_PATH, false), "/"), "/");
-        if (!isEmpty(repositoryPath) && !isEmpty(tagsPath)) {
-            String tagPath = repositoryPath + "/" + tagsPath + "/" + version.getName();
-            System.out.println("[*] Checking whether current version tag exists ...");
-            if (isSvnPathExists(tryExecute("which svn"), tagPath)) {
-                System.out.println("[i] Tag " + version.getName() + " is found in repository:");
-                System.out.println("[i] " + tagPath);
-                Scanner scanner = new Scanner(System.in);
-                System.out.print("[?] Would you like to delete obsolete (possibly non-deployed) tag? (Y/N) ");
-                String answer = scanner.next();
-                if (!isEmpty(answer) && (answer.charAt(0) == 'Y' || answer.charAt(0) == 'y')) {
-                    if (svnDeleteTag(tryExecute("which svn"), tagPath)) {
-                        System.out.println("[✓] ^/" + tagsPath + "/" + version.getName() + " is deleted successfully.");
-                    }
-                } else {
-                    System.out.println("[i] Nothing is done.");
-                }
-            } else {
-                System.out.println("[✓] Nothing found.");
-            }
-        }
-    }
-
-    private boolean svnDeleteTag(String svnCommand, String tagPath) {
-        String comment = "Obsolete tag is deleted, but another new one will be created as a replacement of this.";
-        String[] command = new String[]{
-            svnCommand, "delete", tagPath, "-m", comment
-        };
-        System.out.println(svnCommand + " delete " + tagPath + " -m \"" + comment + "\"");
-        String[] output = execute(command);
-        if (output == null || output[1].length() > 0) {
-            //System.err.println(output[1]);
-            return false;
-        }
-
-        System.out.println(output[0]);
-        return true;
-    }
-
     private void maintainGitTag(Properties prop, RedmineManager redmineManager, int versionId) {
-        boolean isCreateSubversionTagEnabled = getParameterBoolean(prop, PARAMETER_CREATE_SVN_TAG);
-        if (isCreateSubversionTagEnabled) {
-            String repositoryPath = trimRight(getParameterString(prop, PARAMETER_REPOSITORY_PATH, false), "/");
-            String trunkPath = trimLeft(trimRight(getParameterString(prop, PARAMETER_TRUNK_PATH, false), "/"), "/");
-            String tagsPath = trimLeft(trimRight(getParameterString(prop, PARAMETER_TAGS_PATH, false), "/"), "/");
-
-            if (!isEmpty(repositoryPath) && !isEmpty(trunkPath) && !isEmpty(tagsPath)) {
-                String svnCommand = tryExecute("which svn");
-                if (svnCommand.length() > 0) {
-                    maintainGitTag(prop, svnCommand, getVersion(redmineManager, versionId), repositoryPath, trunkPath, tagsPath);
-                } else {
-                    System.err.println("Ooops! Create SVN tag is enabled but couldn't find SVN command.");
-                }
+        if (getParameterBoolean(prop, PARAMETER_CREATE_GIT_TAG) && isGitCredentialsOk(prop)) {
+            Version version = getVersion(redmineManager, versionId);
+            if (version == null) {
+                System.out.println("[e] Create git tag is enabled but couldn't get version from redmine!");
             } else {
-                System.err.println("Ooops! Create SVN tag is enabled but other helper parameters are empty. Please check them.");
+                File repoPath;
+                if ((repoPath = tryGetRepoPath(prop)) != null) {
+                    if (updateAppBuild(prop, repoPath) && updateAppVersion(prop, repoPath, version)) {
+                        if (pushAppUpdate(repoPath)) {
+                            pushTagUpdate(repoPath, version);
+                        }
+                    } else {
+                        System.out.println("[w] Couldn't update app version or build. No git tag is created.");
+                    }
+                }
             }
         }
     }
 
-    private void maintainGitTag(Properties prop, String svnCommand, Version version, String repositoryPath, String trunkPath, String tagsPath) {
-        if (version != null) {
-            boolean isAppUpdated = true;
-
-            String[] filePaths = getParameterStringArray(prop, PARAMETER_APP_BUILD_FILE_PATH, false);
-            if (filePaths.length > 0) {
-                int build = getBuild(prop, svnCommand);
-                if (build > 0) {
-                    String pattern = getParameterString(prop, PARAMETER_APP_BUILD_FILE_PATTERN, false);
-                    if (!StringUtils.isBlank(pattern)) {
-                        isAppUpdated = updateApp(svnCommand, build + "", repositoryPath, trunkPath, filePaths, pattern);
-                    }
-                    String upCmd = getParameterString(prop, PARAMETER_APP_BUILD_FILE_UPCMD, false);
-                    if (!StringUtils.isBlank(upCmd)) {
-                        upCmd = fillUpCmdWithBuild(upCmd, build + "", trunkPath, filePaths[0]);
-                        isAppUpdated = updateApp(svnCommand, upCmd, repositoryPath, trunkPath, filePaths[0]);
-                    }
-                }
-            }
-
-            filePaths = getParameterStringArray(prop, PARAMETER_APP_VERSION_FILE_PATH, false);
-            if (filePaths.length > 0) {
-                String versionTag = getVersionTag(version.getName());
-                if (!StringUtils.isBlank(versionTag)) {
-                    String pattern = getParameterString(prop, PARAMETER_APP_VERSION_FILE_PATTERN, false);
-                    if (!StringUtils.isBlank(pattern)) {
-                        isAppUpdated = updateApp(svnCommand, versionTag, repositoryPath, trunkPath, filePaths, pattern);
-                    }
-                    String upCmd = getParameterString(prop, PARAMETER_APP_VERSION_FILE_UPCMD, false);
-                    if (!StringUtils.isBlank(upCmd)) {
-                        upCmd = fillUpCmdWithVersion(upCmd, versionTag, trunkPath, filePaths[0]);
-                        isAppUpdated = updateApp(svnCommand, upCmd, repositoryPath, trunkPath, filePaths[0]);
-                    }
-                }
-            }
-
-            if (isAppUpdated) {
-                maintainGitTag(svnCommand, version.getName(), repositoryPath, trunkPath, tagsPath);
-            } else {
-                System.err.println("Ooops! Couldn't update app version files successfully, so no version tag is created.");
-            }
-        } else {
-            System.err.println("Ooops! Create SVN tag is enabled but couldn't get version from redmine.");
+    private void pushTagUpdate(File repoPath, Version version) {
+        GitTag tag = new GitTag(repoPath, getVersionTag(version.getName()));
+        if (tagNotExistsOrUserWantsForceUpdate(tag)) {
+            tag.create(repoPath);
         }
     }
 
-    private void maintainGitTag(String svnCommand, String versionName, String repositoryPath, String trunkPath, String tagsPath) {
-        String tagPath = repositoryPath + "/" + tagsPath + "/" + versionName;
-        String srcPath = repositoryPath + "/" + trunkPath;
-        if (!isSvnPathExists(svnCommand, tagPath)) {
-            if (isSvnPathExists(svnCommand, srcPath)) {
-                if (createSvnTag(svnCommand, srcPath, tagPath, versionName)) {
-                    System.out.println("[✓] ^/" + tagsPath + "/" + versionName + " created successfully.");
-                }
-            } else {
-                System.err.println("Ooops! Create SVN tag is enabled but couldn't find TRUNK in repository. (" + srcPath + ")");
-            }
-        } else {
-            System.out.println("Tag already exists in ^/" + tagsPath + " folder for current version [" + versionName + "].");
-        }
-    }
-
-    private boolean createSvnTag(String svnCommand, String srcPath, String tagPath, String comment) {
-        String[] output = execute(svnCommand + " copy " + srcPath + " " + tagPath + " -m " + comment);
-
-        if (output != null) {
-            if (output[1].length() == 0) {
-                System.out.println(output[0]);
+    private boolean tagNotExistsOrUserWantsForceUpdate(GitTag tag) {
+        if (tag.exists()) {
+            System.out.println("[i] Tag exists in repository: " + tag);
+            Scanner scanner = new Scanner(System.in);
+            System.out.print("[?] Would you like to override existing tag? (y/n) ");
+            String answer = scanner.next();
+            if (!isEmpty(answer) && (answer.charAt(0) == 'Y' || answer.charAt(0) == 'y')) {
+                System.out.println("[✓] Ok, tag push will be forced.");
                 return true;
-            } else {
-                System.err.println(output[1]);
             }
-        }
-
-        return false;
-    }
-
-    private boolean updateApp(String svnCommand, String replace, String repositoryPath, String trunkPath, String[] files, String pattern) {
-        files = trimLeft(files, "/");
-
-        String localPath = getWorkingDirectory() + "/" + "tmp";
-        createFolder(localPath);
-
-        localPath += "/" + trunkPath;
-        repositoryPath += "/" + trunkPath;
-
-        System.out.println("=== " + "Getting app files into " + localPath);
-        if (delete(new File(localPath)) && svnCheckout(svnCommand, repositoryPath, localPath)) {
-            svnCheckout(svnCommand, localPath, files);
-            return updateAppFile(localPath, files, pattern, replace)
-                && svnCommit(svnCommand, localPath, "App is modified for next release: " + replace);
-        } else {
-            System.err.println("Ooops! Checkout " + trunkPath + " could not be done!");
-        }
-
-        return false;
-    }
-
-    private boolean svnCheckout(String svnCommand, String trunkPath, String localPath) {
-        String command = svnCommand + " co " + trunkPath + " " + localPath;
-        command += " --depth empty ";
-        System.out.println(command);
-        String[] output = execute(command);
-        if (output == null || output[1].length() > 0) {
-            //System.err.println(output[1]);
+            System.out.println("[i] Ok, tag push canceled.");
             return false;
         }
-
-        System.out.println(output[0]);
         return true;
     }
 
-    private void svnCheckout(String svnCommand, String localPath, String[] filePaths) {
-        for (String filePath : filePaths) {
-            String[] tokens = filePath.split("/");
-            if (tokens.length == 1) {
-                svnUpdate(svnCommand, localPath + "/" + tokens[0], false);
-            } else {
-                int i = 0;
-                StringBuilder buffer = new StringBuilder();
-                for (; i < tokens.length - 1; i++) {
-                    svnUpdate(svnCommand, localPath + "/" + buffer + tokens[i], true);
-                    buffer.append(tokens[i]).append("/");
-                }
-                svnUpdate(svnCommand, localPath + "/" + buffer + tokens[i], false);
-            }
-        }
-    }
-
-    private void svnUpdate(String svnCommand, String filePath, boolean isDepthEmpty) {
-        String command = svnCommand + " up " + filePath;
-        if (isDepthEmpty) {
-            command += " --depth empty";
-        }
-        System.out.println(command);
-        String[] output = execute(command);
-        if (output == null || output[1].length() > 0) {
-            //System.err.println(output[1]);
-            return;
-        }
-
-        System.out.println(output[0]);
-    }
-
-    private boolean svnCommit(String svnCommand, String workingDirPath, String comment) {
-        String[] command = new String[]{
-            svnCommand, "diff", workingDirPath
-        };
-        System.out.println(svnCommand + " diff " + workingDirPath);
-        String[] output = execute(command);
-        System.out.println(output[0]);
-        System.out.println(output[1]);
-        Scanner scanner = new Scanner(System.in);
-        System.out.print("[?] Would you like to commit app modifications to repository? (Y/n) ");
-        String answer = scanner.next();
-        if (!isEmpty(answer) && (answer.charAt(0) == 'Y' || answer.charAt(0) == 'y')) {
-            command = new String[]{
-                svnCommand, "commit", workingDirPath, "-m", comment
-            };
-            System.out.println(svnCommand + " commit " + workingDirPath + " -m \"" + comment + "\"");
-            output = execute(command);
-            if (output == null || output[1].length() > 0) {
-                //System.err.println(output[1]);
-                return false;
-            }
-            System.out.println(output[0]);
+    private boolean pushAppUpdate(File repoPath) {
+        if (isRepositoryClean(repoPath)) {
+            System.out.println("[i] There is no modification to push.");
             return true;
         }
+        showRepositoryDiff(repoPath);
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("[?] Would you like to push modifications? (y/n) ");
+        String answer = scanner.next();
+        if (!isEmpty(answer) && (answer.charAt(0) == 'Y' || answer.charAt(0) == 'y')) {
+            if (pushModifications(repoPath)) {
+                System.out.println("[✓] Modifications pushed successfully.");
+                return true;
+            } else {
+                System.out.println("[w] Modifications not pushed!");
+            }
+            return false;
+        } else {
+            System.out.println("[i] Modifications not pushed!");
+            System.out.print("[?] Would you like to revert modifications? (y/n) ");
+            answer = scanner.next();
+            if (!isEmpty(answer) && (answer.charAt(0) == 'Y' || answer.charAt(0) == 'y')) {
+                resetRepository(repoPath);
+                if (isRepositoryClean(repoPath)) {
+                    System.out.println("[✓] Modifications reverted successfully.");
+                    return true;
+                } else {
+                    System.out.println("[w] Modifications can't be reverted!");
+                }
+                return false;
+            }
+        }
         return true;
     }
 
-    private boolean updateAppFile(String localPath, String[] files, String pattern, String replace) {
+    private boolean updateAppBuild(Properties prop, File repoPath) {
+        String[] filePaths = getParameterStringArray(prop, PARAMETER_APP_BUILD_FILE_PATH, false);
+        if (filePaths.length == 0) {
+            return true; // optional, user doesn't want build number to be updated.
+        }
+        int build = getBuild(repoPath, prop);
+        if (build > 0) {
+            String pattern = getParameterString(prop, PARAMETER_APP_BUILD_FILE_PATTERN, false);
+            if (!StringUtils.isBlank(pattern)) {
+                return updateApp(repoPath, filePaths, pattern, build + "");
+            }
+            String upCmd = getParameterString(prop, PARAMETER_APP_BUILD_FILE_UPCMD, false);
+            if (!StringUtils.isBlank(upCmd)) {
+                return updateApp(fillUpCmdWithBuild(upCmd, build + "", repoPath, filePaths[0]));
+            }
+        }
+        return false;
+    }
+
+    private boolean updateAppVersion(Properties prop, File repoPath, Version version) {
+        String[] filePaths = getParameterStringArray(prop, PARAMETER_APP_VERSION_FILE_PATH, false);
+        if (filePaths.length == 0) {
+            return true; // optional, user doesn't want version to be updated.
+        }
+        String versionTag = getVersionTag(version.getName());
+        if (!StringUtils.isBlank(versionTag)) {
+            String pattern = getParameterString(prop, PARAMETER_APP_VERSION_FILE_PATTERN, false);
+            if (!StringUtils.isBlank(pattern)) {
+                return updateApp(repoPath, filePaths, pattern, versionTag);
+            }
+            String upCmd = getParameterString(prop, PARAMETER_APP_VERSION_FILE_UPCMD, false);
+            if (!StringUtils.isBlank(upCmd)) {
+                return updateApp(fillUpCmdWithVersion(upCmd, versionTag, repoPath, filePaths[0]));
+            }
+        }
+        return false;
+    }
+
+    private boolean updateApp(File repo, String[] files, String pattern, String replace) {
+        files = trimLeft(files, "/");
+
         String[] parts = pattern.split("<>");
         if (parts.length != 3) {
-            System.err.println("Ooops! Pattern is not recognized. (" + pattern + ")");
+            System.out.printf("[e] Pattern is not recognized. (%s)", pattern);
             return false;
         }
         String headPattern = parts[0];
         String tailPattern = parts[2];
-
         for (String file : files) {
-            if (!replaceInFile(localPath + "/" + file, headPattern, replace, tailPattern)) {
-                System.err.println("Ooops! Replacing in app file could not be done.");
+            if (!replaceInFile(repo.getAbsolutePath() + "/" + file, headPattern, replace, tailPattern)) {
+                System.out.print("[e] Replacing in app file could not be done.");
                 return false;
             }
         }
-
         return true;
     }
 
@@ -533,54 +433,11 @@ public class NextVersion extends Operation
         return line;
     }
 
-    private boolean delete(File path) {
-        if (!path.exists()) {
-            return true;
-        }
-
-        if (path.isDirectory()) {
-            //noinspection ConstantConditions
-            for (File child : path.listFiles()) {
-                delete(child);
-            }
-        }
-
-        return path.delete();
-    }
-
-    private int getBuild(Properties prop, String svn) {
-        String svnPath = trimRight(getParameterString(prop, PARAMETER_REPOSITORY_PATH, false), "/") + "/"
-            + trimLeft(trimRight(getParameterString(prop, PARAMETER_TRUNK_PATH, false), "/"), "/");
-        String command = svn + " info " + svnPath;
-        System.out.println(command);
-        String[] output = execute(command);
-        if (output == null || output[1].length() > 0) {
-            //System.err.println(output[1]);
-            return 0;
-        }
-
-        System.out.println(output[0]);
-        String[] lines = output[0].split("\n");
-        for (String line : lines) {
-            line = line.toLowerCase();
-            if (line.contains("revision")) {
-                String[] pair = line.split(":");
-                if (pair.length == 2 && pair[1].length() > 0) {
-                    System.out.println("[i] Build: " + pair[1]);
-                    return Integer.parseInt(pair[1].trim());
-                }
-            }
-        }
-
-        System.out.println("[e] Although svn info got correctly, no \"revision\" number was found on output!");
-        return 0;
-    }
-
-    private String fillUpCmdWithBuild(String upCmd, String build, String trunkPath, String filePath) {
+    private String fillUpCmdWithBuild(String upCmd, String build, File repoPath, String filePath) {
         Velocity.init();
 
         VelocityContext context = new VelocityContext();
-        context.put("file", getWorkingDirectory() + "/" + "tmp" + "/" + trunkPath + "/" + filePath);
+        context.put("file", repoPath.getAbsolutePath() + "/" + filePath);
         context.put("build", build);
 
         StringWriter writer = new StringWriter();
@@ -588,11 +445,11 @@ public class NextVersion extends Operation
         return writer.toString();
     }
 
-    private String fillUpCmdWithVersion(String upCmd, String version, String trunkPath, String filePath) {
+    private String fillUpCmdWithVersion(String upCmd, String version, File repoPath, String filePath) {
         Velocity.init();
 
         VelocityContext context = new VelocityContext();
-        context.put("file", getWorkingDirectory() + "/" + "tmp" + "/" + trunkPath + "/" + filePath);
+        context.put("file", repoPath.getAbsolutePath() + "/" + filePath);
         context.put("version", version);
 
         StringWriter writer = new StringWriter();
@@ -600,28 +457,541 @@ public class NextVersion extends Operation
         return writer.toString();
     }
 
-    private boolean updateApp(String svnCommand, String upCmd, String repositoryPath, String trunkPath, String file) {
-        file = trimLeft(file, "/");
+    private boolean updateApp(String upCmd) {
+        String[] upCmdResult = execute(upCmd);
+        System.out.println(upCmdResult[0]);
+        System.out.println(upCmdResult[1]);
+        System.out.println("Exit Code: " + upCmdResult[2]);
+        return upCmdResult[2].equals("0");
+    }
 
-        String localPath = getWorkingDirectory() + "/" + "tmp";
-        createFolder(localPath);
+    //<editor-fold desc="GIT">
+    private final static HashSet<String> SUPPORTED_PROTOCOLS = new HashSet<>(Arrays.asList("http", "https", "ssh"));
+    private String repository;
+    private CredentialsProvider credentialsProvider;
+    private TransportConfigCallback transportConfigCallback;
 
-        localPath += "/" + trunkPath;
-        repositoryPath += "/" + trunkPath;
-
-        System.out.println("=== " + "Getting app files into " + localPath);
-        if (delete(new File(localPath)) && svnCheckout(svnCommand, repositoryPath, localPath)) {
-            svnCheckout(svnCommand, localPath, new String[]{file});
-            String[] upCmdResult = execute(upCmd);
-            System.out.println(upCmdResult[0]);
-            System.out.println(upCmdResult[1]);
-            System.out.println("Exit Code: " + upCmdResult[2]);
-            return upCmdResult[2].equals("0") && svnCommit(svnCommand, localPath, "App version/build is modified.");
-        } else {
-            System.err.println("Ooops! Checkout " + trunkPath + " could not be done!");
+    @SuppressWarnings("UseSpecificCatch")
+    private boolean isGitCredentialsOk(Properties prop) {
+        System.out.println("[*] Checking git credentials ...");
+        String protocol = getParameterString(prop, PARAMETER_GIT_PROTOCOL, true);
+        if (!SUPPORTED_PROTOCOLS.contains(protocol)) {
+            System.out.println("[e] Unrecognized git protocol: " + protocol);
+            System.out.println("[i] Supported protocols: " + String.join(",", SUPPORTED_PROTOCOLS));
+            return false;
         }
-
+        repository = getRepository(prop, protocol);
+        setCredentials(prop, protocol);
+        try {
+            LsRemoteCommand lsRemote = new LsRemoteCommand(null);
+            lsRemote.setCredentialsProvider(credentialsProvider);
+            lsRemote.setTransportConfigCallback(transportConfigCallback);
+            lsRemote.setRemote(repository);
+            lsRemote.setHeads(true);
+            Collection<Ref> refs = lsRemote.call();
+            System.out.println("\t[i] " + refs.size() + " remote (head) refs found.");
+            System.out.println("\t[✓] Git credentials are ok.");
+            // https://github.com/centic9/jgit-cookbook/blob/master/src/main/java/org/dstadler/jgit/porcelain/ListRemotes.java
+            return true;
+        } catch (Exception ex) {
+            System.out.println("\t[e] Credentials failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+        }
         return false;
     }
+
+    private String getRepository(Properties prop, String protocol) {
+        String repository = trimRight(getParameterString(prop, PARAMETER_GIT_REPOSITORY, false), "/");
+        int indexOfColonWithDoubleSlash;
+        if ((indexOfColonWithDoubleSlash = repository.indexOf("://")) > -1) {
+            repository = repository.substring(indexOfColonWithDoubleSlash + 3);
+        }
+        return protocol.equals("ssh") ? repository : protocol + "://" + repository;
+    }
+
+    private void setCredentials(Properties prop, String protocol) {
+        if (protocol.equals("https") || protocol.equals("http")) {
+            String username = getParameterString(prop, PARAMETER_GIT_USERNAME, false);
+            String password = getParameterString(prop, PARAMETER_GIT_PASSWORD, false);
+            if (!StringUtils.isBlank(username) && !StringUtils.isBlank(password)) {
+                credentialsProvider = new UsernamePasswordCredentialsProvider(username, password);
+            }
+        } else if (protocol.equals("ssh")) {
+            final File identity = new File(getSshPrivateKey(prop));
+            if (identity.exists()) {
+                final SshSessionFactory sshSessionFactory = new JschConfigSessionFactory()
+                {
+                    @Override
+                    protected void configure(OpenSshConfig.Host hc, Session session) {
+                        // do nothing
+                    }
+
+                    @Override
+                    protected JSch createDefaultJSch(FS fs) throws JSchException {
+                        JSch defaultJSch = super.createDefaultJSch(fs);
+                        defaultJSch.addIdentity(identity.getAbsolutePath());
+                        return defaultJSch;
+                    }
+                };
+                transportConfigCallback = (Transport transport) -> {
+                    SshTransport sshTransport = (SshTransport) transport;
+                    sshTransport.setSshSessionFactory(sshSessionFactory);
+                };
+            }
+        }
+    }
+
+    private String getSshPrivateKey(Properties prop) {
+        String sshPrivateKey = getParameterString(prop, PARAMETER_SSH_PRIVATE_KEY, false);
+        if (!StringUtils.isBlank(sshPrivateKey)) {
+            if (sshPrivateKey.startsWith("~")) {
+                sshPrivateKey = System.getProperty("user.home") + sshPrivateKey.substring(1);
+            }
+        } else {
+            sshPrivateKey = System.getProperty("user.home") + "/.ssh/id_rsa";
+        }
+        return sshPrivateKey;
+    }
+
+    private File tryGetRepoPath(Properties prop) {
+        String cacheDir = getWorkingDirectory() + "/" + "cache/git-data/repositories";
+        if (!createFolder(cacheDir)) {
+            System.out.println("[e] Cache directory is unreachable! " + cacheDir);
+            return null;
+        }
+        File repoPath = new File(cacheDir + "/"
+            + new File(trimRight(getParameterString(prop, PARAMETER_GIT_REPOSITORY, false), "/")).getName());
+
+        boolean isRepoReady;
+        if (!repoPath.exists()) {
+            isRepoReady = cloneRepository(repoPath);
+        } else {
+            if (isRepoReady = fetchRepository(repoPath)) {
+                isRepoReady = pullRepository(repoPath);
+                RepositoryStatus status = getRepositoryStatus(repoPath);
+                if (status.isBehindRemote() && status.hasLocalChanges()) {
+                    fastForwardBranch(repoPath);
+                    getRepositoryStatus(repoPath);
+                }
+            }
+        }
+
+        if (isRepoReady) {
+            configProject(prop, repoPath);
+            return repoPath;
+        }
+        return null;
+    }
+
+    private boolean cloneRepository(File cachePath) {
+        System.out.println("\t[i] Locally cached repository not found.");
+        System.out.println("\t[*] Cloning once for cache ...");
+        try (Git result = Git.cloneRepository()
+            .setURI(repository)
+            .setCredentialsProvider(credentialsProvider)
+            .setTransportConfigCallback(transportConfigCallback)
+            .setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)))
+            .setDirectory(cachePath)
+            .call()) {
+            System.out.println("\t[✓] Cloned repository: " + result.getRepository().getDirectory());
+            return true;
+        } catch (GitAPIException gae) {
+            System.out.println("\t[e] Git clone failed with error! " + gae.getClass().getCanonicalName() + " " + gae.getMessage());
+        }
+        return false;
+    }
+
+    private boolean fetchRepository(File cachePath) {
+        System.out.println("\t[i] Locally cached repository exists.");
+        System.out.println("\t[*] Updating remote refs ...");
+        try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
+            try (Git git = new Git(gitRepo)) {
+                FetchCommand fetch = git.fetch();
+                fetch.setCredentialsProvider(credentialsProvider);
+                fetch.setTransportConfigCallback(transportConfigCallback);
+                fetch.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)));
+                fetch.setCheckFetchedObjects(true);
+                fetch.setRemoveDeletedRefs(true);
+                //fetch.setTagOpt(TagOpt.FETCH_TAGS);
+                FetchResult result = fetch.call();
+                if (!StringUtils.isBlank(result.getMessages())) {
+                    System.out.print("\t[i] Messages: " + result.getMessages());
+                }
+                System.out.println("\t[✓] Git fetch ok.");
+                return true;
+            } catch (GitAPIException ex) {
+                System.out.println("\t[e] Git fetch failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            }
+        } catch (IOException ex) {
+            System.out.println("\t[e] Git fetch failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+        }
+        return false;
+    }
+
+    private Repository openRepository(String cachePath) throws IOException {
+        FileRepositoryBuilder builder = new FileRepositoryBuilder();
+        builder.setGitDir(new File(cachePath + "/.git"));
+        builder.setMustExist(true);
+        return builder
+            .readEnvironment() // scan environment GIT_* variables
+            .build();
+    }
+
+    private void configProject(Properties prop, File localBranch) {
+        String userName = getParameterString(prop, PARAMETER_GIT_CONFIG_USER_NAME, false);
+        String userEmail = getParameterString(prop, PARAMETER_GIT_CONFIG_USER_EMAIL, false);
+        if (!StringUtils.isBlank(userName) || !StringUtils.isBlank(userEmail)) {
+            System.out.println("[*] Config project ...");
+            try (Repository gitRepo = openRepository(localBranch.getAbsolutePath())) {
+                StoredConfig config = gitRepo.getConfig();
+                boolean isModified = false;
+
+                String localUserName = config.getString("user", null, "name");
+                System.out.println("\t[i] --local user.name: " + localUserName);
+                if (!userName.equals(localUserName)) {
+                    config.setString("user", null, "name", userName);
+                    System.out.println("\t[✓] Modified as: " + userName);
+                    isModified = true;
+                } else {
+                    System.out.println("\t[✓] user.name is ok. ");
+                }
+                String localUserEmail = config.getString("user", null, "email");
+                System.out.println("\t[i] --local user.email: " + localUserEmail);
+                if (!userEmail.equals(localUserEmail)) {
+                    config.setString("user", null, "email", userEmail);
+                    System.out.println("\t[✓] Modified as: " + userEmail);
+                    isModified = true;
+                } else {
+                    System.out.println("\t[✓] user.email is ok. ");
+                }
+                if (isModified) {
+                    config.save();
+                    System.out.println("\t[✓] Modifications saved. ");
+                }
+            } catch (IOException ex) {
+                System.out.println("\t\t[e] Git config failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            }
+        }
+    }
+
+    private boolean pullRepository(File cachePath) {
+        System.out.println("\t[*] Pulling remote changes ...");
+        try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
+            try (Git git = new Git(gitRepo)) {
+                PullCommand pull = git.pull();
+                pull.setRebase(true);
+                pull.setCredentialsProvider(credentialsProvider);
+                pull.setTransportConfigCallback(transportConfigCallback);
+                pull.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)));
+                PullResult result = pull.call();
+                if (result.isSuccessful()) {
+                    FetchResult fetchResult = result.getFetchResult();
+                    if (!StringUtils.isBlank(fetchResult.getMessages())) {
+                        System.out.print("\t[i] Messages: " + fetchResult.getMessages());
+                    }
+                    MergeResult mergeResult = result.getMergeResult();
+                    if (mergeResult != null && mergeResult.getMergeStatus().isSuccessful()) {
+                        System.out.println("\t[✓] Pull merge status is successful.");
+                    }
+                    System.out.println("\t[✓] Git pull ok.");
+                    return true;
+                }
+            } catch (GitAPIException ex) {
+                System.out.println("\t[e] Git pull failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            }
+        } catch (IOException ex) {
+            System.out.println("\t[e] Git pull failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+        }
+        return false;
+    }
+
+    private class RepositoryStatus
+    {
+
+        private final boolean behindRemote;
+        private final boolean localChanges;
+
+        RepositoryStatus() {
+            behindRemote = false;
+            localChanges = false;
+        }
+
+        RepositoryStatus(int[] trackingStatus, Status status) {
+            behindRemote = trackingStatus[1] > 0;
+            localChanges = status.hasUncommittedChanges() || status.getUntracked().size() > 0 || status.getUntrackedFolders().size() > 0;
+        }
+
+        private boolean isBehindRemote() {
+            return behindRemote;
+        }
+
+        private boolean hasLocalChanges() {
+            return localChanges;
+        }
+    }
+
+    private RepositoryStatus getRepositoryStatus(File repoPath) {
+        try (Repository gitRepo = openRepository(repoPath.getAbsolutePath())) {
+            try (Git git = new Git(gitRepo)) {
+                System.out.print("\t\t[i] Status of branch '" + gitRepo.getBranch() + "': ");
+                Status status = git.status().call();
+                if (status.isClean()) {
+                    System.out.println("nothing to commit, working tree clean");
+                } else {
+                    if (status.hasUncommittedChanges()) {
+                        System.out.print("has uncommitted changes");
+                    }
+                    System.out.println();
+                    listModifiedFiles("Added", status.getAdded());
+                    listModifiedFiles("Changed", status.getChanged());
+                    listModifiedFiles("Conflicting", status.getConflicting());
+                    listModifiedFiles("IgnoredNotInIndex", status.getIgnoredNotInIndex());
+                    listModifiedFiles("Missing", status.getMissing());
+                    listModifiedFiles("Modified", status.getModified());
+                    listModifiedFiles("Removed", status.getRemoved());
+                    listModifiedFiles("Untracked", status.getUntracked());
+                    listModifiedFiles("UntrackedFolders", status.getUntrackedFolders());
+                }
+                int[] trackingStatus = listBranchTrackingStatus(gitRepo, gitRepo.getBranch());
+                return new RepositoryStatus(trackingStatus, status);
+            } catch (GitAPIException ex) {
+                System.out.println("\t\t[e] Git status failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            }
+        } catch (IOException ex) {
+            System.out.println("\t\t[e] Git status failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+        }
+        return new RepositoryStatus();
+    }
+
+    private int[] listBranchTrackingStatus(Repository repository, String branchName) throws IOException {
+        int[] status = getTrackingStatus(repository, branchName);
+        if (status[0] > 0 || status[1] > 0) {
+            System.out.println("\t\t[i] Branch '" + branchName + "' is now (" + status[0] + ") commits ahead, (" + status[1] + ") commits behind.");
+        }
+        return status;
+    }
+
+    private int[] getTrackingStatus(Repository repository, String branchName) throws IOException {
+        BranchTrackingStatus trackingStatus = BranchTrackingStatus.of(repository, branchName);
+        if (trackingStatus != null) {
+            int[] counts = new int[2];
+            counts[0] = trackingStatus.getAheadCount();
+            counts[1] = trackingStatus.getBehindCount();
+            return counts;
+        }
+        return new int[]{0, 0};
+    }
+
+    private void listModifiedFiles(String title, Set<String> files) {
+        if (files.size() > 0) {
+            System.out.println("\t\t" + title + ": (" + files.size() + ")");
+            files.forEach((file) -> System.out.println("\t\t\t" + file));
+        }
+    }
+
+    private void fastForwardBranch(File repoPath) {
+        System.out.println("\t[*] Fast-forwading branch ...");
+        try (Repository gitRepo = openRepository(repoPath.getAbsolutePath())) {
+            try (Git git = new Git(gitRepo)) {
+                System.out.println("\t\t[*] Creating stash for changes ...");
+                StashCreateCommand stashCreate = git.stashCreate();
+                stashCreate.setIncludeUntracked(true);
+                RevCommit stash = stashCreate.call();
+                System.out.println("\t\t[i] " + stash.getFullMessage());
+                System.out.println("\t\t[✓] Created stash: " + stash.getName());
+                System.out.println("\t\t[*] Rebasing ...");
+                RebaseCommand rebase = git.rebase();
+                rebase.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)));
+                rebase.setUpstream("origin/master");
+                RebaseResult rebaseResult = rebase.call();
+                if (rebaseResult.getStatus().isSuccessful()) {
+                    System.out.println("\t\t[✓] Rebase ok.");
+                } else {
+                    System.out.println("\t\t[w] Rebase failed!");
+                }
+                System.out.println("\t\t[*] Applying stash after rebase ...");
+                StashApplyCommand stashApply = git.stashApply();
+                stashApply.setStashRef(stash.getName());
+                ObjectId applied = stashApply.call();
+                System.out.println("\t\t[✓] Stash applied: " + applied);
+                System.out.println("\t\t[*] Dropping applied stash ...");
+                int ref = 0;
+                Collection<RevCommit> stashes = git.stashList().call();
+                for (RevCommit rev : stashes) {
+                    if (rev.getFullMessage().equals(stash.getFullMessage())
+                        && rev.getName().equals(stash.getName())) {
+                        break;
+                    }
+                    ref++;
+                }
+                StashDropCommand stashDrop = git.stashDrop();
+                stashDrop.setStashRef(ref);
+                stashDrop.call();
+                System.out.println("\t\t[i] Stash count: " + stashes.size() + " > " + git.stashList().call().size());
+                System.out.println("\t\t[✓] Stash dropped. ");
+            } catch (GitAPIException ex) {
+                System.out.println("\t\t[e] Fast-forward failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            }
+        } catch (IOException ex) {
+            System.out.println("\t\t[e] Fast-forward failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+        }
+    }
+
+    private int getBuild(File repoPath, Properties prop) {
+        try (Repository gitRepo = openRepository(repoPath.getAbsolutePath())) {
+            try (Git git = new Git(gitRepo)) {
+                Iterable<RevCommit> commits = git.log().call();
+                int count = getParameterInt(prop, PARAMETER_APP_BUILD_OFFSET, 0);
+                for (RevCommit ignored : commits) {
+                    count++;
+                }
+                return count;
+            } catch (GitAPIException ex) {
+                System.out.printf("\t[e] git rev-list --count failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
+            }
+        } catch (IOException ex) {
+            System.out.printf("\t[e] git rev-list --count failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
+        }
+        return 0;
+    }
+
+    private void showRepositoryDiff(File cachePath) {
+        System.out.println("[i] Git diff:");
+        try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
+            try (Git git = new Git(gitRepo)) {
+                git.diff().setOutputStream(System.out).call();
+            } catch (GitAPIException ex) {
+                System.out.printf("[e] Git diff failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
+            }
+        } catch (IOException ex) {
+            System.out.printf("[e] Git diff failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
+        }
+    }
+
+    private boolean pushModifications(File cachePath) {
+        System.out.println("[*] Push modifications to remote ...");
+        try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
+            try (Git git = new Git(gitRepo)) {
+                git.add().addFilepattern(".").call();
+                git.commit().setMessage("App version or build is modified.").call();
+                PushCommand pushCommand = git.push();
+                pushCommand.setCredentialsProvider(credentialsProvider);
+                pushCommand.setTransportConfigCallback(transportConfigCallback);
+                pushCommand.setRemote("origin");
+                pushCommand.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)));
+                Iterable<PushResult> resultIterable = pushCommand.call();
+                PushResult result = resultIterable.iterator().next();
+                if (!StringUtils.isBlank(result.getMessages())) {
+                    System.out.print("\t\t[i] Messages: " + result.getMessages());
+                }
+                return result.getRemoteUpdate("refs/heads/master").getStatus() == RemoteRefUpdate.Status.OK;
+            } catch (GitAPIException ex) {
+                System.out.printf("[e] Git commit+push failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
+            }
+        } catch (IOException ex) {
+            System.out.printf("[e] Git commit+push failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
+        }
+        return false;
+    }
+
+    private boolean isRepositoryClean(File repoPath) {
+        try (Repository gitRepo = openRepository(repoPath.getAbsolutePath())) {
+            try (Git git = new Git(gitRepo)) {
+                return !git.status().call().hasUncommittedChanges();
+            } catch (GitAPIException ex) {
+                System.out.printf("[e] Git status failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
+            }
+        } catch (IOException ex) {
+            System.out.printf("[e] Git status failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
+        }
+        return true;
+    }
+
+    private void resetRepository(File repoPath) {
+        try (Repository gitRepo = openRepository(repoPath.getAbsolutePath())) {
+            try (Git git = new Git(gitRepo)) {
+                git.reset()
+                    .setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)))
+                    .setMode(ResetCommand.ResetType.HARD).call();
+            } catch (GitAPIException ex) {
+                System.out.printf("[e] Git reset failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
+            }
+        } catch (IOException ex) {
+            System.out.printf("[e] Git reset failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
+        }
+    }
+
+    private class GitTag
+    {
+        private final com.g00fy2.versioncompare.Version version;
+        private Ref ref;
+
+        GitTag(File repo, String version) {
+            this.version = new com.g00fy2.versioncompare.Version(version, true);
+            this.ref = tryGetTagRef(repo);
+        }
+
+        public boolean exists() {
+            return ref != null;
+        }
+
+        private Ref tryGetTagRef(File repo) {
+            try (Repository gitRepo = openRepository(repo.getAbsolutePath())) {
+                try (Git git = new Git(gitRepo)) {
+                    ListTagCommand listTagCommand = git.tagList();
+                    List<Ref> refs = listTagCommand.call();
+                    for (Ref ref : refs) {
+                        if (ref.getName().endsWith(version.toString())) {
+                            this.ref = ref;
+                        }
+                    }
+                } catch (GitAPIException ex) {
+                    System.out.printf("[e] Git tag list failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
+                }
+            } catch (IOException ex) {
+                System.out.printf("[e] Git tag list failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
+            }
+            return null;
+        }
+
+        @Override
+        public String toString() {
+            if (ref != null) {
+                return version.getOriginalString() + " " + ref.getObjectId().getName();
+            }
+            return version.getOriginalString();
+        }
+
+        public void create(File repo) {
+            try (Repository gitRepo = openRepository(repo.getAbsolutePath())) {
+                try (Git git = new Git(gitRepo)) {
+                    TagCommand tagCommand = git.tag();
+                    tagCommand.setName(version.getOriginalString());
+                    tagCommand.setForceUpdate(true);
+                    this.ref = tagCommand.call();
+                    if (this.ref.getObjectId() != null) {
+                        PushCommand pushCommand = git.push();
+                        pushCommand.setCredentialsProvider(credentialsProvider);
+                        pushCommand.setTransportConfigCallback(transportConfigCallback);
+                        pushCommand.setRemote("origin");
+                        pushCommand.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)));
+                        pushCommand.add(this.ref);
+                        Iterable<PushResult> resultIterable = pushCommand.call();
+                        PushResult result = resultIterable.iterator().next();
+                        if (!StringUtils.isBlank(result.getMessages())) {
+                            System.out.print("\t[i] Messages: " + result.getMessages());
+                        }
+                        if (result.getRemoteUpdate("refs/tags/" + version.getOriginalString()).getStatus() == RemoteRefUpdate.Status.OK) {
+                            System.out.println("[✓] Tag is created successfully on remote.");
+                        }
+                    }
+                } catch (GitAPIException ex) {
+                    System.out.printf("[e] Git tag create failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
+                }
+            } catch (IOException ex) {
+                System.out.printf("[e] Git tag create failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
+            }
+        }
+    }
+    //</editor-fold>
 
 }
