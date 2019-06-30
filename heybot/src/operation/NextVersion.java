@@ -20,6 +20,11 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.*;
 import org.eclipse.jgit.util.FS;
+import org.gitlab4j.api.GitLabApi;
+import org.gitlab4j.api.GitLabApiException;
+import org.gitlab4j.api.TagsApi;
+import org.gitlab4j.api.models.AccessLevel;
+import org.gitlab4j.api.models.ProtectedTag;
 import utilities.Properties;
 
 import java.io.*;
@@ -247,7 +252,8 @@ public class NextVersion extends Operation
                 if ((repoPath = tryGetRepoPath(prop)) != null) {
                     if (updateAppBuild(prop, repoPath) && updateAppVersion(prop, repoPath, version)) {
                         if (pushAppUpdate(repoPath)) {
-                            pushTagUpdate(repoPath, version);
+                            GitTag tag = pushTagUpdate(repoPath, version);
+                            protectTagIfUnprotected(prop, tag);
                         }
                     } else {
                         System.out.println("[w] Couldn't update app version or build. No git tag is created.");
@@ -257,11 +263,71 @@ public class NextVersion extends Operation
         }
     }
 
-    private void pushTagUpdate(File repoPath, Version version) {
+    private void protectTagIfUnprotected(Properties prop, GitTag tag) {
+        GitLabApi gitlabApi = tryGetGitlabApi(prop);
+        if (gitlabApi == null) {
+            System.out.println("[i] Protect tag functions will be disabled.");
+            return;
+        }
+        int gitlabProjectId = getParameterInt(prop, PARAMETER_GITLAB_PROJECT_ID, 0);
+        if (isTagProtected(gitlabApi, gitlabProjectId, tag)) {
+            System.out.println("[✓] Tag has already been protected.");
+            return;
+        }
+        protectTag(gitlabApi, gitlabProjectId, tag);
+    }
+
+    private void protectTag(GitLabApi gitlabApi, int gitlabProjectId, GitTag tag) {
+        TagsApi tagsApi = gitlabApi.getTagsApi();
+        try {
+            tagsApi.protectTag(gitlabProjectId, tag.getName(), AccessLevel.MAINTAINER);
+            System.out.println("[✓] Tag protected successfully.");
+        } catch (GitLabApiException e) {
+            System.out.println("[w] Can't protect tag! " + e.getMessage());
+        }
+    }
+
+    private boolean isTagProtected(GitLabApi gitlabApi, int gitlabProjectId, GitTag tag) {
+        TagsApi tagsApi = gitlabApi.getTagsApi();
+        try {
+            tagsApi.getProtectedTag(gitlabProjectId, tag.getName());
+            return true;
+            //gitlabApi.getTagsApi().unprotectTag(gitlabProjectId, protectedTag.getName());
+        } catch (GitLabApiException e) {
+            if (e.getHttpStatus() == 404 && e.getReason().equals("Not Found")) {
+                return false;
+            }
+            System.out.println("[w] Can't determine whether tag is protected! " + e.getMessage());
+        }
+        return false;
+    }
+
+    private GitLabApi tryGetGitlabApi(Properties prop) {
+        String gitlabUrl = getParameterString(prop, PARAMETER_GITLAB_URL, false);
+        String gitlabToken = getParameterString(prop, PARAMETER_GITLAB_TOKEN, false);
+        if (StringUtils.isBlank(gitlabUrl) || StringUtils.isBlank(gitlabToken)) {
+            System.out.println("[w] Gitlab API credentials is empty or insufficient. (GITLAB_*)");
+            return null;
+        }
+        GitLabApi api = new GitLabApi(gitlabUrl, gitlabToken);
+        try {
+            org.gitlab4j.api.models.Version version = api.getVersion();
+            System.out.println("[i] Gitlab: " + version.getVersion() + "(" + version.getRevision() + ")");
+        } catch (GitLabApiException e) {
+            System.out.println("[w] Gitlab API credentials is misconfigured or server is unreachable. (GITLAB_*)");
+            System.out.println("[w] " + e.getMessage() + " " + e.getReason());
+            return null;
+        }
+
+        return api;
+    }
+
+    private GitTag pushTagUpdate(File repoPath, Version version) {
         GitTag tag = new GitTag(repoPath, getVersionTag(version.getName()));
         if (tagNotExistsOrUserWantsForceUpdate(tag)) {
             tag.create(repoPath);
         }
+        return tag;
     }
 
     private boolean tagNotExistsOrUserWantsForceUpdate(GitTag tag) {
@@ -940,8 +1006,8 @@ public class NextVersion extends Operation
                     ListTagCommand listTagCommand = git.tagList();
                     List<Ref> refs = listTagCommand.call();
                     for (Ref ref : refs) {
-                        if (ref.getName().endsWith(version.toString())) {
-                            this.ref = ref;
+                        if (ref.getName().endsWith(getName())) {
+                            return ref;
                         }
                     }
                 } catch (GitAPIException ex) {
@@ -956,16 +1022,16 @@ public class NextVersion extends Operation
         @Override
         public String toString() {
             if (ref != null) {
-                return version.getOriginalString() + " " + ref.getObjectId().getName();
+                return getName() + " " + ref.getObjectId().getName();
             }
-            return version.getOriginalString();
+            return getName();
         }
 
         public void create(File repo) {
             try (Repository gitRepo = openRepository(repo.getAbsolutePath())) {
                 try (Git git = new Git(gitRepo)) {
                     TagCommand tagCommand = git.tag();
-                    tagCommand.setName(version.getOriginalString());
+                    tagCommand.setName(getName());
                     tagCommand.setForceUpdate(true);
                     this.ref = tagCommand.call();
                     if (this.ref.getObjectId() != null) {
@@ -980,7 +1046,7 @@ public class NextVersion extends Operation
                         if (!StringUtils.isBlank(result.getMessages())) {
                             System.out.print("\t[i] Messages: " + result.getMessages());
                         }
-                        if (result.getRemoteUpdate("refs/tags/" + version.getOriginalString()).getStatus() == RemoteRefUpdate.Status.OK) {
+                        if (result.getRemoteUpdate("refs/tags/" + getName()).getStatus() == RemoteRefUpdate.Status.OK) {
                             System.out.println("[✓] Tag is created successfully on remote.");
                         }
                     }
@@ -990,6 +1056,10 @@ public class NextVersion extends Operation
             } catch (IOException ex) {
                 System.out.printf("[e] Git tag create failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
             }
+        }
+
+        public String getName() {
+            return version.getOriginalString();
         }
     }
     //</editor-fold>
