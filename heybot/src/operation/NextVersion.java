@@ -24,7 +24,6 @@ import org.gitlab4j.api.GitLabApi;
 import org.gitlab4j.api.GitLabApiException;
 import org.gitlab4j.api.TagsApi;
 import org.gitlab4j.api.models.AccessLevel;
-import org.gitlab4j.api.models.ProtectedTag;
 import utilities.Properties;
 
 import java.io.*;
@@ -37,7 +36,7 @@ import static org.apache.http.util.TextUtils.isEmpty;
  */
 public class NextVersion extends Operation
 {
-    //<editor-fold defaultstate="collapsed" desc="parameters">
+    //<editor-fold desc="parameters">
     // mandatory
     private final static String PARAMETER_REDMINE_TOKEN = "REDMINE_TOKEN";
     private final static String PARAMETER_REDMINE_URL = "REDMINE_URL";
@@ -88,7 +87,6 @@ public class NextVersion extends Operation
             String redmineAccessToken = getParameterString(prop, PARAMETER_REDMINE_TOKEN, false);
             String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
             RedmineManager redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
-
             String filterProject = getParameterString(prop, PARAMETER_FILTER_PROJECT, true);
             int projectId = tryGetProjectId(redmineManager, filterProject);
             if (projectId > 0) {
@@ -100,6 +98,7 @@ public class NextVersion extends Operation
         }
     }
 
+    //<editor-fold desc="Redmine Version">
     private void maintainRedmineVersion(Properties prop, String filterProject, RedmineManager redmineManager, int projectId) throws Exception {
         String filterQuery = getParameterString(prop, PARAMETER_FILTER_QUERY, true);
         String versionTitle = getParameterString(prop, PARAMETER_VERSION_TITLE, false);
@@ -107,7 +106,6 @@ public class NextVersion extends Operation
         if (issues.length > 0) {
             Version version;
             int versionId = getParameterInt(prop, PARAMETER_VERSION_ID, 0);
-
             boolean closePreviousVersion = getParameterBoolean(prop, PARAMETER_CLOSE_PREVIOUS);
             boolean appendCurrentVersion = getParameterBoolean(prop, PARAMETER_APPEND_CURRENT);
             if (appendCurrentVersion) {
@@ -116,10 +114,8 @@ public class NextVersion extends Operation
                 if (closePreviousVersion) {
                     closeVersion(redmineManager, versionId);
                 }
-
                 version = createVersion(redmineManager, prop, issues, projectId, versionTitle);
             }
-
             assignTargetVersion(redmineManager, issues, version);
         }
     }
@@ -127,17 +123,17 @@ public class NextVersion extends Operation
     private void closeVersion(RedmineManager redmineManager, int versionId) {
         if (versionId > 0) {
             try {
-                System.out.println("Getting version from redmine: " + versionId);
+                System.out.println("[*] Getting version from redmine: " + versionId);
                 Version version = redmineManager.getProjectManager().getVersionById(versionId);
                 if (!version.getStatus().equals("closed")) {
                     version.setStatus("closed");
                     redmineManager.getProjectManager().update(version);
-                    System.out.println("Version [" + version.getName() + "] is updated as closed.");
+                    System.out.println("[✓] Version " + version.getName() + " is updated as closed.");
                 } else {
-                    System.out.println("Version [" + version.getName() + "] is already closed.");
+                    System.out.println("[✓] Version " + version.getName() + " is already closed.");
                 }
             } catch (RedmineException ex) {
-                System.err.println("Ooops! Couldn't complete closing last version.(" + ex.getMessage() + ")");
+                System.out.println("[e] Couldn't complete closing last version! " + ex.getMessage());
             }
         }
     }
@@ -145,18 +141,15 @@ public class NextVersion extends Operation
     private Version createVersion(RedmineManager redmineManager, int projectId, String versionTitle, String versionTag) {
         String versionName = versionTitle + "-" + versionTag;
         try {
-            System.out.println("Creating new redmine version: [" + versionName + "]");
+            System.out.println("[*] Creating new redmine version: " + versionName);
             Version version = VersionFactory.create(projectId, versionName);
             version.setStatus("open");
-
             version = redmineManager.getProjectManager().createVersion(version);
             System.out.println("[✓] VERSION_ID=" + version.getId());
-
             return version;
         } catch (RedmineException ex) {
-            System.err.println("Ooops! Can't create new version. (" + ex.getMessage() + ")");
+            System.out.println("[e] Can't create new version. " + ex.getMessage());
         }
-
         return null;
     }
 
@@ -164,26 +157,23 @@ public class NextVersion extends Operation
         int filterSavedQueryId = tryGetSavedQueryId(redmineManager, filterProject, filterQuery);
         if (filterSavedQueryId > 0) {
             Issue[] issues = getProjectIssues(redmineManager, filterProject, filterSavedQueryId);
-            System.out.println("Ready to release and unversioned " + issues.length + " issue(s) found.");
-
+            System.out.println("[✓] Ready to release and unversioned " + issues.length + " issue(s) found.");
             return issues;
         } else {
-            System.err.println("Ooops! Couldn't find saved query. Saved query contains ready and unversioned issues.");
+            System.out.println("[e] Couldn't find saved query. Saved query contains ready and unversioned issues.");
         }
-
         return new Issue[0];
     }
 
     private void assignTargetVersion(RedmineManager redmineManager, Issue[] issues, Version version) {
         for (Issue issue : issues) {
-            System.out.println("#" + issue.getId() + " [" + issue.getTracker().getName() + "]" + " " + issue.getSubject());
-
+            System.out.println("\t #" + issue.getId() + " [" + issue.getTracker().getName() + "]" + " " + issue.getSubject());
             issue.setTargetVersion(version);
             try {
                 redmineManager.getIssueManager().update(issue);
-                System.out.println("[✓] Target Version: [" + version.getName() + "]");
+                System.out.println("[✓] Target Version: " + version.getName());
             } catch (RedmineException ex) {
-                System.err.println("Ooops! Can't assign target version. (" + ex.getMessage() + ")");
+                System.out.println("[e] Can't assign target version. " + ex.getMessage());
             }
         }
     }
@@ -191,17 +181,14 @@ public class NextVersion extends Operation
     private boolean updateVersion(RedmineManager redmineManager, Version version, String versionTitle, String versionTag) {
         String versionName = versionTitle + "-" + versionTag;
         try {
-            System.out.println("Updating redmine version: [" + version.getName() + "] -> [" + versionName + "]");
+            System.out.println("[*] Updating redmine version: " + version.getName() + " -> " + versionName);
             version.setName(versionName);
-
             redmineManager.getProjectManager().update(version);
             System.out.println("[✓] VERSION_ID=" + version.getId());
-
             return true;
         } catch (RedmineException ex) {
-            System.err.println("Ooops! Can't update existing version. (" + ex.getMessage() + ")");
+            System.out.println("[*] Can't update existing version. " + ex.getMessage());
         }
-
         return false;
     }
 
@@ -212,14 +199,12 @@ public class NextVersion extends Operation
             getParameterStringHash(prop, PARAMETER_PATCH_TRACKER, true));
 
         versionTag.next(issues);
-
         Version version = createVersion(redmineManager, projectId, versionTitle, versionTag.toString());
         if (version != null) {
             setParameterString(prop, PARAMETER_PREVIOUS_VERSION_TAG, getParameterString(prop, PARAMETER_VERSION_TAG, false));
             setParameterString(prop, PARAMETER_VERSION_TAG, versionTag.toString());
             setParameterInt(prop, PARAMETER_VERSION_ID, version.getId());
         }
-
         return version;
     }
 
@@ -231,17 +216,17 @@ public class NextVersion extends Operation
             getParameterStringHash(prop, PARAMETER_PATCH_TRACKER, true));
 
         versionTag.next(issues);
-
         Version version = getVersion(redmineManager, versionId);
         if (version != null) {
             if (updateVersion(redmineManager, version, versionTitle, versionTag.toString())) {
                 setParameterString(prop, PARAMETER_VERSION_TAG, versionTag.toString());
             }
         }
-
         return version;
     }
+    //</editor-fold>
 
+    //<editor-fold desc="Git Tag">
     private void maintainGitTag(Properties prop, RedmineManager redmineManager, int versionId) {
         if (getParameterBoolean(prop, PARAMETER_CREATE_GIT_TAG) && isGitCredentialsOk(prop)) {
             Version version = getVersion(redmineManager, versionId);
@@ -261,65 +246,6 @@ public class NextVersion extends Operation
                 }
             }
         }
-    }
-
-    private void protectTagIfUnprotected(Properties prop, GitTag tag) {
-        GitLabApi gitlabApi = tryGetGitlabApi(prop);
-        if (gitlabApi == null) {
-            System.out.println("[i] Protect tag functions will be disabled.");
-            return;
-        }
-        int gitlabProjectId = getParameterInt(prop, PARAMETER_GITLAB_PROJECT_ID, 0);
-        if (isTagProtected(gitlabApi, gitlabProjectId, tag)) {
-            System.out.println("[✓] Tag has already been protected.");
-            return;
-        }
-        protectTag(gitlabApi, gitlabProjectId, tag);
-    }
-
-    private void protectTag(GitLabApi gitlabApi, int gitlabProjectId, GitTag tag) {
-        TagsApi tagsApi = gitlabApi.getTagsApi();
-        try {
-            tagsApi.protectTag(gitlabProjectId, tag.getName(), AccessLevel.MAINTAINER);
-            System.out.println("[✓] Tag protected successfully.");
-        } catch (GitLabApiException e) {
-            System.out.println("[w] Can't protect tag! " + e.getMessage());
-        }
-    }
-
-    private boolean isTagProtected(GitLabApi gitlabApi, int gitlabProjectId, GitTag tag) {
-        TagsApi tagsApi = gitlabApi.getTagsApi();
-        try {
-            tagsApi.getProtectedTag(gitlabProjectId, tag.getName());
-            return true;
-            //gitlabApi.getTagsApi().unprotectTag(gitlabProjectId, protectedTag.getName());
-        } catch (GitLabApiException e) {
-            if (e.getHttpStatus() == 404 && e.getReason().equals("Not Found")) {
-                return false;
-            }
-            System.out.println("[w] Can't determine whether tag is protected! " + e.getMessage());
-        }
-        return false;
-    }
-
-    private GitLabApi tryGetGitlabApi(Properties prop) {
-        String gitlabUrl = getParameterString(prop, PARAMETER_GITLAB_URL, false);
-        String gitlabToken = getParameterString(prop, PARAMETER_GITLAB_TOKEN, false);
-        if (StringUtils.isBlank(gitlabUrl) || StringUtils.isBlank(gitlabToken)) {
-            System.out.println("[w] Gitlab API credentials is empty or insufficient. (GITLAB_*)");
-            return null;
-        }
-        GitLabApi api = new GitLabApi(gitlabUrl, gitlabToken);
-        try {
-            org.gitlab4j.api.models.Version version = api.getVersion();
-            System.out.println("[i] Gitlab: " + version.getVersion() + "(" + version.getRevision() + ")");
-        } catch (GitLabApiException e) {
-            System.out.println("[w] Gitlab API credentials is misconfigured or server is unreachable. (GITLAB_*)");
-            System.out.println("[w] " + e.getMessage() + " " + e.getReason());
-            return null;
-        }
-
-        return api;
     }
 
     private GitTag pushTagUpdate(File repoPath, Version version) {
@@ -424,14 +350,14 @@ public class NextVersion extends Operation
 
         String[] parts = pattern.split("<>");
         if (parts.length != 3) {
-            System.out.printf("[e] Pattern is not recognized. (%s)", pattern);
+            System.out.printf("[e] Pattern is not recognized! (%s)", pattern);
             return false;
         }
         String headPattern = parts[0];
         String tailPattern = parts[2];
         for (String file : files) {
             if (!replaceInFile(repo.getAbsolutePath() + "/" + file, headPattern, replace, tailPattern)) {
-                System.out.print("[e] Replacing in app file could not be done.");
+                System.out.print("[e] Replacing in app file could not be done!");
                 return false;
             }
         }
@@ -439,15 +365,15 @@ public class NextVersion extends Operation
     }
 
     private boolean replaceInFile(String filePath, String headPattern, String versionTag, String tailPattern) {
-        System.out.println("=== Replacing app version file " + filePath);
+        System.out.println("[*] Replacing app version file " + filePath);
         File in = new File(filePath);
         if (!in.exists()) {
-            System.err.println("Ooops! The input file " + in + " does not exist!");
+            System.out.println("[e] The input file " + in + " does not exist!");
             return false;
         }
         File out = new File(filePath + "_tmp");
         if (out.exists()) {
-            System.err.println("Ooops! The output file " + out + " already exists!");
+            System.out.println("[e] The output file " + out + " already exists!");
             return false;
         }
 
@@ -530,8 +456,9 @@ public class NextVersion extends Operation
         System.out.println("Exit Code: " + upCmdResult[2]);
         return upCmdResult[2].equals("0");
     }
+    //</editor-fold>
 
-    //<editor-fold desc="GIT">
+    //<editor-fold desc="Git">
     private final static HashSet<String> SUPPORTED_PROTOCOLS = new HashSet<>(Arrays.asList("http", "https", "ssh"));
     private String repository;
     private CredentialsProvider credentialsProvider;
@@ -555,12 +482,11 @@ public class NextVersion extends Operation
             lsRemote.setRemote(repository);
             lsRemote.setHeads(true);
             Collection<Ref> refs = lsRemote.call();
-            System.out.println("\t[i] " + refs.size() + " remote (head) refs found.");
-            System.out.println("\t[✓] Git credentials are ok.");
-            // https://github.com/centic9/jgit-cookbook/blob/master/src/main/java/org/dstadler/jgit/porcelain/ListRemotes.java
+            System.out.println("[i] " + refs.size() + " remote refs found.");
+            System.out.println("[✓] Git credentials are ok.");
             return true;
         } catch (Exception ex) {
-            System.out.println("\t[e] Credentials failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            System.out.println("[e] Credentials failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
         }
         return false;
     }
@@ -649,8 +575,8 @@ public class NextVersion extends Operation
     }
 
     private boolean cloneRepository(File cachePath) {
-        System.out.println("\t[i] Locally cached repository not found.");
-        System.out.println("\t[*] Cloning once for cache ...");
+        System.out.println("[i] Locally cached repository not found.");
+        System.out.println("[*] Cloning once for cache ...");
         try (Git result = Git.cloneRepository()
             .setURI(repository)
             .setCredentialsProvider(credentialsProvider)
@@ -658,17 +584,17 @@ public class NextVersion extends Operation
             .setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)))
             .setDirectory(cachePath)
             .call()) {
-            System.out.println("\t[✓] Cloned repository: " + result.getRepository().getDirectory());
+            System.out.println("[✓] Cloned repository: " + result.getRepository().getDirectory());
             return true;
         } catch (GitAPIException gae) {
-            System.out.println("\t[e] Git clone failed with error! " + gae.getClass().getCanonicalName() + " " + gae.getMessage());
+            System.out.printf("[e] Git clone failed with error! %s %s%n", gae.getClass().getCanonicalName(), gae.getMessage());
         }
         return false;
     }
 
     private boolean fetchRepository(File cachePath) {
-        System.out.println("\t[i] Locally cached repository exists.");
-        System.out.println("\t[*] Updating remote refs ...");
+        System.out.println("[i] Locally cached repository exists.");
+        System.out.println("[*] Updating remote refs ...");
         try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
             try (Git git = new Git(gitRepo)) {
                 FetchCommand fetch = git.fetch();
@@ -677,18 +603,17 @@ public class NextVersion extends Operation
                 fetch.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)));
                 fetch.setCheckFetchedObjects(true);
                 fetch.setRemoveDeletedRefs(true);
-                //fetch.setTagOpt(TagOpt.FETCH_TAGS);
                 FetchResult result = fetch.call();
                 if (!StringUtils.isBlank(result.getMessages())) {
-                    System.out.print("\t[i] Messages: " + result.getMessages());
+                    System.out.print("[i] Messages: " + result.getMessages());
                 }
-                System.out.println("\t[✓] Git fetch ok.");
+                System.out.println("[✓] Git fetch ok.");
                 return true;
             } catch (GitAPIException ex) {
-                System.out.println("\t[e] Git fetch failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+                System.out.printf("[e] Git fetch failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
             }
         } catch (IOException ex) {
-            System.out.println("\t[e] Git fetch failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            System.out.printf("[e] Git fetch failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
         }
         return false;
     }
@@ -706,41 +631,41 @@ public class NextVersion extends Operation
         String userName = getParameterString(prop, PARAMETER_GIT_CONFIG_USER_NAME, false);
         String userEmail = getParameterString(prop, PARAMETER_GIT_CONFIG_USER_EMAIL, false);
         if (!StringUtils.isBlank(userName) || !StringUtils.isBlank(userEmail)) {
-            System.out.println("[*] Config project ...");
+            System.out.println("[*] Git config repository ...");
             try (Repository gitRepo = openRepository(localBranch.getAbsolutePath())) {
                 StoredConfig config = gitRepo.getConfig();
                 boolean isModified = false;
 
                 String localUserName = config.getString("user", null, "name");
-                System.out.println("\t[i] --local user.name: " + localUserName);
+                System.out.println("[i] --local user.name: " + localUserName);
                 if (!userName.equals(localUserName)) {
                     config.setString("user", null, "name", userName);
-                    System.out.println("\t[✓] Modified as: " + userName);
+                    System.out.println("[✓] Modified as: " + userName);
                     isModified = true;
                 } else {
-                    System.out.println("\t[✓] user.name is ok. ");
+                    System.out.println("[✓] user.name is ok. ");
                 }
                 String localUserEmail = config.getString("user", null, "email");
-                System.out.println("\t[i] --local user.email: " + localUserEmail);
+                System.out.println("[i] --local user.email: " + localUserEmail);
                 if (!userEmail.equals(localUserEmail)) {
                     config.setString("user", null, "email", userEmail);
-                    System.out.println("\t[✓] Modified as: " + userEmail);
+                    System.out.println("[✓] Modified as: " + userEmail);
                     isModified = true;
                 } else {
-                    System.out.println("\t[✓] user.email is ok. ");
+                    System.out.println("[✓] user.email is ok. ");
                 }
                 if (isModified) {
                     config.save();
-                    System.out.println("\t[✓] Modifications saved. ");
+                    System.out.println("[✓] Modifications saved. ");
                 }
             } catch (IOException ex) {
-                System.out.println("\t\t[e] Git config failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+                System.out.printf("[e] Git config failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
             }
         }
     }
 
     private boolean pullRepository(File cachePath) {
-        System.out.println("\t[*] Pulling remote changes ...");
+        System.out.println("[*] Pulling remote changes ...");
         try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
             try (Git git = new Git(gitRepo)) {
                 PullCommand pull = git.pull();
@@ -752,53 +677,28 @@ public class NextVersion extends Operation
                 if (result.isSuccessful()) {
                     FetchResult fetchResult = result.getFetchResult();
                     if (!StringUtils.isBlank(fetchResult.getMessages())) {
-                        System.out.print("\t[i] Messages: " + fetchResult.getMessages());
+                        System.out.print("[i] Messages: " + fetchResult.getMessages());
                     }
                     MergeResult mergeResult = result.getMergeResult();
                     if (mergeResult != null && mergeResult.getMergeStatus().isSuccessful()) {
-                        System.out.println("\t[✓] Pull merge status is successful.");
+                        System.out.println("[✓] Pull merge status is successful.");
                     }
-                    System.out.println("\t[✓] Git pull ok.");
+                    System.out.println("[✓] Git pull ok.");
                     return true;
                 }
             } catch (GitAPIException ex) {
-                System.out.println("\t[e] Git pull failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+                System.out.printf("[e] Git pull failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
             }
         } catch (IOException ex) {
-            System.out.println("\t[e] Git pull failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            System.out.printf("[e] Git pull failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
         }
         return false;
-    }
-
-    private class RepositoryStatus
-    {
-
-        private final boolean behindRemote;
-        private final boolean localChanges;
-
-        RepositoryStatus() {
-            behindRemote = false;
-            localChanges = false;
-        }
-
-        RepositoryStatus(int[] trackingStatus, Status status) {
-            behindRemote = trackingStatus[1] > 0;
-            localChanges = status.hasUncommittedChanges() || status.getUntracked().size() > 0 || status.getUntrackedFolders().size() > 0;
-        }
-
-        private boolean isBehindRemote() {
-            return behindRemote;
-        }
-
-        private boolean hasLocalChanges() {
-            return localChanges;
-        }
     }
 
     private RepositoryStatus getRepositoryStatus(File repoPath) {
         try (Repository gitRepo = openRepository(repoPath.getAbsolutePath())) {
             try (Git git = new Git(gitRepo)) {
-                System.out.print("\t\t[i] Status of branch '" + gitRepo.getBranch() + "': ");
+                System.out.print("[i] Status of branch '" + gitRepo.getBranch() + "': ");
                 Status status = git.status().call();
                 if (status.isClean()) {
                     System.out.println("nothing to commit, working tree clean");
@@ -820,10 +720,10 @@ public class NextVersion extends Operation
                 int[] trackingStatus = listBranchTrackingStatus(gitRepo, gitRepo.getBranch());
                 return new RepositoryStatus(trackingStatus, status);
             } catch (GitAPIException ex) {
-                System.out.println("\t\t[e] Git status failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+                System.out.printf("[e] Git status failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
             }
         } catch (IOException ex) {
-            System.out.println("\t\t[e] Git status failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            System.out.printf("[e] Git status failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
         }
         return new RepositoryStatus();
     }
@@ -831,7 +731,7 @@ public class NextVersion extends Operation
     private int[] listBranchTrackingStatus(Repository repository, String branchName) throws IOException {
         int[] status = getTrackingStatus(repository, branchName);
         if (status[0] > 0 || status[1] > 0) {
-            System.out.println("\t\t[i] Branch '" + branchName + "' is now (" + status[0] + ") commits ahead, (" + status[1] + ") commits behind.");
+            System.out.println("[i] Branch '" + branchName + "' is now (" + status[0] + ") commits ahead, (" + status[1] + ") commits behind.");
         }
         return status;
     }
@@ -855,7 +755,7 @@ public class NextVersion extends Operation
     }
 
     private void fastForwardBranch(File repoPath) {
-        System.out.println("\t[*] Fast-forwading branch ...");
+        System.out.println("[*] Fast-forwarding branch ...");
         try (Repository gitRepo = openRepository(repoPath.getAbsolutePath())) {
             try (Git git = new Git(gitRepo)) {
                 System.out.println("\t\t[*] Creating stash for changes ...");
@@ -895,10 +795,10 @@ public class NextVersion extends Operation
                 System.out.println("\t\t[i] Stash count: " + stashes.size() + " > " + git.stashList().call().size());
                 System.out.println("\t\t[✓] Stash dropped. ");
             } catch (GitAPIException ex) {
-                System.out.println("\t\t[e] Fast-forward failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+                System.out.printf("\t\t[e] Fast-forward failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
             }
         } catch (IOException ex) {
-            System.out.println("\t\t[e] Fast-forward failed! " + ex.getClass().getCanonicalName() + " " + ex.getMessage());
+            System.out.printf("\t\t[e] Fast-forward failed! %s %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
         }
     }
 
@@ -921,7 +821,7 @@ public class NextVersion extends Operation
     }
 
     private void showRepositoryDiff(File cachePath) {
-        System.out.println("[i] Git diff:");
+        System.out.println("[*] Git diff ...");
         try (Repository gitRepo = openRepository(cachePath.getAbsolutePath())) {
             try (Git git = new Git(gitRepo)) {
                 git.diff().setOutputStream(System.out).call();
@@ -947,7 +847,7 @@ public class NextVersion extends Operation
                 Iterable<PushResult> resultIterable = pushCommand.call();
                 PushResult result = resultIterable.iterator().next();
                 if (!StringUtils.isBlank(result.getMessages())) {
-                    System.out.print("\t\t[i] Messages: " + result.getMessages());
+                    System.out.print("[i] Messages: " + result.getMessages());
                 }
                 return result.getRemoteUpdate("refs/heads/master").getStatus() == RemoteRefUpdate.Status.OK;
             } catch (GitAPIException ex) {
@@ -1027,7 +927,7 @@ public class NextVersion extends Operation
             return getName();
         }
 
-        public void create(File repo) {
+        void create(File repo) {
             try (Repository gitRepo = openRepository(repo.getAbsolutePath())) {
                 try (Git git = new Git(gitRepo)) {
                     TagCommand tagCommand = git.tag();
@@ -1061,6 +961,92 @@ public class NextVersion extends Operation
         public String getName() {
             return version.getOriginalString();
         }
+    }
+
+    private class RepositoryStatus
+    {
+
+        private final boolean behindRemote;
+        private final boolean localChanges;
+
+        RepositoryStatus() {
+            behindRemote = false;
+            localChanges = false;
+        }
+
+        RepositoryStatus(int[] trackingStatus, Status status) {
+            behindRemote = trackingStatus[1] > 0;
+            localChanges = status.hasUncommittedChanges() || status.getUntracked().size() > 0 || status.getUntrackedFolders().size() > 0;
+        }
+
+        private boolean isBehindRemote() {
+            return behindRemote;
+        }
+
+        private boolean hasLocalChanges() {
+            return localChanges;
+        }
+    }
+    //</editor-fold>
+
+    //<editor-fold desc="GitLab">
+    private void protectTagIfUnprotected(Properties prop, GitTag tag) {
+        GitLabApi gitlabApi = tryGetGitlabApi(prop);
+        if (gitlabApi == null) {
+            System.out.println("[i] Protect tag functions will be disabled.");
+            return;
+        }
+        int gitlabProjectId = getParameterInt(prop, PARAMETER_GITLAB_PROJECT_ID, 0);
+        if (isTagProtected(gitlabApi, gitlabProjectId, tag)) {
+            System.out.println("[✓] Tag has already been protected.");
+            return;
+        }
+        protectTag(gitlabApi, gitlabProjectId, tag);
+    }
+
+    private void protectTag(GitLabApi gitlabApi, int gitlabProjectId, GitTag tag) {
+        TagsApi tagsApi = gitlabApi.getTagsApi();
+        try {
+            tagsApi.protectTag(gitlabProjectId, tag.getName(), AccessLevel.MAINTAINER);
+            System.out.println("[✓] Tag protected successfully.");
+        } catch (GitLabApiException e) {
+            System.out.println("[w] Can't protect tag! " + e.getMessage());
+        }
+    }
+
+    private boolean isTagProtected(GitLabApi gitlabApi, int gitlabProjectId, GitTag tag) {
+        TagsApi tagsApi = gitlabApi.getTagsApi();
+        try {
+            tagsApi.getProtectedTag(gitlabProjectId, tag.getName());
+            return true;
+            //gitlabApi.getTagsApi().unprotectTag(gitlabProjectId, protectedTag.getName());
+        } catch (GitLabApiException e) {
+            if (e.getHttpStatus() == 404 && e.getReason().equals("Not Found")) {
+                return false;
+            }
+            System.out.println("[w] Can't determine whether tag is protected! " + e.getMessage());
+        }
+        return false;
+    }
+
+    private GitLabApi tryGetGitlabApi(Properties prop) {
+        String gitlabUrl = getParameterString(prop, PARAMETER_GITLAB_URL, false);
+        String gitlabToken = getParameterString(prop, PARAMETER_GITLAB_TOKEN, false);
+        if (StringUtils.isBlank(gitlabUrl) || StringUtils.isBlank(gitlabToken)) {
+            System.out.println("[w] Gitlab API credentials is empty or insufficient. (GITLAB_*)");
+            return null;
+        }
+        GitLabApi api = new GitLabApi(gitlabUrl, gitlabToken);
+        try {
+            org.gitlab4j.api.models.Version version = api.getVersion();
+            System.out.println("[i] Gitlab: " + version.getVersion() + "(" + version.getRevision() + ")");
+        } catch (GitLabApiException e) {
+            System.out.println("[w] Gitlab API credentials is misconfigured or server is unreachable. (GITLAB_*)");
+            System.out.println("[w] " + e.getMessage() + " " + e.getReason());
+            return null;
+        }
+
+        return api;
     }
     //</editor-fold>
 
