@@ -25,6 +25,7 @@ import java.util.*;
 
 public class NotifyConflictedBranch extends Operation
 {
+    //<editor-fold desc="parameters">
     // mandatory
     private final static String PARAMETER_GITLAB_URL = "GITLAB_URL";
     private final static String PARAMETER_GITLAB_TOKEN = "GITLAB_TOKEN";
@@ -35,7 +36,7 @@ public class NotifyConflictedBranch extends Operation
     private final static String PARAMETER_GIT_USERNAME = "GIT_USERNAME";
     private final static String PARAMETER_GIT_PASSWORD = "GIT_PASSWORD";
     private final static String PARAMETER_SSH_PRIVATE_KEY = "SSH_PRIVATE_KEY";
-
+    //</editor-fold>
 
     public NotifyConflictedBranch() {
         super(new String[]{PARAMETER_GITLAB_URL, PARAMETER_GITLAB_TOKEN, PARAMETER_GITLAB_PROJECT_ID, PARAMETER_GIT_REPOSITORY, PARAMETER_GIT_PROTOCOL});
@@ -70,14 +71,18 @@ public class NotifyConflictedBranch extends Operation
                     continue;
                 }
                 List<String> conflicts = getConflictsWith(repoPath, mergeRequest.getSourceBranch());
-                if (conflicts.size() > 0) {
-                    System.out.println("[✓] mattermost notification.");
-                }
+                pushNotification(conflicts);
                 resetRepository(repoPath);
             }
         }
     }
 
+    private void pushNotification(List<String> conflicts) {
+        System.out.println("[i] " + conflicts.size() + " conflict(s) found.");
+        if (conflicts.size() > 0) {
+            System.out.println("[✓] mattermost notification.");
+        }
+    }
 
     //<editor-fold desc="GitLab">
     private List<MergeRequest> filterUnmergeableMergeRequests(List<MergeRequest> mergeRequests) {
