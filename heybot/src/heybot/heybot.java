@@ -288,6 +288,8 @@ public class heybot
 		    return new Snapshot();
                 case "begin-issue-with-git":
                     return new BeginIssueWithGit();
+                case "notify-conflicted-branch":
+                    return new NotifyConflictedBranch();
 		default:
 		    System.err.println("Ooops! Unsupported operation. Please check version and manual.");
 	    }
