@@ -3,6 +3,9 @@ package operation;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
+import net.bis5.mattermost.client4.ApiResponse;
+import net.bis5.mattermost.client4.hook.IncomingWebhookClient;
+import net.bis5.mattermost.model.IncomingWebhookRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jgit.api.*;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -16,12 +19,15 @@ import org.gitlab4j.api.Constants;
 import org.gitlab4j.api.GitLabApi;
 import org.gitlab4j.api.GitLabApiException;
 import org.gitlab4j.api.models.MergeRequest;
+import org.gitlab4j.api.models.Participant;
+import org.gitlab4j.api.models.Project;
 import utilities.Properties;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
+import java.util.logging.Level;
 
 public class NotifyConflictedBranch extends Operation
 {
@@ -32,6 +38,7 @@ public class NotifyConflictedBranch extends Operation
     private final static String PARAMETER_GITLAB_PROJECT_ID = "GITLAB_PROJECT_ID";
     private final static String PARAMETER_GIT_REPOSITORY = "GIT_REPOSITORY";
     private final static String PARAMETER_GIT_PROTOCOL = "GIT_PROTOCOL";
+    private final static String PARAMETER_MATTERMOST_INCOMING_WEBHOOK = "MATTERMOST_INCOMING_WEBHOOK";
     // conditional optional
     private final static String PARAMETER_GIT_USERNAME = "GIT_USERNAME";
     private final static String PARAMETER_GIT_PASSWORD = "GIT_PASSWORD";
@@ -39,7 +46,7 @@ public class NotifyConflictedBranch extends Operation
     //</editor-fold>
 
     public NotifyConflictedBranch() {
-        super(new String[]{PARAMETER_GITLAB_URL, PARAMETER_GITLAB_TOKEN, PARAMETER_GITLAB_PROJECT_ID, PARAMETER_GIT_REPOSITORY, PARAMETER_GIT_PROTOCOL});
+        super(new String[]{PARAMETER_GITLAB_URL, PARAMETER_GITLAB_TOKEN, PARAMETER_GITLAB_PROJECT_ID, PARAMETER_GIT_REPOSITORY, PARAMETER_GIT_PROTOCOL, PARAMETER_MATTERMOST_INCOMING_WEBHOOK});
     }
 
     @Override
@@ -54,11 +61,11 @@ public class NotifyConflictedBranch extends Operation
             System.out.println("[i] Total " + mergeRequests.size() + " opened merge request(s) found.");
             mergeRequests = filterUnmergeableMergeRequests(mergeRequests);
             System.out.println("[i] Total " + mergeRequests.size() + " unmergeable merge request(s) found.");
-            notifyConflictedMergeRequests(prop, mergeRequests);
+            notifyConflictedMergeRequests(prop, gitlabApi, mergeRequests);
         }
     }
 
-    private void notifyConflictedMergeRequests(Properties prop, List<MergeRequest> mergeRequests) {
+    private void notifyConflictedMergeRequests(Properties prop, GitLabApi gitlabApi, List<MergeRequest> mergeRequests) throws GitLabApiException {
         File repoPath;
         if (isGitCredentialsOk(prop) && (repoPath = tryGetRepoPath(prop)) != null) {
             for (MergeRequest mergeRequest : mergeRequests) {
@@ -71,16 +78,45 @@ public class NotifyConflictedBranch extends Operation
                     continue;
                 }
                 List<String> conflicts = getConflictsWith(repoPath, mergeRequest.getSourceBranch());
-                pushNotification(conflicts);
+                pushNotification(prop, gitlabApi, mergeRequest, conflicts);
                 resetRepository(repoPath);
             }
         }
     }
 
-    private void pushNotification(List<String> conflicts) {
-        System.out.println("[i] " + conflicts.size() + " conflict(s) found.");
+    private void pushNotification(Properties prop, GitLabApi gitLabApi, MergeRequest mergeRequest, List<String> conflicts) throws GitLabApiException {
+        System.out.println("\t[i] " + conflicts.size() + " conflict(s) found.");
         if (conflicts.size() > 0) {
-            System.out.println("[✓] mattermost notification.");
+            System.out.println("\t[*] Mattermost notification ... ");
+            Project project = gitLabApi.getProjectApi().getProject(getParameterInt(prop, PARAMETER_GITLAB_PROJECT_ID, 0));
+            List<Participant> participants = gitLabApi.getMergeRequestApi().getParticipants(project.getId(), mergeRequest.getIid());
+            IncomingWebhookRequest payload = new IncomingWebhookRequest();
+            StringBuilder text = new StringBuilder();
+            text.append(String.format("`%s` can no longer be merged due to merge conflict with `%s`\n", mergeRequest.getSourceBranch(), mergeRequest.getTargetBranch()));
+            text.append("Conflicts:\n");
+            for (String conflict : conflicts) {
+                text.append(String.format("* %s\n", conflict));
+            }
+            text.append(String.format("@%s a gentle reminder to resolve conflicts :point_right: [%s!%d](%s)\n", mergeRequest.getAuthor().getUsername(), project.getPathWithNamespace(), mergeRequest.getIid(), mergeRequest.getWebUrl()));
+            StringBuilder cc = new StringBuilder();
+            for (Participant participant : participants) {
+                if (participant.getUsername().equals(mergeRequest.getAuthor().getUsername())) {
+                    continue;
+                }
+                cc.append(String.format("@%s", participant.getUsername()));
+            }
+            if (cc.length() > 0) {
+                text.append(String.format("**cc/** %s", cc.toString()));
+            }
+            payload.setText(text.toString());
+            IncomingWebhookClient webhookClient = new IncomingWebhookClient(
+                getParameterString(prop, PARAMETER_MATTERMOST_INCOMING_WEBHOOK, false), Level.WARNING);
+            ApiResponse<Boolean> response = webhookClient.postByIncomingWebhook(payload);
+            if (!response.hasError()) {
+                System.out.println("[✓] Mattermost notification sent.");
+            } else {
+                System.out.println("[e] " + response.readError().getMessage());
+            }
         }
     }
 
