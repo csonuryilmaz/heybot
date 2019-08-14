@@ -99,10 +99,11 @@ public class NextVersion extends Operation
     }
 
     //<editor-fold desc="Redmine Version">
-    private void maintainRedmineVersion(Properties prop, String filterProject, RedmineManager redmineManager, int projectId) throws Exception {
-        String filterQuery = getParameterString(prop, PARAMETER_FILTER_QUERY, true);
+    private void maintainRedmineVersion(Properties prop, String project, RedmineManager redmineManager, int projectId) throws Exception {
+        String filterByQuery = getParameterString(prop, PARAMETER_FILTER_QUERY, true);
+        String[] filterByIssues = getParameterStringArray(prop, PARAMETER_FILTER_QUERY, true);
         String versionTitle = getParameterString(prop, PARAMETER_VERSION_TITLE, false);
-        Issue[] issues = getReadyUnversionedIssues(redmineManager, filterProject, filterQuery);
+        Issue[] issues = getReadyUnversionedIssues(redmineManager, project, filterByQuery, filterByIssues);
         if (issues.length > 0) {
             Version version;
             int versionId = getParameterInt(prop, PARAMETER_VERSION_ID, 0);
@@ -153,10 +154,16 @@ public class NextVersion extends Operation
         return null;
     }
 
-    private Issue[] getReadyUnversionedIssues(RedmineManager redmineManager, String filterProject, String filterQuery) {
-        int filterSavedQueryId = tryGetSavedQueryId(redmineManager, filterProject, filterQuery);
-        if (filterSavedQueryId > 0) {
-            Issue[] issues = getProjectIssues(redmineManager, filterProject, filterSavedQueryId);
+    private Issue[] getReadyUnversionedIssues(RedmineManager redmineManager, String project, String filterByQuery, String[] filterByIssues) {
+        int savedQueryId = tryGetSavedQueryId(redmineManager, project, filterByQuery);
+        if (savedQueryId > 0) {
+            System.out.println("[i] Try filter by Redmine saved query: " + savedQueryId);
+            Issue[] issues = getProjectIssues(redmineManager, project, savedQueryId);
+            System.out.println("[✓] Ready to release and unversioned " + issues.length + " issue(s) found.");
+            return issues;
+        } else if ((filterByQuery.contains(",") || StringUtils.isNumeric(filterByQuery)) && filterByIssues.length > 0) {
+            System.out.println("[i] Try filter comma separated Redmine issue list: " + filterByQuery);
+            Issue[] issues = getIssues(redmineManager, filterByIssues);
             System.out.println("[✓] Ready to release and unversioned " + issues.length + " issue(s) found.");
             return issues;
         } else {

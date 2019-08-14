@@ -1035,4 +1035,20 @@ public abstract class Operation
 	System.out.println(filteredTrackers.size() + " tracker");
 	return filteredTrackers.toArray(new Tracker[filteredTrackers.size()]);
     }
+
+    protected Issue[] getIssues(RedmineManager redmineManager, String[] issueIds) {
+        try {
+            List<Issue> issues = new ArrayList<>();
+            for (String issueId : issueIds) {
+                Issue issue = getIssue(redmineManager, Integer.parseInt(issueId));
+                if (issue != null) {
+                    issues.add(issue);
+                }
+            }
+            return issues.toArray(new Issue[issues.size()]);
+        } catch (NumberFormatException ex) {
+            System.err.println("Ooops! Couldn't get issues.(" + ex.getMessage() + ")");
+        }
+        return new Issue[0];
+    }
 }
