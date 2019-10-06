@@ -13,10 +13,8 @@ import com.taskadapter.redmineapi.bean.Issue;
 import com.taskadapter.redmineapi.bean.IssueRelation;
 import com.taskadapter.redmineapi.bean.Version;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashSet;
+import java.util.*;
+
 import model.EmailSender;
 import org.apache.commons.lang3.StringUtils;
 import utilities.Properties;
@@ -32,6 +30,7 @@ public class Release extends Operation
 
     // mandatory
     private final static String PARAMETER_VERSION_ID = "VERSION_ID";
+    private final static String PARAMETER_VERSION_PREFIX = "VERSION_PREFIX";
     private final static String PARAMETER_REDMINE_TOKEN = "REDMINE_TOKEN";
     private final static String PARAMETER_REDMINE_URL = "REDMINE_URL";
     private final static String PARAMETER_ISSUE_DEPLOYED_STATUS = "ISSUE_DEPLOYED_STATUS";
@@ -85,35 +84,89 @@ public class Release extends Operation
     {
 	if (areMandatoryParametersNotEmpty(prop))
 	{
-	    String redmineAccessToken = getParameterString(prop, PARAMETER_REDMINE_TOKEN, false);
-	    String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
-	    
-	    redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
-	    this.prop = prop;
+            redmineManager = RedmineManagerFactory.createWithApiKey(
+                getParameterString(prop, PARAMETER_REDMINE_URL, false),
+                getParameterString(prop, PARAMETER_REDMINE_TOKEN, false));
+            this.prop = prop;
 
-	    relateIssuesFromProjects = getParameterStringHash(prop, PARAMETER_EMAIL_BODY_RELATED_ISSUES_FROM_PROJECTS, true);
+            relateIssuesFromProjects = getParameterStringHash(prop, PARAMETER_EMAIL_BODY_RELATED_ISSUES_FROM_PROJECTS, true);
 
-	    int versionId = getParameterInt(prop, PARAMETER_VERSION_ID, 0);
-	    System.out.println("[*] Getting version from redmine ... ");
-	    System.out.println("[i] VersionId: " + versionId);
-	    Version version = getVersion(redmineManager, versionId);
-	    if (version != null) {
-		release(version, redmineUrl);
-	    }
+            Version[] versions = getVersions(prop);
+            if (versions.length > 0) {
+                release(versions);
+            }
 	}
     }
 
-    private void release(Version version, String redmineUrl) throws Exception
+    private Version[] getVersions(Properties prop) {
+        System.out.println("[*] Getting versions from Redmine ... ");
+        Version[] versions = getVersions(redmineManager, getParameterIntArray(prop, PARAMETER_VERSION_ID),
+            getParameterString(prop, PARAMETER_VERSION_PREFIX, true));
+        for (Version version : versions) {
+            System.out.println("\t [✓] " + version.getName());
+        }
+        if (versions.length == 0) {
+            System.out.println("[i] No version is found.");
+        } else if (versions.length > 1) {
+            System.out.println("[i] All versions will be bundled as " + versions[0].getName() + " in a single notification.");
+        }
+        return versions;
+    }
+
+    private Version[] getVersions(RedmineManager redmineManager, int[] versionIds, String prefix) {
+        ArrayList<Version> versions = new ArrayList<>();
+        for (int versionId : versionIds) {
+            Version version = getVersion(redmineManager, versionId);
+            if (version != null) {
+                versions.add(version);
+            }
+        }
+        Collections.sort(versions, new VersionComparator(prefix));
+        return versions.toArray(new Version[versions.size()]);
+    }
+
+    private class VersionComparator implements java.util.Comparator<Version>
     {
-	System.out.println("[✓] " + version.getName());
-	Issue[] issues = getVersionIssues(getParameterString(prop, PARAMETER_REDMINE_URL, false),
-		getParameterString(prop, PARAMETER_REDMINE_TOKEN, false), version);
+        private final String prefix;
+
+        public VersionComparator(String prefix) {
+            this.prefix = prefix;
+        }
+
+        @Override
+        public int compare(Version o1, Version o2) {
+            com.g00fy2.versioncompare.Version o1Ver, o2Ver;
+
+            o1Ver = new com.g00fy2.versioncompare.Version(o1.getName().replace(prefix, ""), true);
+            o2Ver = new com.g00fy2.versioncompare.Version(o2.getName().replace(prefix, ""), true);
+
+            return o1Ver.isHigherThan(o2Ver) ? -1 : 1;
+        }
+    }
+
+    private Issue[] getAllIssuesOfVersions(String redmineUrl, String redmineToken, Version[] versions) {
+        Issue[] bundle = new Issue[0];
+        for (Version version : versions) {
+            Issue[] issues = getVersionIssues(redmineUrl, redmineToken, version);
+
+            int currentSize = bundle.length;
+            bundle = Arrays.copyOf(bundle, currentSize + issues.length);
+            System.arraycopy(issues, 0, bundle, currentSize, issues.length);
+        }
+        return bundle;
+    }
+
+    private void release(Version[] versions) throws Exception
+    {
+        String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
+        Issue[] issues = getAllIssuesOfVersions(redmineUrl,
+            getParameterString(prop, PARAMETER_REDMINE_TOKEN, false), versions);
 
 	String releaseType = getParameterString(prop, PARAMETER_RELEASE_TYPE, true);
 	boolean isDryRun = getParameterBoolean(prop, PARAMETER_DRY_RUN);
 
 	if (!isDryRun) {
-	    deployVersion(releaseType, version, issues);
+	    deployVersion(releaseType, versions, issues);
 	}
 	else {
 	    System.out.println("[i] Running in --dry-run mode. Be cool, there won't be real deployment. ¯\\_(ツ)_/¯");
@@ -126,38 +179,28 @@ public class Release extends Operation
 	String[] slackWebHookUrls = getParameterStringArray(prop, 
 		isDryRun ? PARAMETER_DRY_RUN_NOTIFY_SLACK : PARAMETER_NOTIFY_SLACK, false);
 	if (slackWebHookUrls.length > 0) {
-	    notifySlack(version, issues, redmineUrl, slackWebHookUrls);
+	    notifySlack(versions[0], issues, redmineUrl, slackWebHookUrls);
 	}
 	
 	String[] recipients = getParameterStringArray(prop, 
 		isDryRun ? PARAMETER_DRY_RUN_NOTIFY_EMAIL : PARAMETER_NOTIFY_EMAIL, true);
 	if (recipients.length > 0) {
-	    notifyEmail(releaseType, recipients, version, issues, redmineUrl);
-	}
-    }
-    
-    private void deployVersion(String releaseType, Version version, Issue[] issues) throws Exception
-    {
-	if (!isVersionDeployed(version)) {
-	    if (isProductionRelease(releaseType)) {
-		deployVersion(version, issues);
-	    }
-	}
-	else {
-	    System.out.println("[i] Version is already deployed! Version status is closed.");
+	    notifyEmail(releaseType, recipients, versions[0], issues, redmineUrl);
 	}
     }
 
-    private boolean isVersionDeployed(Version version)
-    {
-	return version.getStatus().equals("closed");
+    private void deployVersion(String releaseType, Version[] versions, Issue[] issues) throws Exception {
+
+        if (isProductionRelease(releaseType)) {
+            deployVersion(versions, issues);
+        }
     }
 
-    private void deployVersion(Version version, Issue[] issues) throws Exception
+    private void deployVersion(Version[] versions, Issue[] issues) throws Exception
     {
-	doDeployment(version);
+	doDeployment(versions[0]);
 	updateAsDeployed(issues);
-	updateAsDeployed(version);
+	updateAsDeployed(versions);
     }
 
     private void doDeployment(Version version) throws Exception
@@ -206,22 +249,24 @@ public class Release extends Operation
 
     private void updateAsDeployed(Issue[] issues) throws Exception
     {
-	System.out.println("* Updating related issues ... ");
+	System.out.println("[*]  Updating issues as deployed ... ");
 	int statusId = getIssueDeployedStatusId();
 	for (Issue issue : issues)
 	{
 	    updateAsDeployed(issue, statusId);
-	    System.out.println("[✓] " + "#" + issue.getId() + " - " + issue.getSubject());
+	    System.out.println("\t [✓] " + "#" + issue.getId() + " - " + issue.getSubject());
 	}
-	System.out.println("  Total " + issues.length + " issue(s) are updated as deployed.");
+	System.out.println("[✓] Total " + issues.length + " issue(s) are updated as deployed.");
     }
 
-    private void updateAsDeployed(Version version) throws RedmineException
-    {
-	System.out.println("* Updating related version ... ");
-	setDateDeployedOn(version);
-	setDescription(version);
-	System.out.println("  Version is updated as deployed.");
+    private void updateAsDeployed(Version[] versions) throws RedmineException {
+        System.out.println("[*] Updating versions as deployed ... ");
+        for (Version version : versions) {
+            setDateDeployedOn(version);
+            setDescription(version);
+            System.out.println("\t [✓] " + version.getName());
+        }
+        System.out.println("[✓] Total " + versions.length + " version(s) are updated as deployed.");
     }
 
     private void notifySlack(Version version, Issue[] issues, String redmineUrl, String[] slackWebHookUrls)

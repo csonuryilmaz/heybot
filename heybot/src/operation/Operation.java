@@ -30,6 +30,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+
+import org.apache.commons.lang3.StringUtils;
 import utilities.Properties;
 import java.util.TimeZone;
 import static org.apache.http.util.TextUtils.isEmpty;
@@ -550,6 +552,26 @@ public abstract class Operation
 	    return sValue.split("\\s*,\\s*");
 	}
 	return new String[0];
+    }
+
+    protected int[] getParameterIntArray(Properties props, String parameter) {
+        String sValue = getParameterString(props, parameter, false);
+        if (!isEmpty(sValue)) {
+            String[] sValues = sValue.split("\\s*,\\s*");
+            List<Integer> iValues = new ArrayList();
+            for (String value : sValues) {
+                if (StringUtils.isNumeric(value)) {
+                    try {
+                        iValues.add(Integer.parseInt(value));
+                    } catch (NumberFormatException nfe) {
+                        System.out.printf("[w] %s could not be parsed! " +
+                            "%s %s%n", value, nfe.getClass().getCanonicalName(), nfe.getMessage());
+                    }
+                }
+            }
+            return iValues.stream().mapToInt(i -> i).toArray();
+        }
+        return new int[0];
     }
 
     protected HashSet<String> getParameterStringHash(Properties props, String parameter, boolean isLowerCased)

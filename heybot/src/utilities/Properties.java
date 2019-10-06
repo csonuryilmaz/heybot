@@ -1,14 +1,14 @@
 package utilities;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.util.Iterator;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.configuration2.FileBasedConfiguration;
 import org.apache.commons.configuration2.PropertiesConfiguration;
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
 import org.apache.commons.configuration2.builder.fluent.Parameters;
 import org.apache.commons.configuration2.ex.ConfigurationException;
+
+import java.io.File;
+import java.util.Iterator;
 
 /**
  * An extended implementation of java.util.Properties
@@ -25,8 +25,7 @@ public class Properties
 
     }
 
-    public void load(String file) throws ConfigurationException, FileNotFoundException
-    {
+    public void load(String file) throws ConfigurationException {
 	Parameters params = new Parameters();
 	File propertiesFile = new File(file);
 
@@ -66,4 +65,7 @@ public class Properties
 	return parameters;
     }
 
+    public boolean isLoadedSuccessfully() {
+        return content != null;
+    }
 }
