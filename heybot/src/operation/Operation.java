@@ -135,25 +135,16 @@ public abstract class Operation
 	return null;
     }
 
-    protected String[] execute(String command)
-    {
-	Process process;
-	try
-	{
-	    process = Runtime.getRuntime().exec(command);
-
-	    return execute(process);
-	}
-	catch (NumberFormatException ex)
-	{
-	    System.err.println(ex);
-	}
-	catch (IOException | InterruptedException ex)
-	{
-	    System.err.println(ex);
-	}
-
-	return null;
+    protected String[] execute(String command) {
+        try {
+            return execute(Runtime.getRuntime().exec(command));
+        } catch (NumberFormatException | IOException | InterruptedException ex) {
+            String[] output = new String[3];
+            output[0] = ex.getMessage();
+            output[1] = "";
+            output[2] = "1";
+            return output;
+        }
     }
 
     private String[] execute(Process process) throws InterruptedException, IOException
