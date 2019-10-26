@@ -253,8 +253,10 @@ public class Release extends Operation
 	int statusId = getIssueDeployedStatusId();
 	for (Issue issue : issues)
 	{
-	    updateAsDeployed(issue, statusId);
-	    System.out.println("\t [✓] " + "#" + issue.getId() + " - " + issue.getSubject());
+            if (updateAsDeployed(issue, statusId))
+                System.out.println("\t [✓] " + "#" + issue.getId() + " - " + issue.getSubject());
+            else
+                System.out.println("\t [x] " + "#" + issue.getId() + " - " + issue.getSubject());
 	}
 	System.out.println("[✓] Total " + issues.length + " issue(s) are updated as deployed.");
     }
@@ -354,17 +356,13 @@ public class Release extends Operation
 	return issueDeployedStatusId;
     }
 
-    private void updateAsDeployed(Issue issue, int statusId) throws Exception
-    {
-	if (issue.getStatusId() != statusId)
-	{
-	    issue.setStatusId(statusId);
-	    redmineManager.getIssueManager().update(issue);
-	    if (!isIssueUpdatedAsDeployed(issue.getId(), statusId))
-	    {
-		throw new Exception("Could not update issue status! Please check your redmine workflow or configuration!");
-	    }
-	}
+    private boolean updateAsDeployed(Issue issue, int statusId) throws Exception {
+        if (issue.getStatusId() != statusId) {
+            issue.setStatusId(statusId);
+            redmineManager.getIssueManager().update(issue);
+            return isIssueUpdatedAsDeployed(issue.getId(), statusId);
+        }
+        return true;
     }
 
     private boolean isIssueUpdatedAsDeployed(int issueId, int statusId) throws RedmineException
