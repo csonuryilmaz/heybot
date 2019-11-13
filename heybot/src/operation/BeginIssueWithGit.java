@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
 
+import com.taskadapter.redmineapi.bean.IssueFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jgit.api.CheckoutCommand;
 import org.eclipse.jgit.api.CreateBranchCommand;
@@ -80,6 +81,7 @@ public class BeginIssueWithGit extends Operation
     private final static String PARAMETER_REDMINE_TOKEN = "REDMINE_TOKEN";
 
     private final static String PARAMETER_ISSUE = "ISSUE";
+    private final static String PARAMETER_ISSUE_PREFIX = "ISSUE_PREFIX";
     private final static String PARAMETER_GIT_REPOSITORY = "GIT_REPOSITORY";
     private final static String PARAMETER_GIT_PROTOCOL = "GIT_PROTOCOL";
 
@@ -118,27 +120,41 @@ public class BeginIssueWithGit extends Operation
     private boolean hasRemoteBranch;
     private boolean isFreshCheckout;
     private Issue issue;
+    private String issuePrefix;
 
     public BeginIssueWithGit() {
         super(new String[]{
-            PARAMETER_ISSUE, PARAMETER_REDMINE_TOKEN, PARAMETER_REDMINE_URL,
+            PARAMETER_ISSUE,
             PARAMETER_GIT_REPOSITORY, PARAMETER_GIT_PROTOCOL,
             PARAMETER_WORKSPACE_PATH
         });
     }
 
+    private void setIssuePrefix(Properties prop) {
+        String prefix = getParameterString(prop, PARAMETER_ISSUE_PREFIX, true);
+        this.issuePrefix = StringUtils.isNotBlank(prefix) ? prefix : "i";
+    }
+
     @Override
     protected void execute(Properties prop) throws Exception {
         if (areMandatoryParametersNotEmpty(prop)) {
-            String redmineAccessToken = getParameterString(prop, PARAMETER_REDMINE_TOKEN, false);
-            String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
-            redmineManager = RedmineManagerFactory.createWithApiKey(redmineUrl, redmineAccessToken);
-
-            if ((issue = getIssue(redmineManager, getParameterInt(prop, PARAMETER_ISSUE, 0))) == null) {
-                return;
+            int issueId = getParameterInt(prop, PARAMETER_ISSUE, 0);
+            String apiAccessKey = getParameterString(prop, PARAMETER_REDMINE_TOKEN, false);
+            String uri = getParameterString(prop, PARAMETER_REDMINE_URL, false);
+            if (StringUtils.isNotBlank(uri) && StringUtils.isNotBlank(apiAccessKey)) {
+                redmineManager = RedmineManagerFactory.createWithApiKey(uri, apiAccessKey);
+                if ((issue = getIssue(redmineManager, issueId)) == null) {
+                    return;
+                }
+                System.out.println("#" + issue.getId() + " - " + issue.getSubject());
+                if (!isIssueAssigneeOk(issue, prop)) {
+                    return;
+                }
+            } else {
+                issue = IssueFactory.create(issueId);
             }
-            System.out.println("#" + issue.getId() + " - " + issue.getSubject());
-            if (!isIssueAssigneeOk(issue, prop) || !isGitCredentialsOk(prop)) {
+            setIssuePrefix(prop);
+            if (!isGitCredentialsOk(prop)) {
                 return;
             }
             createBranch(prop);
@@ -196,7 +212,7 @@ public class BeginIssueWithGit extends Operation
 
     private boolean findIfRemoteBranchExists(Collection<Ref> refs) {
         for (Ref ref : refs) {
-            if (ref.getName().equals("refs/heads/i" + issue.getId() + "/" + project)) {
+            if (ref.getName().equals("refs/heads/" + issuePrefix + issue.getId() + "/" + project)) {
                 System.out.println("\t\t[i] " + ref.getName() + " is found on remote repository.");
                 return true;
             }
@@ -484,7 +500,7 @@ public class BeginIssueWithGit extends Operation
     }
 
     private File getLocalBranch(Properties prop) {
-        File localBranch = new File(trimRight(getParameterString(prop, PARAMETER_WORKSPACE_PATH, false), "/") + "/i" + issue.getId());
+        File localBranch = new File(trimRight(getParameterString(prop, PARAMETER_WORKSPACE_PATH, false), "/") + "/" + issuePrefix + issue.getId());
         System.out.println("\t[i] Local branch folder: " + localBranch);
         System.out.println("\t[*] Checking whether local branch folder exists ...");
         boolean pathExists = true;
@@ -551,7 +567,7 @@ public class BeginIssueWithGit extends Operation
         System.out.println("\t[*] Checkout ...");
         try (Repository gitRepo = openRepository(localBranch.getAbsolutePath())) {
             try (Git git = new Git(gitRepo)) {
-                String name = "i" + issue.getId() + "/" + project;
+                String name = issuePrefix + issue.getId() + "/" + project;
                 Ref ref = gitRepo.exactRef("refs/heads/" + name);
                 if (ref == null) {
                     CreateBranchCommand createBranch = git.branchCreate();
@@ -602,7 +618,7 @@ public class BeginIssueWithGit extends Operation
 
     private void issueIsBegun(Properties prop) {
         String begunStatus = getParameterString(prop, PARAMETER_BEGUN_STATUS, true);
-        if (!isEmpty(begunStatus)) {
+        if (!isEmpty(begunStatus) && redmineManager != null) {
             System.out.println("[*] Updating issue status ...");
             int statusId = tryGetIssueStatusId(redmineManager, begunStatus);
             System.out.println("\t[i] Begun Status: " + begunStatus);
@@ -830,7 +846,7 @@ public class BeginIssueWithGit extends Operation
                 System.out.println("\t\t[*] Rebasing ...");
                 RebaseCommand rebase = git.rebase();
                 rebase.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)));
-                rebase.setUpstream("origin/" + "i" + issue.getId() + "/" + project);
+                rebase.setUpstream("origin/" + issuePrefix + issue.getId() + "/" + project);
                 RebaseResult rebaseResult = rebase.call();
                 if (rebaseResult.getStatus().isSuccessful()) {
                     System.out.println("\t\t[✓] Rebase ok.");
