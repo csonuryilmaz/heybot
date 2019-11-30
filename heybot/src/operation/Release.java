@@ -8,10 +8,8 @@ import com.github.seratch.jslack.api.webhook.WebhookResponse;
 import com.taskadapter.redmineapi.RedmineException;
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
-import com.taskadapter.redmineapi.bean.CustomField;
-import com.taskadapter.redmineapi.bean.Issue;
-import com.taskadapter.redmineapi.bean.IssueRelation;
-import com.taskadapter.redmineapi.bean.Version;
+import com.taskadapter.redmineapi.bean.*;
+
 import java.io.IOException;
 import java.util.*;
 
@@ -64,6 +62,9 @@ public class Release extends Operation
     private final static String PARAMETER_DRY_RUN="DRY_RUN";
     private final static String PARAMETER_DRY_RUN_NOTIFY_SLACK="DRY_RUN_NOTIFY_SLACK";
     private final static String PARAMETER_DRY_RUN_NOTIFY_EMAIL="DRY_RUN_NOTIFY_EMAIL";
+
+    private final static String PARAMETER_CUSTOM_VERSION="CUSTOM_VERSION";
+    private final static String PARAMETER_CUSTOM_ISSUE="CUSTOM_ISSUE";
     //</editor-fold>
     private RedmineManager redmineManager;
     private Properties prop;
@@ -74,7 +75,7 @@ public class Release extends Operation
     {
 	super(new String[]
 	{
-	    PARAMETER_REDMINE_TOKEN, PARAMETER_REDMINE_URL, PARAMETER_VERSION_ID, PARAMETER_ISSUE_DEPLOYED_STATUS, PARAMETER_RELEASE_TYPE
+	    PARAMETER_REDMINE_TOKEN, PARAMETER_REDMINE_URL, PARAMETER_ISSUE_DEPLOYED_STATUS, PARAMETER_RELEASE_TYPE
 	}
 	);
     }
@@ -100,8 +101,7 @@ public class Release extends Operation
 
     private Version[] getVersions(Properties prop) {
         System.out.println("[*] Getting versions from Redmine ... ");
-        Version[] versions = getVersions(redmineManager, getParameterIntArray(prop, PARAMETER_VERSION_ID),
-            getParameterString(prop, PARAMETER_VERSION_PREFIX, true));
+        Version[] versions = getVersions(redmineManager, prop);
         for (Version version : versions) {
             System.out.println("\t [✓] " + version.getName());
         }
@@ -113,13 +113,18 @@ public class Release extends Operation
         return versions;
     }
 
-    private Version[] getVersions(RedmineManager redmineManager, int[] versionIds, String prefix) {
+    private Version[] getVersions(RedmineManager redmineManager, Properties prop) {
+        String prefix = getParameterString(prop, PARAMETER_VERSION_PREFIX, true);
         ArrayList<Version> versions = new ArrayList<>();
+        int[] versionIds = getParameterIntArray(prop, PARAMETER_VERSION_ID);
         for (int versionId : versionIds) {
             Version version = getVersion(redmineManager, versionId);
             if (version != null) {
                 versions.add(version);
             }
+        }
+        if (versionIds.length == 0) {
+            versions.add(VersionFactory.create(0, prefix + getParameterString(prop, PARAMETER_CUSTOM_VERSION, false)));
         }
         Collections.sort(versions, new VersionComparator(prefix));
         return versions.toArray(new Version[versions.size()]);
@@ -159,8 +164,13 @@ public class Release extends Operation
     private void release(Version[] versions) throws Exception
     {
         String redmineUrl = getParameterString(prop, PARAMETER_REDMINE_URL, false);
-        Issue[] issues = getAllIssuesOfVersions(redmineUrl,
-            getParameterString(prop, PARAMETER_REDMINE_TOKEN, false), versions);
+        Issue[] issues;
+        if (versions.length == 1 && versions[0].getId() == null) {
+            issues = getIssues(redmineManager, getParameterStringArray(prop, PARAMETER_CUSTOM_ISSUE, false));
+        } else {
+            issues = getAllIssuesOfVersions(redmineUrl,
+                getParameterString(prop, PARAMETER_REDMINE_TOKEN, false), versions);
+        }
 
 	String releaseType = getParameterString(prop, PARAMETER_RELEASE_TYPE, true);
 	boolean isDryRun = getParameterBoolean(prop, PARAMETER_DRY_RUN);
@@ -264,9 +274,11 @@ public class Release extends Operation
     private void updateAsDeployed(Version[] versions) throws RedmineException {
         System.out.println("[*] Updating versions as deployed ... ");
         for (Version version : versions) {
-            setDateDeployedOn(version);
-            setDescription(version);
-            System.out.println("\t [✓] " + version.getName());
+            if (version.getId() != null) {
+                setDateDeployedOn(version);
+                setDescription(version);
+                System.out.println("\t [✓] " + version.getName());
+            }
         }
         System.out.println("[✓] Total " + versions.length + " version(s) are updated as deployed.");
     }
@@ -581,7 +593,11 @@ public class Release extends Operation
 
     private String getVersionHtml(String redmineUrl, Version version)
     {
-	return "<b><a href=\"" + redmineUrl + "/versions/" + version.getId() + "\">" + version.getName() + "</a></b>";
+        if (version.getId() != null) {
+            return "<b><a href=\"" + redmineUrl + "/versions/" + version.getId() + "\">" + version.getName() + "</a></b>";
+        } else {
+            return "<b>" + version.getName() + "</b>";
+        }
     }
 
     private String getIssueIdHtml(String redmineUrl, Issue issue)
