@@ -12,10 +12,16 @@ import com.taskadapter.redmineapi.bean.*;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.logging.Level;
 
 import model.EmailSender;
+import net.bis5.mattermost.client4.ApiResponse;
+import net.bis5.mattermost.client4.hook.IncomingWebhookClient;
+import net.bis5.mattermost.model.IncomingWebhookRequest;
 import org.apache.commons.lang3.StringUtils;
 import utilities.Properties;
+
+import static org.apache.http.util.TextUtils.isBlank;
 import static org.apache.http.util.TextUtils.isEmpty;
 
 /**
@@ -65,6 +71,10 @@ public class Release extends Operation
 
     private final static String PARAMETER_CUSTOM_VERSION="CUSTOM_VERSION";
     private final static String PARAMETER_CUSTOM_ISSUE="CUSTOM_ISSUE";
+
+    private final static String PARAMETER_MATTERMOST_INCOMING_WEBHOOK="MATTERMOST_INCOMING_WEBHOOK";
+    private final static String PARAMETER_MATTERMOST_CHANNEL="MATTERMOST_CHANNEL";
+    private final static String PARAMETER_DRY_RUN_MATTERMOST_CHANNEL="DRY_RUN_MATTERMOST_CHANNEL";
     //</editor-fold>
     private RedmineManager redmineManager;
     private Properties prop;
@@ -191,12 +201,84 @@ public class Release extends Operation
 	if (slackWebHookUrls.length > 0) {
 	    notifySlack(versions[0], issues, redmineUrl, slackWebHookUrls);
 	}
+
+	notifyMattermost(prop, redmineUrl, versions, issues, isDryRun);
 	
 	String[] recipients = getParameterStringArray(prop, 
 		isDryRun ? PARAMETER_DRY_RUN_NOTIFY_EMAIL : PARAMETER_NOTIFY_EMAIL, true);
 	if (recipients.length > 0) {
 	    notifyEmail(releaseType, recipients, versions[0], issues, redmineUrl);
 	}
+    }
+
+    private void notifyMattermost(Properties prop, String redmineUrl, Version[] versions, Issue[] issues, boolean isDryRun) {
+        String mmIncomingWebhook = getParameterString(prop, PARAMETER_MATTERMOST_INCOMING_WEBHOOK, false);
+        String mmChannel = isDryRun ? getParameterString(prop, PARAMETER_DRY_RUN_MATTERMOST_CHANNEL, false) :
+            getParameterString(prop, PARAMETER_MATTERMOST_CHANNEL, false);
+        if (!isBlank(mmIncomingWebhook) && !isBlank(mmChannel)){
+            System.out.println("[*] Sending mattermost notification ... ");
+
+            StringBuilder summary = new StringBuilder();
+            summary.append("Cheers! :beers: **"+versions[0].getName()+"**  has been released. :rocket: \n");
+            summary.append("\n:scroll: **Release Notes:** ");
+
+            String description = getParameterString(prop, PARAMETER_DESCRIPTION, false).trim();
+            String splitter = getParameterString(prop, PARAMETER_EMAIL_BODY_RELEASE_NOTES_SPLITTER, false);
+            if (!StringUtils.isBlank(splitter))
+            {
+                description = description.replace(splitter, "\n- ");
+            }
+            summary.append(description + "\n");
+
+            String dbModifications = getParameterString(prop, PARAMETER_DB_MODIFICATIONS, false);
+            if (!isEmpty(dbModifications))
+            {
+                summary.append("\n:file_cabinet: **Database Migrations:**");
+                appendMattermostSummaryMigrations(summary, getMigrations(dbModifications));
+                summary.append("\n");
+            }
+
+            summary.append("\n:wastebasket: **" +issues.length);
+            summary.append(issues.length > 1 ? " issues" : " issue");
+            summary.append(" resolved:**\n");
+            for (Issue issue : issues)
+            {
+                summary.append("\n:heavy_check_mark: [");
+                summary.append("#"+issue.getId());
+                summary.append("](");
+                summary.append(redmineUrl + "/issues/" + issue.getId());
+                summary.append(")/_"+issue.getTracker().getName().toLowerCase()+"_/ ");
+                summary.append(issue.getSubject());
+            }
+
+            IncomingWebhookRequest payload = new IncomingWebhookRequest();
+
+            payload.setText(summary.toString());
+            payload.setChannel(mmChannel);
+            IncomingWebhookClient webhookClient = new IncomingWebhookClient(mmIncomingWebhook, Level.WARNING);
+            ApiResponse<Boolean> response = webhookClient.postByIncomingWebhook(payload);
+            if (!response.hasError()) {
+                System.out.println("[✓] Mattermost notification sent.");
+            } else {
+                System.out.println("[e] " + response.readError().getMessage());
+            }
+        }
+    }
+
+    private void appendMattermostSummaryMigrations(StringBuilder summary, String[] migrations)
+    {
+        for (String migration : migrations)
+        {
+            migration = migration.trim();
+            if (!isEmpty(migration))
+            {
+                summary.append("\n- [");
+                summary.append(getMigrationText(migration));
+                summary.append("](");
+                summary.append(migration);
+                summary.append(")");
+            }
+        }
     }
 
     private void deployVersion(String releaseType, Version[] versions, Issue[] issues) throws Exception {
