@@ -548,6 +548,7 @@ public class NextVersion extends Operation
                     @Override
                     protected JSch createDefaultJSch(FS fs) throws JSchException {
                         JSch defaultJSch = super.createDefaultJSch(fs);
+                        defaultJSch.removeAllIdentity();
                         defaultJSch.addIdentity(identity.getAbsolutePath());
                         return defaultJSch;
                     }
