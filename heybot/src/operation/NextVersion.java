@@ -242,9 +242,10 @@ public class NextVersion extends Operation
             } else {
                 File repoPath;
                 if ((repoPath = tryGetRepoPath(prop)) != null) {
-                    if (updateAppBuild(prop, repoPath) && updateAppVersion(prop, repoPath, version)) {
+                    String versionTag = getVersionTag(prop, version);
+                    if (updateAppBuild(prop, repoPath) && updateAppVersion(prop, repoPath, versionTag)) {
                         if (pushAppUpdate(repoPath)) {
-                            GitTag tag = pushTagUpdate(repoPath, version);
+                            GitTag tag = pushTagUpdate(repoPath, versionTag);
                             protectTagIfUnprotected(prop, tag);
                         }
                     } else {
@@ -255,8 +256,8 @@ public class NextVersion extends Operation
         }
     }
 
-    private GitTag pushTagUpdate(File repoPath, Version version) {
-        GitTag tag = new GitTag(repoPath, getVersionTag(version.getName()));
+    private GitTag pushTagUpdate(File repoPath, String versionTag) {
+        GitTag tag = new GitTag(repoPath, versionTag);
         if (tagNotExistsOrUserWantsForceUpdate(tag)) {
             tag.create(repoPath);
         }
@@ -333,12 +334,11 @@ public class NextVersion extends Operation
         return false;
     }
 
-    private boolean updateAppVersion(Properties prop, File repoPath, Version version) {
+    private boolean updateAppVersion(Properties prop, File repoPath, String versionTag) {
         String[] filePaths = getParameterStringArray(prop, PARAMETER_APP_VERSION_FILE_PATH, false);
         if (filePaths.length == 0) {
             return true; // optional, user doesn't want version to be updated.
         }
-        String versionTag = getVersionTag(version.getName());
         if (!StringUtils.isBlank(versionTag)) {
             String pattern = getParameterString(prop, PARAMETER_APP_VERSION_FILE_PATTERN, false);
             if (!StringUtils.isBlank(pattern)) {
@@ -350,6 +350,27 @@ public class NextVersion extends Operation
             }
         }
         return false;
+    }
+
+    private String getVersionTag(Properties prop, Version version) {
+        String tagByVersion = getVersionTag(version.getName());
+        String tagByConfig = getParameterString(prop, PARAMETER_VERSION_TAG, false);
+
+        if (tagByVersion.equals(tagByConfig)) {
+            return tagByVersion;
+        } else {
+            System.out.println("[w] Config VERSION_TAG and Redmine Version is not the same value!");
+            System.out.println("[i] Config VERSION_TAG: " + tagByConfig);
+            System.out.println("[i] Redmine Version: " + tagByVersion);
+            Scanner scanner = new Scanner(System.in);
+            System.out.print("[?] Would you like to override existing Redmine Version with Config VERSION_TAG? (y/n) ");
+            String answer = scanner.next();
+            if (!isEmpty(answer) && (answer.charAt(0) == 'Y' || answer.charAt(0) == 'y')) {
+                return tagByConfig;
+            } else {
+                return tagByVersion;
+            }
+        }
     }
 
     private boolean updateApp(File repo, String[] files, String pattern, String replace) {
